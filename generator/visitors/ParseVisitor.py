@@ -35,8 +35,9 @@ class ParseVisitor(vis.Visitor):
     frk.table = {}
     
   def Parser( self, visited ):
-    # return self.visit( visited.rule )
-    return visited( self.lexer )
+    result, stack = visited( self.lexer )
+    self.result += stack
+    return result
   
   def Handle( self, visited ):
     result = self.visit( visited.rule )

@@ -232,7 +232,7 @@ toolCall = gen.Ignore("TOOL CALL") & [
 
 heidenhain = (
 ~ gen.Ignore(expr.number)
-& ~( positioning | [
+& ( positioning | [
       fn_f
     , toolCall
     , begin_pgm 
