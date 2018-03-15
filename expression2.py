@@ -24,16 +24,16 @@ _number           = gen.make('([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))')
 variable          = 'Q(\\d+)' & ~( gen.Ignore("[=]") & expression )
 subexpression     = gen.Ignore("[(]") & [ expression, gen.Ignore("[)]") ]
 
-_primary = gen.Bracket( _number | [ variable, subexpression ] )
+_primary = gen.Push( _number | [ variable, subexpression ] )
 _primary.name = "primary"
 
-expression.rule = gen.Bracket( term & +( ExpressionTokens & term ) )
-term.rule       = gen.Bracket( pow & +( TermTokens & pow ) )
-pow.rule        = gen.Bracket( _primary & +( "\\^" & _primary ) )
+expression.rule = gen.Push( term & +( ExpressionTokens & term ) )
+term.rule       = gen.Push( pow & +( TermTokens & pow ) )
+pow.rule        = gen.Push( _primary & +( "\\^" & _primary ) )
 
-'''expression.rule = gen.Bracket( term & [ ExpressionTokens , expression ] | term )
-term.rule       = gen.Bracket( pow & [ TermTokens, term ] | pow )
-pow.rule        = gen.Bracket( _primary & [ "\\^", pow ] | _primary )'''
+'''expression.rule = gen.Push( term & [ ExpressionTokens , expression ] | term )
+term.rule       = gen.Push( pow & [ TermTokens, term ] | pow )
+pow.rule        = gen.Push( _primary & [ "\\^", pow ] | _primary )'''
 
 expression.name =  "expression"
 term.name =  "term"

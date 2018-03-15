@@ -61,8 +61,8 @@ class ReprVisitor(vis.Visitor):
   def Ignore( self, rule ):
     return "<Ignore { rule =\n" + rule.rule.accept(self) + "\n" + self._ident() + ">"
 
-  def Bracket( self, rule ):
-    return "<Bracket, rule =\n" + rule.rule.accept(self) + "\n" + self._ident() + ">"
+  def Push( self, rule ):
+    return "<Push, rule =\n" + rule.rule.accept(self) + "\n" + self._ident() + ">"
     
   def Copy( self, rule ):
     return "<Copy, name =" + rule.name + ", rule =\n" + rule.rule.accept(self) + "\n" + self._ident() + ">"

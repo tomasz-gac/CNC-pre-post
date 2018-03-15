@@ -162,7 +162,7 @@ class Ignore(Rule):
     self.rule = make(rule)
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
-class Bracket(Rule):
+class Push(Rule):
   def __init__(self, rule):
     self.rule = make(rule)
 

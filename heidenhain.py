@@ -209,9 +209,7 @@ feed       = gen.Ignore("F") & ( "MAX" | expr.primary )
 compensation = gen.make( "R(L|R|0)" )
 direction    = gen.make( "DR([+]|[-])" )
 
-goto = gen.Cut( "goto",
-                gen.Cut( "L", ~gen.make(GOTOtokens) ) & ~point & ~gen.Paste( "L" ) ) \
-                & gen.Bracket( ~direction & [ ~compensation, ~feed ] & gen.Paste( "goto" ) )
+goto = gen.Push( ~gen.make(GOTOtokens) & gen.Push( ~point ) & gen.Push( ~direction & [ ~compensation, ~feed ] ) )
 circleCenter = gen.make("CC") & point
 
 auxilary = gen.Ignore("M") & expr.number

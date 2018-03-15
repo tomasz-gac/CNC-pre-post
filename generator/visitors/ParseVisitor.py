@@ -128,7 +128,7 @@ class ParseVisitor(vis.Visitor):
     else:      
       return self._handle( visited, None )
   
-  def Bracket( self, visited ):
+  def Push( self, visited ):
     result = self.visit( visited.rule )
     if not _failure( result, self.lexer.success ):
       if result is not None: 

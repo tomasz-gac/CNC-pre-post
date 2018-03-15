@@ -17,7 +17,7 @@ from generator.rule import TerminalString
 from generator.rule import Always
 from generator.rule import Never
 from generator.rule import Ignore
-from generator.rule import Bracket
+from generator.rule import Push
 from generator.rule import Copy
 from generator.rule import Cut
 from generator.rule import Paste
