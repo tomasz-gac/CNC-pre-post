@@ -133,7 +133,8 @@ class ParseVisitor(vis.Visitor):
     result = self.visit( visited.rule )
     if not _failure( result, self.lexer.success ):
       if result is not None: 
-        self.result.append( self._handle( visited, result ) )
+        # self.result.append( self._handle( visited, result ) )
+        return self._handle( visited, result )
       return None
     else:
       return ParserFailed

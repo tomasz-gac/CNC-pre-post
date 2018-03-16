@@ -27,13 +27,13 @@ subexpression     = gen.Ignore("[(]") & [ expression, gen.Ignore("[)]") ]
 _primary = gen.Push( _number | [ variable, subexpression ] )
 _primary.name = "primary"
 
-expression.rule = gen.Push( term & +( ExpressionTokens & term ) )
+'''expression.rule = gen.Push( term & +( ExpressionTokens & term ) )
 term.rule       = gen.Push( pow & +( TermTokens & pow ) )
-pow.rule        = gen.Push( _primary & +( "\\^" & _primary ) )
+pow.rule        = gen.Push( _primary & +( "\\^" & _primary ) )'''
 
-'''expression.rule = gen.Push( term & [ ExpressionTokens , expression ] | term )
+expression.rule = gen.Push( term & [ ExpressionTokens , expression ] | term )
 term.rule       = gen.Push( pow & [ TermTokens, term ] | pow )
-pow.rule        = gen.Push( _primary & [ "\\^", pow ] | _primary )'''
+pow.rule        = gen.Push( _primary & [ "\\^", pow ] | _primary )
 
 expression.name =  "expression"
 term.name =  "term"
