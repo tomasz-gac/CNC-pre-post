@@ -203,18 +203,20 @@ def handlePositioning( lst ):
     result = list(lst[1]) + result
   return result
   
-coordinate = CoordinateTokens & expr.primary
+coordinate = gen.Push(CoordinateTokens & gen.Push(expr.primary))
 point      = coordinate & +coordinate
-feed       = gen.Ignore("F") & ( "MAX" | expr.primary )
+feed       = gen.make("F") & gen.Push( "MAX" | expr.primary )
 compensation = gen.make( "R(L|R|0)" )
 direction    = gen.make( "DR([+]|[-])" )
 
-goto = gen.Push( ~gen.make(GOTOtokens) & gen.Push( ~point ) & gen.Push( ~direction & [ ~compensation, ~feed ] ) )
+gotoTail = gen.Push( ~direction & [ ~compensation, ~feed ] )
+goto = gen.make(GOTOtokens) & ~point & gotoTail
 circleCenter = gen.make("CC") & point
 
-auxilary = gen.Ignore("M") & expr.number
+auxilary = "M" & gen.Push(expr.number)
 
-positioning = ( goto | circleCenter ) & +auxilary
+positioning = gen.Push(( goto | circleCenter ) & gen.Push(+auxilary))
+positioningShort = gen.Push( point & gotoTail & gen.Push(+auxilary ) )
 
 begin_pgm = gen.make('BEGIN PGM (.+) (MM|INCH)')
 end_pgm   = gen.make('END PGM (.+)')
@@ -223,14 +225,10 @@ BLKformStart = gen.make( "BLK FORM 0\\.1 (X|Y|Z)" ) & point
 BLKformEnd   = gen.Ignore( "BLK FORM 0\\.2" )       & point
 fn_f         = gen.make('FN[ ]*(\\d+)\\:')          & expr.Parse
 
-toolCall = gen.Ignore("TOOL CALL") & [ 
-  expr.primary, "(X|Y|Z)"
-, ~( gen.Ignore("S") & expr.primary )
-, ~( gen.Ignore("DR") & expr.primary )
-, ~( gen.Ignore("DL") & expr.primary ) 
-]
+toolCall = gen.Push( gen.make("TOOL CALL") &
+  gen.Push(expr.primary & "(X|Y|Z)") & +gen.Push( ToolCallTokens & gen.Push( expr.primary ) ) )
 
-heidenhain = (
+heidenhain = gen.Push(
 ~ gen.Ignore(expr.number)
 & ( positioning | [
       fn_f
@@ -240,6 +238,7 @@ heidenhain = (
     , BLKformStart 
     , BLKformEnd
     , auxilary
+    , positioningShort
     ]
   )
 & ~comment

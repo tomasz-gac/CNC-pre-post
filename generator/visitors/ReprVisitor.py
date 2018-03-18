@@ -1,4 +1,3 @@
-
 import generator.visitor as vis
 
 class ReprVisitor(vis.Visitor):
@@ -27,6 +26,10 @@ class ReprVisitor(vis.Visitor):
   def Handle( self, rule ):
     return "<Handle {rule=\n"+rule.rule.accept(self)+"\n"+self._ident()+">"
 
+  def Transform( self, rule ):
+    return "<Transform {function="+str(rule.function)+" rule=\n"+rule.rule.accept(self)+"\n"+self._ident()+">"
+
+    
   def Not(self, rule):
     return "<Not {rule=\n" + rule.rule.accept(self) + self._ident() + ">"
     

@@ -7,9 +7,10 @@ def _doHandle( self, task ):
   return type(self)._dispatch[task.type]( self, task )
 
 class Handler:  
-  def __init__( self, Tasks ):
-    self.tasks = Tasks
+  def __init__( self, Task ):
+    self.tasks = Task
   def __call__( self, Handler ):
+    Handler.enum = self.tasks
     Handler._dispatch = ( #find all handlers
       { self.tasks[name] : getattr(Handler, name) for name in  # all atributes
         (  
@@ -22,9 +23,9 @@ class Handler:
     if( len(self.tasks) != len(Handler._dispatch) ):
       raise Exception( "Not all task types handled by "+str(Handler) )
       #set the handle method in Handler
-    #default handler
-    Handler._dispatch[None] = Handler.default
-    Handler.handle = _doHandle
+    # default handler
+    # Handler._dispatch[None] = Handler.default
+    Handler.__call__ = _doHandle
     Handler.handled = self.tasks
     return Handler
     
@@ -41,12 +42,11 @@ class Task:
     self._re = { taskType : re.compile(taskType.value) for taskType in self._typeEnum }
     
   
-  def set( self, line, delim = ' ' ):
+  def set( self, line ):
     self.line = line   
     self.type = None
     self.groups = None
     self.match = None
-    # l = len(line)
     
     # list comprehension code, remember to assign values with code from loop
     # slower for some reason
@@ -64,14 +64,27 @@ class Task:
         self.match = match.group()
         self.groups = match.groups()
         self.type = taskType;
-        return match.string[match.end(0):]
-        
+        return self, match.string[match.end(0):]
+    
+    return None, None
+    
   def __repr__( self ):
     return ( "<Task"
       + ((" type: "+str(self.type)) if self.type else "")
       + ((" groups: "+str(self.groups)) if self.groups else "")
       + ">" )
 
+class HandledTask(Task):
+  def __init__( self, handler ):
+    self.handler = handler
+    Task.__init__( self, handler.enum )
+    
+  def set( self, line ):
+    result, rest = Task.set( self, line )
+    if rest is not None:
+      return self.handler( result ), rest
+    return result, rest
+      
 class EitherTask(Task):
   def __init__(self, enumTypes ):
     Task.__init__( self, enumTypes )

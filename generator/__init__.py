@@ -1,5 +1,6 @@
 from generator.task   import Handler
 from generator.task   import Task
+from generator.task   import HandledTask
 from generator.task   import EitherTask
 from generator.lexer  import Lexer
 
@@ -23,6 +24,5 @@ from generator.rule import Cut
 from generator.rule import Paste
 
 from generator.rule import lexerEmpty
-from generator.visitors.ParseVisitor import ParserFailed
 
 import generator.visitors

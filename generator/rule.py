@@ -10,13 +10,15 @@ def make( item ):
   if isinstance( item, str ):
     return TerminalString( item )
   if isinstance( item, EnumMeta ):
-    return Terminal( item )
-  raise RuntimeError("Cannot use type " + type(item).__name__ + " in parser definition.")  
+    return Terminal( generator.Task(item) )
+  return Terminal( generator.HandledTask(item) )
+  
+  # raise RuntimeError("Cannot use type " + type(item).__name__ + " in parser definition.")  
 
 class Rule:
   def accept( self, visitor ):
     return visitor.visit( self )
-  
+    
   def __or__( self, rhs ):
     if isinstance( rhs, list ):
       return Alternative( [self] + [ make(x) for x in rhs ] )
@@ -71,7 +73,7 @@ def flatten( l ):
     return _flatten(l)
   else:
     return l
-
+    
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Parser(Rule):
   def __init__( self, rule, handlers = {}, defaultHandler = lambda x : x ):
@@ -83,8 +85,12 @@ class Parser(Rule):
     if input is not None:
       lexer.set(input)
     visitor = vis.ParseVisitor( lexer, self.handlers, self.defaultHandler )
-    result = visitor.visit( self.rule )
-    return result, visitor.result
+    fallthrough = visitor.visit( self.rule )
+    if vis.ParserFailed( fallthrough, lexer.success ):
+      return vis.ParserFailed
+    if fallthrough is not None:
+      raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )
+    return visitor.result
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Handle(Rule):
@@ -138,8 +144,8 @@ class Repeat(Rule):
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Terminal(Rule):
   def __init__( self, handled):
-    self.task = generator.Task( handled )
-    
+    self.task = handled# generator.Task(  )
+        
 _empty = lambda arg : []
   
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )

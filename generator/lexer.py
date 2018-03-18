@@ -4,15 +4,14 @@ from generator import Task
 
   # breaks a line into tokens using a scanner
 class Lexer:
-  def __init__( self, ws = " " ):
+  def __init__( self, transform = lambda x : x, pp = lambda s : s.lstrip(' ') ):
     self._input = ''  # lexer input
-    # self.tokens = []  # token list
-    self.ws = ws
+    self.preprocess = pp
+    self.transform = transform
     self.success = True
 
   def set( self, line ):
-    self._input = line.lstrip( self.ws )
-    # self.tokens = []
+    self._input = self.preprocess( line )
   
   def hasInput(self):
     return bool(self._input)
@@ -20,32 +19,27 @@ class Lexer:
   def get( self, task ):
     self.success = True
     if not self._input:
-      return None # parsed token, parsing success
+      return None
     
-    rest = task.set( self._input )
-    if task.groups is not None:
-      # self.tokens.append(copy.copy(task))
-      self._input = rest.lstrip( self.ws )
-      return copy.copy(task) # self.current()
+    result, rest = task.set( self._input )
+    if rest is not None:
+      self.set(rest)
+      return self.transform(result)
     
     self.success = False
     return None
-    
-  # def current(self):
-  #   return self.tokens[-1] if self.tokens else None
   
   def join( self, fork ):
     self._input = fork._input
-    self.ws = fork.ws
     self.success = fork.success
-    fork.ws     = " "
-    fork._input = ""
-    fork.success = True
+    self.preprocess = fork.preprocess
+    self.transform = fork.transform
     
   def fork( self ):
     frk = Lexer()
     frk._input = self._input[:]
     frk.success = self.success
-    frk.ws = self.ws
+    frk.preprocess = self.preprocess
+    frk.transform = self.transform
     return frk
     
