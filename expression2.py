@@ -46,8 +46,8 @@ class AssignHandler:
   def assign( self, task ):
     return cmd.SET
 
-def toFloat( token ):
-  return [ cmd.PUSH, float( token.groups[0] ) ]
+def toFloat( token, result ):
+  return float( token.groups[0] ), result
     
 expression  = gen.Handle()
 term        = gen.Handle()
@@ -55,19 +55,19 @@ pow         = gen.Handle()
 
 _number           = gen.make('([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))')
 _int              = gen.make('(\\d+)')
-variable          = 'Q' & gen.Push(_int) & ~( AssignHandler() & expression )
+variable          = 'Q' & (_int).push() & ~( AssignHandler() & expression )
 subexpression     = gen.Ignore("[(]") & [ expression, gen.Ignore("[)]") ]
 
-_primary = gen.Push( _number | [ variable, subexpression ] )
+_primary = ( _number | [ variable, subexpression ] ).push()
 _primary.name = "primary"
 
-expression.rule = gen.Push( term & +( ExprHandler() & expression ) )
-term.rule       = gen.Push( pow & +( TermHandler() & term ) )
-pow.rule        = gen.Push( _primary & +( PowHandler() & pow ) )
+expression.rule = ( term & +( ExprHandler() & expression ) ).push()
+term.rule       = ( pow & +( TermHandler() & term ) ).push()
+pow.rule        = ( _primary & +( PowHandler() & pow ) ).push()
 
-'''expression.rule = gen.Push( term & [ ExpressionTokens , expression ] | term )
-term.rule       = gen.Push( pow & [ TermTokens, term ] | pow )
-pow.rule        = gen.Push( _primary & [ PowTokens, pow ] | _primary )'''
+'''expression.rule = ( term & [ ExpressionTokens , expression ] | term ).push()
+term.rule       = ( pow & [ TermTokens, term ] | pow ).push()
+pow.rule        = ( _primary & [ PowTokens, pow ] | _primary ).push()'''
 
 expression.name =  "expression"
 term.name =  "term"

@@ -3,3 +3,7 @@ class ParserFailedType:
     return type(result) == ParserFailedType
 
 ParserFailed = ParserFailedType()
+
+class ParserResult:
+  def __init__( self ):
+    self.result = []

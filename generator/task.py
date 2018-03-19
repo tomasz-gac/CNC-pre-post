@@ -42,7 +42,7 @@ class Task:
     self._re = { taskType : re.compile(taskType.value) for taskType in self._typeEnum }
     
   
-  def set( self, line ):
+  def __call__( self, line ):
     self.line = line   
     self.type = None
     self.groups = None
@@ -79,8 +79,8 @@ class HandledTask(Task):
     self.handler = handler
     Task.__init__( self, handler.enum )
     
-  def set( self, line ):
-    result, rest = Task.set( self, line )
+  def __call__( self, line ):
+    result, rest = Task.__call__( self, line )
     if rest is not None:
       return self.handler( result ), rest
     return result, rest

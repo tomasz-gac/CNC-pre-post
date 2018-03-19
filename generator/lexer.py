@@ -21,7 +21,7 @@ class Lexer:
     if not self._input:
       return None
     
-    result, rest = task.set( self._input )
+    result, rest = task( self._input )
     if rest is not None:
       self.set(rest)
       return self.transform(result)

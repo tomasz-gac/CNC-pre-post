@@ -11,7 +11,8 @@ class ParseVisitor(vis.Visitor):
     self.result = []
   
   def _handle( self, rule, result ):
-    return self.handlers.get(rule, self.defaultHandler)(result)
+    handled, self.result = self.handlers.get(rule, self.defaultHandler)(result, self.result)
+    return handled
     
     
   def _fork( self ):

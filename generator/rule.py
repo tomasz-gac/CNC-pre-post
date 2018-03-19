@@ -57,6 +57,9 @@ class Rule:
   
   def __repr__( self ):
     return vis.ReprVisitor().visit(self)
+    
+  def push( self ):
+    return Push( self )
 
 def lexerEmpty( _, __, lexer ):
   return not lexer.hasInput()
@@ -76,7 +79,7 @@ def flatten( l ):
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Parser(Rule):
-  def __init__( self, rule, handlers = {}, defaultHandler = lambda x : x ):
+  def __init__( self, rule, handlers = {}, defaultHandler = (lambda x,r : (x,r)) ):
     self.rule = rule
     self.handlers = handlers
     self.defaultHandler = defaultHandler
