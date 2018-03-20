@@ -4,6 +4,5 @@ class ParserFailedType:
 
 ParserFailed = ParserFailedType()
 
-class ParserResult:
-  def __init__( self ):
-    self.result = []
+class ParserState:
+  pass

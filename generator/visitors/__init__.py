@@ -1,4 +1,5 @@
 from generator.visitors.Failure         import ParserFailed
+from generator.visitors.Failure         import ParserState
 from generator.visitors.ParseVisitor    import ParseVisitor
 from generator.visitors.ReprVisitor     import ReprVisitor
 from generator.visitors.StrVisitor      import StrVisitor

@@ -1,43 +1,39 @@
 import generator.visitor as vis
-from copy import copy
-from .Failure import ParserFailed
+from copy import copy, deepcopy
+from .Failure import ParserFailed, ParserState
 
 class ParseVisitor(vis.Visitor):
   def __init__( self, lexer, handlers, defaultHandler ):
     self.handlers = handlers
     self.defaultHandler = defaultHandler
-    self.table = {}
     self.lexer = lexer
-    self.result = []
+    self.state = {}
   
   def _handle( self, rule, result ):
-    handled, self.result = self.handlers.get(rule, self.defaultHandler)(result, self.result)
+    handled, self.state = self.handlers.get(rule.handle, self.defaultHandler)(result, self.state)
     return handled
     
     
   def _fork( self ):
     frk = ParseVisitor( self.lexer.fork(), self.handlers, self.defaultHandler )
-    frk.result = self.result[:]
-    frk.table = copy(self.table)
+    frk.state = dict( self.state )
     return frk
   
   def _join( self, frk ):
     self.lexer.join( frk.lexer )
-    self.result = frk.result
-    frk.result = []
-    self.table = frk.table
-    frk.table = {}
+    print( self.state )
+    self.state = frk.state
     
   def Parser( self, visited ):
     return self._handle( visited, visited( self.lexer ) )
     
-  def Push( self, visited ):
+  '''def Push( self, visited ):
     result = self.visit( visited.rule )
     if ParserFailed( result, self.lexer.success ):
       return ParserFailed
     elif result is not None:
       self.result += self._handle( visited, result )
-    return None  
+    return None  '''
 
   def Handle( self, visited ):
     result = self.visit( visited.rule )
@@ -106,24 +102,24 @@ class ParseVisitor(vis.Visitor):
     if ParserFailed(result, self.lexer.success):
       return ParserFailed
       # handle the result and return the result
-    result = self._handle(visited, result)
-    return result if isinstance( result, list ) else [result]
+    return self._handle(visited, [result])
   
   def TerminalString( self, visited ):
     return self.Terminal( visited )
-    
-  def Always( self, visited ):
-    return self._handle( visited, None)
   
-  def Never( self, visited ):
-    return ParserFailed
-    
   def Ignore( self, visited ):
     result = self.visit( visited.rule )
     if ParserFailed( result, self.lexer.success ):
       return ParserFailed
     else:      
       return self._handle( visited, None )
+    
+  '''def Always( self, visited ):
+    return self._handle( visited, None)
+  
+  def Never( self, visited ):
+    return ParserFailed
+    
         
   def Copy( self, visited ):
     result = self.visit( visited.rule )
@@ -140,4 +136,4 @@ class ParseVisitor(vis.Visitor):
   def Paste( self, visited ):
     if visited.name in self.table:
       return self.table[ visited.name ]
-    return ParserFailed
+    return ParserFailed'''

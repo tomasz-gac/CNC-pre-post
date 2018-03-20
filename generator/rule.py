@@ -16,6 +16,18 @@ def make( item ):
   # raise RuntimeError("Cannot use type " + type(item).__name__ + " in parser definition.")  
 
 class Rule:
+  def __init__( self ):
+    self.__slots__ = "__handle"
+    self.handle = self
+  
+  @property
+  def handle( self ):
+    return self.__handle
+    
+  @handle.setter
+  def handle( self, handle ):
+    self.__handle = handle
+  
   def accept( self, visitor ):
     return visitor.visit( self )
     
@@ -58,8 +70,11 @@ class Rule:
   def __repr__( self ):
     return vis.ReprVisitor().visit(self)
     
-  def push( self ):
-    return Push( self )
+  def __getitem__( self, handle ):
+    self.handle = handle
+    return self
+    
+  
 
 def lexerEmpty( _, __, lexer ):
   return not lexer.hasInput()
@@ -79,31 +94,34 @@ def flatten( l ):
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Parser(Rule):
-  def __init__( self, rule, handlers = {}, defaultHandler = (lambda x,r : (x,r)) ):
+  def __init__( self, rule, handlers = {}, defaultHandler = (lambda x,s : (x,s)) ):
     self.rule = rule
     self.handlers = handlers
     self.defaultHandler = defaultHandler
+    super().__init__()
     
   def __call__( self, lexer, input = None ):
     if input is not None:
       lexer.set(input)
     visitor = vis.ParseVisitor( lexer, self.handlers, self.defaultHandler )
     fallthrough = visitor.visit( self.rule )
-    if vis.ParserFailed( fallthrough, lexer.success ):
+    '''if vis.ParserFailed( fallthrough, lexer.success ):
       return vis.ParserFailed
     if fallthrough is not None:
-      raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )
-    return visitor.result
+      raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )'''
+    return fallthrough
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Handle(Rule):
   def __init__( self, rule = None ):
     self.rule = rule
+    super().__init__()
 
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )  
 class Not(Rule):
   def __init__( self, rule ):
     self.rule = rule
+    super().__init__()
   
   def __neg__( self ):
     return self.rule
@@ -117,6 +135,7 @@ class Optional(Rule):
 class Alternative(Rule):
   def __init__( self, options ):
     self.options = options
+    super().__init__()
   
   '''def __or__( self, other ):
     if isinstance(other, Alternative):
@@ -132,6 +151,7 @@ class Alternative(Rule):
 class Sequence(Rule):
   def __init__( self, sequence ):
     self.sequence = sequence
+    super().__init__()
     
   '''def __and__( self, other ):
     return Sequence( self.sequence + [make(other)] )
@@ -143,20 +163,31 @@ class Sequence(Rule):
 class Repeat(Rule):
   def __init__( self, rule ):
     self.rule = rule
+    super().__init__()
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Terminal(Rule):
   def __init__( self, handled):
     self.task = handled# generator.Task(  )
+    super().__init__()
         
 _empty = lambda arg : []
   
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class TerminalString(Terminal):
   def __init__( self, regex):
-    self.task = generator.task.StringTask( regex )
+    super().__init__( generator.task.StringTask( regex ) )
     
 
+
+  
+@Visitable( vis.ReprVisitor, vis.ParseVisitor )
+class Ignore(Rule):
+  def __init__( self, rule ):
+    self.rule = make(rule)
+    super().__init__()
+  
+'''
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Always(Rule):
   pass
@@ -166,28 +197,27 @@ class Never(Rule):
   pass
   
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
-class Ignore(Rule):
-  def __init__( self, rule ):
-    self.rule = make(rule)
-    
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Push(Rule):
   def __init__(self, rule):
     self.rule = make(rule)
+    super().__init__()
 
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Copy(Rule):
   def __init__(self, name, rule):
     self.name = name
     self.rule = make(rule)
+    super().__init__()
 
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Cut(Rule):
   def __init__(self, name, rule):
     self.name = name
     self.rule = make(rule)
+    super().__init__()
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Paste(Rule):
   def __init__(self, name):
     self.name = name
+    super().__init__()'''
