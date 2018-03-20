@@ -103,10 +103,8 @@ class Parser(Rule):
       lexer.set(input)
     visitor = vis.ParseVisitor( lexer, self.handlers )
     fallthrough = visitor.visit( self.rule )
-    if generator.ParserFailed( fallthrough, lexer.success ):
-      return generator.ParserFailed
-    else:
-      return self.onExit(fallthrough, visitor.state)
+    return self.onExit(fallthrough, visitor.state)
+      
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Transform(Rule):

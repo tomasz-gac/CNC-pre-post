@@ -21,6 +21,6 @@ from generator.rule import TerminalString
 from generator.rule import Ignore
 
 from generator.rule import lexerEmpty
-from generator.visitors.Failure import ParserFailed
+from generator.visitors.Failure import ParserFailedException
 
 import generator.visitors
