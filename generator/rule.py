@@ -17,16 +17,17 @@ def make( item ):
 
 class Rule:
   def __init__( self ):
-    self.__slots__ = "__handle"
-    self.handle = self
+    pass
+    # self.__slots__ = "__handle"
+    # self.handle = self
   
-  @property
-  def handle( self ):
-    return self.__handle
+  # @property
+  # def handle( self ):
+    # return self.__handle
     
-  @handle.setter
-  def handle( self, handle ):
-    self.__handle = handle
+  # @handle.setter
+  # def handle( self, handle ):
+    # self.__handle = handle
   
   def accept( self, visitor ):
     return visitor.visit( self )
@@ -70,9 +71,8 @@ class Rule:
   def __repr__( self ):
     return vis.ReprVisitor().visit(self)
     
-  def __getitem__( self, handle ):
-    self.handle = handle
-    return self
+  def __getitem__( self, handle = None ):
+    return Transform( self, handle )
     
 def lexerEmpty( _, __, lexer ):
   return not lexer.hasInput()
@@ -92,7 +92,7 @@ def flatten( l ):
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Parser(Rule):
-  def __init__( self, rule, handlers, onExit = (lambda r, s : (r,s))):
+  def __init__( self, rule, handlers, onExit):
     self.rule = rule
     self.handlers = handlers
     self.onExit = onExit
@@ -103,16 +103,19 @@ class Parser(Rule):
       lexer.set(input)
     visitor = vis.ParseVisitor( lexer, self.handlers )
     fallthrough = visitor.visit( self.rule )
-    return self.onExit(fallthrough, visitor.state)
+    if generator.ParserFailed( fallthrough, lexer.success ):
+      return generator.ParserFailed
+    else:
+      return self.onExit(fallthrough, visitor.state)
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
-class Handler(Rule):
+class Transform(Rule):
   def __init__( self, rule, handle = None ):
     if handle is None:
         self.handle = self
     self.rule = rule
     self.handle = handle
-    supe().__init__()
+    super().__init__()
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Handle(Rule):

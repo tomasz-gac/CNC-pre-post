@@ -1,54 +1,40 @@
 import generator.visitor as vis
 from copy import copy, deepcopy
-from .Failure import ParserFailed, ParserState
-
-class ParserState:
-  pass
+from .Failure import ParserFailed
 
 class ParseVisitor(vis.Visitor):
-  def __init__( self, lexer, handlers ):
-    self.handlers = handlers
+  def __init__( self, lexer, transforms ):
+    self.transforms = transforms
     self.lexer = lexer
-    self.state = ParserState()
+    self.state = [] # ParserState()
   
-  def _handle( self, rule, result ):
-    if rule.handle in self.handlers:
-      handled = self.handlers[rule.handle](result, self.state)
-      return handled
-    return result
-    
-    
   def _fork( self ):
-    frk = ParseVisitor( self.lexer.fork(), self.handlers )
-    frk.state = copy( self.state )
+    frk = ParseVisitor( self.lexer.fork(), self.transforms )
+    frk.state = self.state[:]
     return frk
   
   def _join( self, frk ):
     self.lexer.join( frk.lexer )
     self.state = frk.state
-    frk.state = {}
+    frk.state = []
     
   def Parser( self, visited ):
-    return self._handle( visited, visited( self.lexer ) )
+    return visited( self.lexer )
     
-  def Handler( self, visited ):
-    pass
-    
-  '''def Push( self, visited ):
+  def Transform( self, visited ):
     result = self.visit( visited.rule )
-    if ParserFailed( result, self.lexer.success ):
+    if ParserFailed(result, self.lexer.success):
       return ParserFailed
-    elif result is not None:
-      self.result += self._handle( visited, result )
-    return None  '''
-
+      # Expects all transforms to be handled
+    return self.transforms[visited.handle]( result, self.state)
+    
   def Handle( self, visited ):
     result = self.visit( visited.rule )
     
     if ParserFailed(result, self.lexer.success):
       return ParserFailed
     
-    return self._handle(visited, result)
+    return result
     
   def Not( self, visited ):
     result = self.visit( visited.rule )
@@ -56,16 +42,16 @@ class ParseVisitor(vis.Visitor):
     if not ParserFailed(result, self.lexer.success):
       return ParserFailed
     
-    return self._handle( visited, None )
+    return None
     
   def Optional( self, visited ):
     fork = self._fork()
     result = fork.visit( visited.rule )
     if ParserFailed(result, fork.lexer.success ):
-      return self._handle( visited, None )
+      return None
     
     self._join( fork )
-    return self._handle( visited, result )
+    return result
     
   def Alternative( self, visited ):    
     result = ParserFailed
@@ -75,7 +61,7 @@ class ParseVisitor(vis.Visitor):
       if not ParserFailed(result, fork.lexer.success):
         self._join( fork )
         break
-    result = self._handle(visited, result) if result is not ParserFailed else ParserFailed
+    
     return result
     
   def Sequence( self, visited ):
@@ -87,7 +73,7 @@ class ParseVisitor(vis.Visitor):
       if result is not None:
         sequence += result
     
-    return self._handle(visited, sequence)
+    return sequence
     
   def Repeat( self, visited ):
     sequence = []
@@ -97,7 +83,7 @@ class ParseVisitor(vis.Visitor):
       result = self.visit( visited.rule )
       if ParserFailed(result, self.lexer.success):
         self._join( tmp )
-        return self._handle(visited, sequence)
+        return sequence
       if result is not None:
         sequence += result 
       
@@ -109,7 +95,7 @@ class ParseVisitor(vis.Visitor):
     if ParserFailed(result, self.lexer.success):
       return ParserFailed
       # handle the result and return the result
-    return self._handle(visited, [result])
+    return [result]
   
   def TerminalString( self, visited ):
     return self.Terminal( visited )
@@ -119,10 +105,10 @@ class ParseVisitor(vis.Visitor):
     if ParserFailed( result, self.lexer.success ):
       return ParserFailed
     else:      
-      return self._handle( visited, None )
+      return None
     
   '''def Always( self, visited ):
-    return self._handle( visited, None)
+    return None
   
   def Never( self, visited ):
     return ParserFailed
@@ -138,7 +124,7 @@ class ParseVisitor(vis.Visitor):
     result = self.visit( visited.rule )
     if result is not ParserFailed:
       self.table[visited.name] = result
-    return self._handle( visited, None )
+    return None
     
   def Paste( self, visited ):
     if visited.name in self.table:

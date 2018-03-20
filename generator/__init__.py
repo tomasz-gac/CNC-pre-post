@@ -3,11 +3,13 @@ from generator.task   import Task
 from generator.task   import HandledTask
 from generator.task   import EitherTask
 from generator.lexer  import Lexer
-from generator.handlers import Pipe
+from generator.transforms import Sink
+from generator.transforms import Source
 
 from generator.rule import make
 from generator.rule import Rule
 from generator.rule import Parser
+from generator.rule import Transform
 from generator.rule import Handle
 from generator.rule import Not
 from generator.rule import Optional
@@ -20,6 +22,5 @@ from generator.rule import Ignore
 
 from generator.rule import lexerEmpty
 from generator.visitors.Failure import ParserFailed
-from generator.visitors.Failure import ParserState
 
 import generator.visitors

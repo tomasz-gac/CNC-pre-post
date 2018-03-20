@@ -26,7 +26,7 @@ class ReprVisitor(vis.Visitor):
   def Handle( self, rule ):
     return "<Handle {rule=\n"+rule.rule.accept(self)+"\n"+self._ident()+">"
 
-  def Handler( self, rule ):
+  def Transform( self, rule ):
     return "<Transform {handle="+str(rule.handle)+" rule=\n"+rule.rule.accept(self)+"\n"+self._ident()+">"
 
     

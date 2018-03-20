@@ -64,26 +64,20 @@ expression.rule = ( term & +( ExprHandler() & expression ) )["sink"]
 term.rule       = ( pow & +( TermHandler() & term ) )["sink"]
 pow.rule        = ( _primary & +( PowHandler() & pow ) )["sink"]
 
-'''expression.rule = ( term & [ ExpressionTokens , expression ] | term ).push()
-term.rule       = ( pow & [ TermTokens, term ] | pow ).push()
-pow.rule        = ( _primary & [ PowTokens, pow ] | _primary ).push()'''
-  
-sink, source = gen.Pipe()
-    
 handlers = {
   "number"     : toFloat,
-  "sink"       : sink,
-  "source"     : source
+  "sink"       : gen.Sink,
+  "source"     : gen.Source
 }
 
 l = gen.Lexer()
 
-Parse   = gen.Parser( expression, handlers, source )
-primary = gen.Parser( _primary, handlers, source )
-number  = gen.Parser( _number, { "number" : toFloat }, source )
+Parse   = gen.Parser( expression, handlers, gen.Source )
+primary = gen.Parser( _primary, handlers, gen.Source )
+number  = gen.Parser( _number, { "number" : toFloat }, gen.Source )
 
-# import time
-# start = time.time()
-# for i in range(1000):
-#   q = Parse(l, "1+2/3")
-# print( str(time.time() - start) )
+import time
+start = time.time()
+for i in range(1000):
+  q = Parse(l, "1^(2-3/4)^2/3")
+print( str(time.time() - start) )

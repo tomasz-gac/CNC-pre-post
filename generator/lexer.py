@@ -32,14 +32,10 @@ class Lexer:
   def join( self, fork ):
     self._input = fork._input
     self.success = fork.success
-    self.preprocess = fork.preprocess
-    self.transform = fork.transform
     
   def fork( self ):
-    frk = Lexer()
+    frk = Lexer( self.transform, self.preprocess)
     frk._input = self._input[:]
     frk.success = self.success
-    frk.preprocess = self.preprocess
-    frk.transform = self.transform
     return frk
     

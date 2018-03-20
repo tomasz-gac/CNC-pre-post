@@ -3,6 +3,3 @@ class ParserFailedType:
     return type(result) == ParserFailedType
 
 ParserFailed = ParserFailedType()
-
-class ParserState:
-  pass
