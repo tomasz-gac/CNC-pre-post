@@ -74,8 +74,6 @@ class Rule:
     self.handle = handle
     return self
     
-  
-
 def lexerEmpty( _, __, lexer ):
   return not lexer.hasInput()
 
@@ -94,22 +92,27 @@ def flatten( l ):
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Parser(Rule):
-  def __init__( self, rule, handlers = {}, defaultHandler = (lambda x,s : (x,s)) ):
+  def __init__( self, rule, handlers, onExit = (lambda r, s : (r,s))):
     self.rule = rule
     self.handlers = handlers
-    self.defaultHandler = defaultHandler
+    self.onExit = onExit
     super().__init__()
     
   def __call__( self, lexer, input = None ):
     if input is not None:
       lexer.set(input)
-    visitor = vis.ParseVisitor( lexer, self.handlers, self.defaultHandler )
+    visitor = vis.ParseVisitor( lexer, self.handlers )
     fallthrough = visitor.visit( self.rule )
-    '''if vis.ParserFailed( fallthrough, lexer.success ):
-      return vis.ParserFailed
-    if fallthrough is not None:
-      raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )'''
-    return fallthrough
+    return self.onExit(fallthrough, visitor.state)
+    
+@Visitable( vis.ReprVisitor, vis.ParseVisitor )
+class Handler(Rule):
+  def __init__( self, rule, handle = None ):
+    if handle is None:
+        self.handle = self
+    self.rule = rule
+    self.handle = handle
+    supe().__init__()
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Handle(Rule):
@@ -186,7 +189,7 @@ class Ignore(Rule):
   def __init__( self, rule ):
     self.rule = make(rule)
     super().__init__()
-  
+    
 '''
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Always(Rule):

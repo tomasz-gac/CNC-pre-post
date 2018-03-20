@@ -47,9 +47,9 @@ class AssignHandler:
     return cmd.SET
 
 def toFloat( token, state ):
-  return float( token.groups[0] ), state
+  return [ float( token[0].groups[0] )]
     
-expression  = gen.Handle()["source"]
+expression  = gen.Handle()
 term        = gen.Handle()
 pow         = gen.Handle()
 
@@ -67,47 +67,8 @@ pow.rule        = ( _primary & +( PowHandler() & pow ) )["sink"]
 '''expression.rule = ( term & [ ExpressionTokens , expression ] | term ).push()
 term.rule       = ( pow & [ TermTokens, term ] | pow ).push()
 pow.rule        = ( _primary & [ PowTokens, pow ] | _primary ).push()'''
-
-class Source:    
-  def __init__( self, sink ):
-    self._sink = sink
   
-  @property
-  def sink( self ):
-    return self._sink
-
-  def __call__( self, fallthrough, state ):
-    if gen.ParserFailed( fallthrough, True ):
-      return gen.ParserFailed
-    if fallthrough is not None:
-      raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )
-    # 
-    return self.sink.extract(state), state
-
-class Sink:
-  def __call__( self, result, state ):  
-    if gen.ParserFailed( result, True ):
-      return ParserFailed
-    elif result is not None:
-      try:
-        state[self] += result
-      except KeyError:
-        state[self] = result
-    return None, state
-    
-  def extract( self, state ):
-    result = state[self]
-    del state[self]
-    return result
-    
-  def clear( self, state ):
-    del state[self]
-
-def Pipe():
-  s = Sink()
-  return s, Source(s)
-  
-sink, source = Pipe()
+sink, source = gen.Pipe()
     
 handlers = {
   "number"     : toFloat,
@@ -117,6 +78,12 @@ handlers = {
 
 l = gen.Lexer()
 
-Parse   = gen.Parser( expression, handlers )
-primary = gen.Parser( _primary, handlers )
-number  = gen.Parser( _number["sink"], { _number : toFloat } )
+Parse   = gen.Parser( expression, handlers, source )
+primary = gen.Parser( _primary, handlers, source )
+number  = gen.Parser( _number, { "number" : toFloat }, source )
+
+# import time
+# start = time.time()
+# for i in range(1000):
+#   q = Parse(l, "1+2/3")
+# print( str(time.time() - start) )

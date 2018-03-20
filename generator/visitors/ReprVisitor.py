@@ -26,8 +26,8 @@ class ReprVisitor(vis.Visitor):
   def Handle( self, rule ):
     return "<Handle {rule=\n"+rule.rule.accept(self)+"\n"+self._ident()+">"
 
-  def Transform( self, rule ):
-    return "<Transform {function="+str(rule.function)+" rule=\n"+rule.rule.accept(self)+"\n"+self._ident()+">"
+  def Handler( self, rule ):
+    return "<Transform {handle="+str(rule.handle)+" rule=\n"+rule.rule.accept(self)+"\n"+self._ident()+">"
 
     
   def Not(self, rule):

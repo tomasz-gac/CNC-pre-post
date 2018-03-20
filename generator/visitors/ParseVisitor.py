@@ -2,30 +2,37 @@ import generator.visitor as vis
 from copy import copy, deepcopy
 from .Failure import ParserFailed, ParserState
 
+class ParserState:
+  pass
+
 class ParseVisitor(vis.Visitor):
-  def __init__( self, lexer, handlers, defaultHandler ):
+  def __init__( self, lexer, handlers ):
     self.handlers = handlers
-    self.defaultHandler = defaultHandler
     self.lexer = lexer
-    self.state = {}
+    self.state = ParserState()
   
   def _handle( self, rule, result ):
-    handled, self.state = self.handlers.get(rule.handle, self.defaultHandler)(result, self.state)
-    return handled
+    if rule.handle in self.handlers:
+      handled = self.handlers[rule.handle](result, self.state)
+      return handled
+    return result
     
     
   def _fork( self ):
-    frk = ParseVisitor( self.lexer.fork(), self.handlers, self.defaultHandler )
-    print( self.state )
-    frk.state = deepcopy( self.state )
+    frk = ParseVisitor( self.lexer.fork(), self.handlers )
+    frk.state = copy( self.state )
     return frk
   
   def _join( self, frk ):
     self.lexer.join( frk.lexer )
     self.state = frk.state
+    frk.state = {}
     
   def Parser( self, visited ):
     return self._handle( visited, visited( self.lexer ) )
+    
+  def Handler( self, visited ):
+    pass
     
   '''def Push( self, visited ):
     result = self.visit( visited.rule )
