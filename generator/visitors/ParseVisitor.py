@@ -16,12 +16,12 @@ class ParseVisitor(vis.Visitor):
     
   def _fork( self ):
     frk = ParseVisitor( self.lexer.fork(), self.handlers, self.defaultHandler )
-    frk.state = dict( self.state )
+    print( self.state )
+    frk.state = deepcopy( self.state )
     return frk
   
   def _join( self, frk ):
     self.lexer.join( frk.lexer )
-    print( self.state )
     self.state = frk.state
     
   def Parser( self, visited ):

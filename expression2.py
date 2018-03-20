@@ -53,8 +53,8 @@ expression  = gen.Handle()["source"]
 term        = gen.Handle()
 pow         = gen.Handle()
 
-_number           = gen.make('([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))')
-_int              = gen.make('(\\d+)')
+_number           = gen.make('([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))')["number"]
+_int              = gen.make('(\\d+)')["number"]
 variable          = 'Q' & (_int)["sink"] & ~( AssignHandler() & expression )
 subexpression     = gen.Ignore("[(]") & [ expression, gen.Ignore("[)]") ]
 
@@ -110,8 +110,7 @@ def Pipe():
 sink, source = Pipe()
     
 handlers = {
-  _number     : toFloat,
-  _int      : toFloat,
+  "number"     : toFloat,
   "sink"       : sink,
   "source"     : source
 }
