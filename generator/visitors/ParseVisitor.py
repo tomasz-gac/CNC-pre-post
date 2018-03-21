@@ -56,8 +56,8 @@ class ParseVisitor(vis.Visitor):
     
   def Alternative( self, visited ):    
     for rule in visited.options:
-      fork = self._fork()
       try:
+        fork = self._fork()
         result = fork.visit( rule )
         self._join( fork )
         return result
@@ -68,26 +68,32 @@ class ParseVisitor(vis.Visitor):
     
     
   def Sequence( self, visited ):
+    '''sequence = [ 
+      result for result in ( 
+        self.visit( rule ) for rule in visited.sequence 
+        ) if result is not None 
+      ]'''
     sequence = []
     for rule in visited.sequence:
       result = self.visit( rule )
       if result is not None:
         sequence += result
-    
+       
     return sequence
     
   def Repeat( self, visited ):
     sequence = []
-    while True:
-        #if visitation fails - return to state from before visitation
-      tmp = self._fork()
-      try:
+    tmp = None
+    try:
+      while True:
+          #if visitation fails - return to state from before visitation
+        tmp = self._fork()
         result = self.visit( visited.rule )
         if result is not None:
           sequence += result 
-      except ParserFailedException:
-        self._join( tmp )
-        return sequence      
+    except ParserFailedException:
+      self._join( tmp )
+      return sequence      
       
   def Terminal( self, visited):
     #get a result from lexer, see if lexing failed
@@ -104,27 +110,3 @@ class ParseVisitor(vis.Visitor):
   def Ignore( self, visited ):
     result = self.visit( visited.rule )
     return None
-   
-  '''def Always( self, visited ):
-    return None
-  
-  def Never( self, visited ):
-    return ParserFailed
-    
-        
-  def Copy( self, visited ):
-    result = self.visit( visited.rule )
-    if result is not ParserFailed:
-      self.table[visited.name] = result
-    return result
-    
-  def Cut( self, visited ):
-    result = self.visit( visited.rule )
-    if result is not ParserFailed:
-      self.table[visited.name] = result
-    return None
-    
-  def Paste( self, visited ):
-    if visited.name in self.table:
-      return self.table[ visited.name ]
-    return ParserFailed'''
