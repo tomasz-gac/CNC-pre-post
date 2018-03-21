@@ -2,16 +2,17 @@ import generator
 from enum import EnumMeta
 import generator.visitors as vis
 from generator.visitor import Visitor, Visitable
-import collections
+import copy
     
 def make( item ):
   if isinstance( item, Rule ):
     return item
-  if isinstance( item, str ):
+  '''if isinstance( item, str ):
     return TerminalString( item )
   if isinstance( item, EnumMeta ):
     return Terminal( generator.Task(item) )
-  return Terminal( generator.HandledTask(item) )
+  return Terminal( generator.HandledTask(item) )'''
+  return Terminal( item )
   
   # raise RuntimeError("Cannot use type " + type(item).__name__ + " in parser definition.")  
 
@@ -29,9 +30,6 @@ class Rule:
   # def handle( self, handle ):
     # self.__handle = handle
   
-  def accept( self, visitor ):
-    return visitor.visit( self )
-    
   def __or__( self, rhs ):
     if isinstance( rhs, list ):
       return Alternative( [self] + [ make(x) for x in rhs ] )
@@ -92,16 +90,17 @@ def flatten( l ):
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Parser(Rule):
-  def __init__( self, rule, handlers, onExit):
-    self.rule = rule
+  def __init__( self, rule, handlers, terminals, onExit):
+    self.rule = copy.deepcopy(rule)
     self.handlers = handlers
+    self.terminals = terminals
     self.onExit = onExit
     super().__init__()
     
   def __call__( self, lexer, input = None ):
     if input is not None:
       lexer.set(input)
-    visitor = vis.ParseVisitor( lexer, self.handlers )
+    visitor = vis.ParseVisitor( lexer, self.handlers, self.terminals )
     fallthrough = self.rule.ParseVisitor( visitor )
     return self.onExit(fallthrough, visitor.state)
   
@@ -141,7 +140,7 @@ class Alternative(Rule):
     self.options = options
     super().__init__()
     
-  '''def __or__( self, other ):
+  def __or__( self, other ):
     if isinstance(other, Alternative):
       return Alternative( self.options + other.options )
     return Alternative( self.options + [make(other)] )
@@ -149,7 +148,7 @@ class Alternative(Rule):
   def __ror__( self, other ):
     if isinstance(other, Alternative):
       return Alternative( other.options + self.options )
-    return Alternative( [make(other)] + self.options )'''
+    return Alternative( [make(other)] + self.options )
 
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Sequence(Rule):
@@ -163,6 +162,17 @@ class Sequence(Rule):
   def __rand__( self, other ):
     return Sequence( [make(other)] + self.sequence )'''
     
+  def __and__( self, other ):
+    if isinstance(other, Sequence):
+      return Sequence( self.sequence + other.sequence )
+    return Sequence( self.sequence + [make(other)] )
+  
+  def __rand__( self, other ):
+    if isinstance(other, Sequence):
+      return Sequence( other.sequence + self.sequence )
+    return Sequence( [make(other)] + self.sequence )
+
+    
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Repeat(Rule):
   def __init__( self, rule ):
@@ -171,16 +181,17 @@ class Repeat(Rule):
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Terminal(Rule):
-  def __init__( self, handled):
-    self.task = handled# generator.Task(  )
+  def __init__( self, handle ):
+    self.handle = self if handle is None else handle
+    # self.task = handled
     super().__init__()
     
 _empty = lambda arg : []
   
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
+'''@Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class TerminalString(Terminal):
   def __init__( self, regex):
-    super().__init__( generator.task.StringTask( regex ) )
+    super().__init__( generator.task.StringTask( regex ) )'''
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Ignore(Rule):
@@ -188,8 +199,7 @@ class Ignore(Rule):
     self.rule = make(rule)
     super().__init__()
     
-'''
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
+'''@Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Always(Rule):
   pass
   

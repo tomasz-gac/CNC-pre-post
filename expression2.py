@@ -5,11 +5,11 @@ from enum import Enum, unique
 import collections
 
 @unique
-class ExpressionTokens( Enum ):
+class ExpressionToken( Enum ):
   plus = '[+]'
   minus = '[-]'
 
-@gen.task.Handler( ExpressionTokens )
+@gen.task.Handler( ExpressionToken )
 class ExprHandler:
   def plus( self, task ):
     return cmd.ADD
@@ -17,11 +17,11 @@ class ExprHandler:
     return cmd.SUB
   
 @unique
-class TermTokens( Enum ):
+class TermToken( Enum ):
   mult = '[*]'
   div = '[/]'
 
-@gen.task.Handler( TermTokens )
+@gen.task.Handler( TermToken )
 class TermHandler:
   def mult( self, task ):
     return cmd.MUL
@@ -29,40 +29,40 @@ class TermHandler:
     return cmd.DIV
   
 @unique 
-class PowTokens( Enum ):
+class PowToken( Enum ):
   pow = '\\^'
 
-@gen.task.Handler( PowTokens )
+@gen.task.Handler( PowToken )
 class PowHandler:
   def pow( self, task ):
     return cmd.POW
   
 @unique 
-class AssignTokens( Enum ):
+class AssignToken( Enum ):
   assign = '[=]'
 
-@gen.task.Handler( AssignTokens )
+@gen.task.Handler( AssignToken )
 class AssignHandler:
   def assign( self, task ):
     return cmd.SET
 
 def toFloat( token, state ):
   return [ float( token[0].groups[0] )]
-    
+  
 expression  = gen.Handle()
 term        = gen.Handle()
 pow         = gen.Handle()
+# ([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))
+_number           = gen.make('number')["number"]
+_int              = gen.make('int')["number"]
+variable          = ( 'Q' & (_int)["sink"])['sink'] & ~( AssignToken & expression )
+subexpression     = "(" & expression & ")"
 
-_number           = gen.make('([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))')["number"]
-_int              = gen.make('(\\d+)')["number"]
-variable          = 'Q' & (_int)["sink"] & ~( AssignHandler() & expression )
-subexpression     = gen.Ignore("[(]") & [ expression, gen.Ignore("[)]") ]
+_primary = ( _number | variable | subexpression )["sink"]
 
-_primary = ( _number | [ variable, subexpression ] )["sink"]
-
-expression.rule = ( term & +( ExprHandler() & expression ) )["sink"]
-term.rule       = ( pow & +( TermHandler() & term ) )["sink"]
-pow.rule        = ( _primary & +( PowHandler() & pow ) )["sink"]
+expression.rule = ( term & +( ExpressionToken & expression ) )["sink"]
+term.rule       = ( pow & +( TermToken & term ) )["sink"]
+pow.rule        = ( _primary & +( PowToken & pow ) )["sink"]
 
 handlers = {
   "number"     : toFloat,
@@ -70,11 +70,23 @@ handlers = {
   "source"     : gen.Source
 }
 
+terminals = {
+  "number" : gen.StringTask( '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' ),
+  'int' : gen.StringTask( '(\\d.)' ),
+  'Q'   : gen.StringTask( 'Q' ),
+  AssignToken : gen.HandledTask(AssignHandler()),
+  '('   : gen.Ignore(gen.StringTask('[(]')),
+  ')'   : gen.Ignore(gen.StringTask('[)]')),
+  ExpressionToken : gen.HandledTask(ExprHandler()),
+  TermToken : gen.HandledTask(TermHandler()),
+  PowToken : gen.HandledTask(PowHandler())
+}
+
 l = gen.Lexer()
 
-Parse   = gen.Parser( expression, handlers, gen.Source )
-primary = gen.Parser( _primary, handlers, gen.Source )
-number  = gen.Parser( _number, { "number" : toFloat }, gen.Source )
+Parse   = gen.Parser( expression, handlers, terminals, gen.Source )
+primary = gen.Parser( _primary, handlers, terminals, gen.Source )
+number  = gen.Parser( _number, { "number" : toFloat }, terminals, gen.Source )
 
 import time
 start = time.time()

@@ -4,6 +4,7 @@ from generator import Task
 
   # breaks a line into tokens using a scanner
 class Lexer:
+  __slots__ = "_input", "preprocess", "transform", "success"
   def __init__( self, transform = lambda x : x, pp = lambda s : s.lstrip(' ') ):
     self._input = ''  # lexer input
     self.preprocess = pp
@@ -17,12 +18,9 @@ class Lexer:
     return bool(self._input)
   
   def get( self, task ):
-    self.success = True
-    if not self._input:
-      return None
-    
     result, rest = task( self._input )
     if rest is not None:
+      self.success = True
       self.set(rest)
       return self.transform(result)
     

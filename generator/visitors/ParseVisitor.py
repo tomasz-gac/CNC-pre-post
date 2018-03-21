@@ -3,13 +3,14 @@ from copy import copy, deepcopy
 from .Failure import ParserFailedException
 
 class ParseVisitor(vis.Visitor):
-  def __init__( self, lexer, transforms ):
+  def __init__( self, lexer, transforms, terminals ):
     self.transforms = transforms
+    self.terminals = terminals
     self.lexer = lexer
     self.state = [] # ParserState()
   
   def _fork( self ):
-    frk = ParseVisitor( self.lexer.fork(), self.transforms )
+    frk = ParseVisitor( self.lexer.fork(), self.transforms, self.terminals )
     frk.state = self.state[:]
     return frk
   
@@ -23,18 +24,29 @@ class ParseVisitor(vis.Visitor):
     
   def Transform( visited, self ):
     result = visited.rule.ParseVisitor( self )
+    try:
+      transformed = visited.transform( result, self.state)
+    except AttributeError:
+      visited.transform = self.transforms[visited.handle]
+      transformed = visited.transform( result, self.state)
+    return transformed
+    
     # if ParserFailed(result, self.lexer.success):
       # return ParserFailed
       # Expects all transforms to be handled
-    return self.transforms[visited.handle]( result, self.state)
+    
+    
+  def Terminal( visited, self ):
+    try:
+      result = self.lexer.get( visited.terminal )
+    except AttributeError:
+      visited.terminal = self.terminals[visited.handle]
+      result = self.lexer.get( visited.terminal )
+    
+    return [result] if result is not None else None
     
   def Handle( visited, self ):
-    result = visited.rule.ParseVisitor( self )
-    
-    # if ParserFailed(result, self.lexer.success):
-      # return ParserFailed
-    
-    return result
+    return visited.rule.ParseVisitor( self )
     
   def Not( visited, self ):
     try:
@@ -47,7 +59,7 @@ class ParseVisitor(vis.Visitor):
   def Optional( visited, self ):
     fork = self._fork()
     try:
-      result = visited.rule.ParserVisitor( fork )
+      result = visited.rule.ParseVisitor( fork )
     except ParserFailedException:
       return None
     
@@ -68,11 +80,7 @@ class ParseVisitor(vis.Visitor):
     
     
   def Sequence( visited, self ):
-    '''sequence = [ 
-      result for result in ( 
-        rule.ParseVisitor( self ) for rule in visited.sequence 
-        ) if result is not None 
-      ]'''
+    # return filter(None, [ rule.ParseVisitor( self ) for rule in visited.sequence ] )
     sequence = []
     for rule in visited.sequence:
       result = rule.ParseVisitor( self )
@@ -95,17 +103,10 @@ class ParseVisitor(vis.Visitor):
       self._join( tmp )
       return sequence      
       
-  def Terminal( visited, self ):
-    #get a result from lexer, see if lexing failed
-    result = self.lexer.get( visited.task )
-      #return if error or EOL
-    if result is None:
-      raise ParserFailedException()
     
-    return [result]
   
-  def TerminalString( visited, self ):
-    return ParseVisitor.Terminal( visited, self )
+  '''def TerminalString( visited, self ):
+    return ParseVisitor.Terminal( visited, self )'''
   
   def Ignore( visited, self ):
     result = visited.rule.ParseVisitor( self )

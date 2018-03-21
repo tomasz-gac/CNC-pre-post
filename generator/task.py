@@ -2,6 +2,7 @@ import re
 import itertools
 from enum import Enum, unique
 import copy
+import generator as gen
 
 def _doHandle( self, task ):
   return type(self)._dispatch[task.type]( self, task )
@@ -30,6 +31,7 @@ class Handler:
     return Handler
     
 class Task:
+  __slots__ = "_typeEnum", "groups", "type", "line", "match", "_re"
   def __init__( self, typeEnum ):
     self.setPattern( typeEnum )
 
@@ -40,33 +42,38 @@ class Task:
     self.type = None
       #set the regex lookup dict
     self._re = { taskType : re.compile(taskType.value) for taskType in self._typeEnum }
-    
+  
+    # no deep copying regexes. Members must be immutable
+  def __deepcopy__( self, memo ):
+    return copy.copy(self)
   
   def __call__( self, line ):
     self.line = line   
     self.type = None
-    self.groups = None
-    self.match = None
     
     # list comprehension code, remember to assign values with code from loop
     # slower for some reason
-    '''match, taskType = next(                         #first of:
-       ( (re, t) for (re, t) in                     # regex, token pair from:
-         zip( (r.match(line) for r in self._re), self._typeEnum) #(match line for each _re, typeEnum )
-           if re is not None                                     #add if matched
-       )
-     , (None, None) # default value
-     )'''
+    '''taskType, match = next( ( 
+      (taskType, match) for (taskType, match) in ( 
+        (t, r.match(line)) for (t, r) in self._re.items() 
+      ) if match is not None 
+    ), (None, None) )
+    
+    if match is not None:
+      self.match = match
+      self.type = taskType;
+      return self, self.match.string[self.match.end(0):]
+    return None, None'''
     
     for taskType, re in self._re.items():
       match = re.match(line)
       if match is not None:
         self.match = match.group()
         self.groups = match.groups()
-        self.type = taskType;
+        self.type = taskType
         return self, match.string[match.end(0):]
     
-    return None, None
+    raise gen.ParserFailedException()
     
   def __repr__( self ):
     return ( "<Task"

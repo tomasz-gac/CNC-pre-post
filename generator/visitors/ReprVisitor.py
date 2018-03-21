@@ -21,36 +21,36 @@ class ReprVisitor(vis.Visitor):
     return s
     
   def Parser( self, rule ):
-    return "<Parser\n" + rule.rule.accept(self)+"\n" + self._ident() + ">"
+    return "<Parser\n" + self.visit(rule.rule)+"\n" + self._ident() + ">"
   
   def Handle( self, rule ):
-    return "<Handle {rule=\n"+rule.rule.accept(self)+"\n"+self._ident()+">"
+    return "<Handle {rule=\n"+self.visit(rule.rule)+"\n"+self._ident()+">"
 
   def Transform( self, rule ):
-    return "<Transform {handle="+str(rule.handle)+" rule=\n"+rule.rule.accept(self)+"\n"+self._ident()+">"
+    return "<Transform {handle="+str(rule.handle)+" rule=\n"+self.visit(rule.rule)+"\n"+self._ident()+">"
 
     
   def Not(self, rule):
-    return "<Not {rule=\n" + rule.rule.accept(self) + self._ident() + ">"
+    return "<Not {rule=\n" + self.visit(rule.rule) + self._ident() + ">"
     
   def Optional(self, rule):
-    return "<Optional { rule=\n" + rule.rule.accept( self ) + "\n" + self._ident() + ">"
+    return "<Optional { rule=\n" + self.visit(rule.rule) + "\n" + self._ident() + ">"
     
   def Alternative( self, rule ):
     s = "<Alternative { options=\n"
-    s += "\n".join( ( option.accept( self ) for option in rule.options) )
+    s += "\n".join( ( self.visit(option) for option in rule.options) )
     return s + "\n" + self._ident() + ">"
 
   def Sequence( self, rule ):
     s = "<Sequence { sequence=\n"
-    s += "\n".join( ( item.accept( self ) for item in rule.sequence) )
+    s += "\n".join( ( self.visit(item) for item in rule.sequence) )
     return s + "\n" + self._ident() + ">"
     
   def Repeat( self, rule ):
-    return "<Repeat {rule =\n" + rule.rule.accept(self) + "\n" + self._ident() + ">"
+    return "<Repeat {rule =\n" + self.visit(rule.rule) + "\n" + self._ident() + ">"
     
   def Terminal( self, rule ):
-    return "<Terminal parser ("+str(rule.task._typeEnum)+")>"
+    return "<Terminal parser ("+str(rule.task)+")>"
 
   def TerminalString( self, rule ):
     return self.Terminal( rule )
@@ -62,16 +62,16 @@ class ReprVisitor(vis.Visitor):
     return "<Never>"
     
   def Ignore( self, rule ):
-    return "<Ignore { rule =\n" + rule.rule.accept(self) + "\n" + self._ident() + ">"
+    return "<Ignore { rule =\n" + self.visit(rule.rule) + "\n" + self._ident() + ">"
 
   def Push( self, rule ):
-    return "<Push, rule =\n" + rule.rule.accept(self) + "\n" + self._ident() + ">"
+    return "<Push, rule =\n" + self.visit(rule.rule) + "\n" + self._ident() + ">"
     
   def Copy( self, rule ):
-    return "<Copy, name =" + rule.name + ", rule =\n" + rule.rule.accept(self) + "\n" + self._ident() + ">"
+    return "<Copy, name =" + rule.name + ", rule =\n" + self.visit(rule.rule) + "\n" + self._ident() + ">"
 
   def Cut( self, rule ):
-    return "<Move, name =" + rule.name + ", rule =\n" + rule.rule.accept(self) + "\n" + self._ident() + ">"
+    return "<Move, name =" + rule.name + ", rule =\n" + self.visit(rule.rule) + "\n" + self._ident() + ">"
     
   def Paste( self, rule ):
-    return "<Paste, name =" + rule.name + ", rule =\n" + rule.rule.accept(self) + "\n" + self._ident() + ">"
+    return "<Paste, name =" + rule.name + ", rule =\n" + self.visit(rule.rule) + "\n" + self._ident() + ">"
