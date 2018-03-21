@@ -102,9 +102,9 @@ class Parser(Rule):
     if input is not None:
       lexer.set(input)
     visitor = vis.ParseVisitor( lexer, self.handlers )
-    fallthrough = visitor.visit( self.rule )
+    fallthrough = self.rule.ParseVisitor( visitor )
     return self.onExit(fallthrough, visitor.state)
-      
+  
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Transform(Rule):
@@ -114,13 +114,13 @@ class Transform(Rule):
     self.rule = rule
     self.handle = handle
     super().__init__()
-    
+  
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Handle(Rule):
   def __init__( self, rule = None ):
     self.rule = rule
     super().__init__()
-
+  
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )  
 class Not(Rule):
   def __init__( self, rule ):
@@ -134,13 +134,13 @@ class Not(Rule):
 class Optional(Rule):
   def __init__( self, rule ):
     self.rule = rule
-    
+
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Alternative(Rule):
   def __init__( self, options ):
     self.options = options
     super().__init__()
-  
+    
   '''def __or__( self, other ):
     if isinstance(other, Alternative):
       return Alternative( self.options + other.options )
@@ -174,7 +174,7 @@ class Terminal(Rule):
   def __init__( self, handled):
     self.task = handled# generator.Task(  )
     super().__init__()
-        
+    
 _empty = lambda arg : []
   
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
@@ -182,9 +182,6 @@ class TerminalString(Terminal):
   def __init__( self, regex):
     super().__init__( generator.task.StringTask( regex ) )
     
-
-
-  
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Ignore(Rule):
   def __init__( self, rule ):
