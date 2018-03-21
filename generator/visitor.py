@@ -17,10 +17,10 @@ def _visitor_dispatch( self, object, *args, **kwargs ):
   return type(self)._dispatch[ type(object) ]( self, object, *args, **kwargs )
         
 class Visitor:
-  def visit( self, object, *args, **kwargs ):
+  def visit( self, object, *args ):
     # name = getattr(object, "name") if hasattr(object, "name") else str(type(object) )
     # print( "visiting " + name )
-    result = type(self)._visitor_dispatch[ type(object) ]( self, object, *args, **kwargs )
+    result = type(self)._visitor_dispatch[ type(object) ]( self, object, *args )
     # print( "leaving " + name )
     return result
   
