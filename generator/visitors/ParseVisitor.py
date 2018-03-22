@@ -17,7 +17,6 @@ class ParseVisitor(vis.Visitor):
   def _join( self, frk ):
     self.lexer.join( frk.lexer )
     self.state = frk.state
-    frk.state = []
     
   def Parser( visited, self ):
     return visited( self.lexer )
@@ -28,21 +27,15 @@ class ParseVisitor(vis.Visitor):
       transformed = visited.transform( result, self.state)
     except AttributeError:
       visited.transform = self.transforms[visited.handle]
-      transformed = visited.transform( result, self.state)
-    return transformed
-    
-    # if ParserFailed(result, self.lexer.success):
-      # return ParserFailed
-      # Expects all transforms to be handled
-    
+      transformed = visited.transform( result, self.state)      
+    return transformed    
     
   def Terminal( visited, self ):
     try:
       result = self.lexer.get( visited.terminal )
     except AttributeError:
       visited.terminal = self.terminals[visited.handle]
-      result = self.lexer.get( visited.terminal )
-    
+      result = self.lexer.get( visited.terminal )    
     return [result] if result is not None else None
     
   def Handle( visited, self ):
@@ -67,20 +60,17 @@ class ParseVisitor(vis.Visitor):
     return result
     
   def Alternative( visited, self ):    
+    save = self._fork() # entry state
     for rule in visited.options:
       try:
-        fork = self._fork()
-        result = rule.ParseVisitor( fork )
-        self._join( fork )
-        return result
+        return rule.ParseVisitor( self )  # try visiting
       except ParserFailedException:
-        pass      
+        self._join( save )  # if failed - restore entry state
     
-    raise ParserFailedException()
+    raise ParserFailedException() # all options exhausted with no match
     
     
   def Sequence( visited, self ):
-    # return filter(None, [ rule.ParseVisitor( self ) for rule in visited.sequence ] )
     sequence = []
     for rule in visited.sequence:
       result = rule.ParseVisitor( self )
@@ -91,23 +81,13 @@ class ParseVisitor(vis.Visitor):
     
   def Repeat( visited, self ):
     sequence = []
-    tmp = None
+    save = None
     try:
       while True:
-          #if visitation fails - return to state from before visitation
-        tmp = self._fork()
+        save = self._fork() #save state from before visitation
         result = visited.rule.ParseVisitor( self )
         if result is not None:
           sequence += result 
     except ParserFailedException:
-      self._join( tmp )
+      self._join( save )  # repeat until failure. Discard failed state
       return sequence      
-      
-    
-  
-  '''def TerminalString( visited, self ):
-    return ParseVisitor.Terminal( visited, self )'''
-  
-  def Ignore( visited, self ):
-    result = visited.rule.ParseVisitor( self )
-    return None

@@ -50,7 +50,7 @@ class ReprVisitor(vis.Visitor):
     return "<Repeat {rule =\n" + self.visit(rule.rule) + "\n" + self._ident() + ">"
     
   def Terminal( self, rule ):
-    return "<Terminal parser ("+str(rule.task)+")>"
+    return "<Terminal parser ("+str(rule.handle)+")>"
 
   def TerminalString( self, rule ):
     return self.Terminal( rule )

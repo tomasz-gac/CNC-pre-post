@@ -1,6 +1,6 @@
 import re
 import itertools
-from enum import Enum, unique
+from enum import Enum, EnumMeta, unique
 import copy
 import generator as gen
 
@@ -23,14 +23,70 @@ class Handler:
     )
     if( len(self.tasks) != len(Handler._dispatch) ):
       raise Exception( "Not all task types handled by "+str(Handler) )
-      #set the handle method in Handler
-    # default handler
-    # Handler._dispatch[None] = Handler.default
+      #set the handling method in Handler
     Handler.__call__ = _doHandle
     Handler.handled = self.tasks
     return Handler
     
-class Task:
+class TerminalBase:
+  def ignore( self ):
+    return Ignore(self)
+    
+  def __rshift__( self, wrapper ):
+    return Wrapper( self, wrapper )
+    
+def make_terminal( t ):
+  if isinstance( t, TerminalBase ):
+    return t
+  if isinstance( t, EnumMeta ):
+    return gen.Task( t )
+  if isinstance( t, str ):
+    return gen.StringTask( t )
+  return gen.TaskHandler( t )
+  
+def make_terminals( terminals ):
+  return { key : make_terminal(value) for (key,value) in terminals.items() }
+
+class Ignore(TerminalBase):
+  def __init__( self, task ):
+    self.task = make_terminal(task)
+  def __call__( self, line ):
+    result, rest = self.task(line)
+    return None, rest
+    #override for unnecessary wrapping
+  def ignore( self ):
+    return self
+
+class Lookup(TerminalBase):
+  def __init__( self, terminal, table ):
+    self.terminal = make_terminal(terminal)
+    self.table = table
+    
+  def __call__( self, line ):
+    result, rest = self.terminal( line )
+      # table has to handle None
+    return self.table[ result.type ], rest
+
+def makeLookup( table ):
+  def impl( terminal ):
+    return Lookup( terminal, table )
+  return impl
+
+class Wrapper(TerminalBase):
+  def __init__( self, wrapped, wrapper ):
+    self.wrapped = wrapped
+    self.wrapper = wrapper
+    
+  def __call__( self, line ):
+    result, rest = self.wrapped( line )
+    return self.wrapper( result ), rest
+
+def group( number ):
+  def impl( token ):
+    return token.groups[number]
+  return impl
+  
+class Task(TerminalBase):
   __slots__ = "_typeEnum", "groups", "type", "line", "match", "_re"
   def __init__( self, typeEnum ):
     self.setPattern( typeEnum )
@@ -51,8 +107,7 @@ class Task:
     self.line = line   
     self.type = None
     
-    # list comprehension code, remember to assign values with code from loop
-    # slower for some reason
+    # list comprehension code,. Slower for some reason
     '''taskType, match = next( ( 
       (taskType, match) for (taskType, match) in ( 
         (t, r.match(line)) for (t, r) in self._re.items() 
@@ -81,20 +136,19 @@ class Task:
       + ((" groups: "+str(self.groups)) if self.groups else "")
       + ">" )
 
-class HandledTask(Task):
+    
+class TaskHandler(Task):
   def __init__( self, handler ):
     self.handler = handler
-    Task.__init__( self, handler.enum )
+    super().__init__( handler.enum )
     
   def __call__( self, line ):
     result, rest = Task.__call__( self, line )
-    if rest is not None:
-      return self.handler( result ), rest
-    return result, rest
+    return self.handler( result ), rest
       
 class EitherTask(Task):
   def __init__(self, enumTypes ):
-    Task.__init__( self, enumTypes )
+    super().__init__( enumTypes )
     
   def setPattern( self, typeEnums ):
       #clear state variables
@@ -107,7 +161,7 @@ class EitherTask(Task):
 
 class StringTask(Task):
   def __init__(self, rex ):
-    Task.__init__( self, rex )
+    super().__init__( rex )
     
   def setPattern( self, rex ):
       #clear state variables
@@ -116,4 +170,3 @@ class StringTask(Task):
     self.type = None
       #set the regex lookup list
     self._re = { None : re.compile(rex) }
-    

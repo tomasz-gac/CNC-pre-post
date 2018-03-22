@@ -1,5 +1,4 @@
 import generator
-from enum import EnumMeta
 import generator.visitors as vis
 from generator.visitor import Visitor, Visitable
 import copy
@@ -17,19 +16,7 @@ def make( item ):
   # raise RuntimeError("Cannot use type " + type(item).__name__ + " in parser definition.")  
 
 class Rule:
-  def __init__( self ):
-    pass
-    # self.__slots__ = "__handle"
-    # self.handle = self
-  
-  # @property
-  # def handle( self ):
-    # return self.__handle
-    
-  # @handle.setter
-  # def handle( self, handle ):
-    # self.__handle = handle
-  
+
   def __or__( self, rhs ):
     if isinstance( rhs, list ):
       return Alternative( [self] + [ make(x) for x in rhs ] )
@@ -69,7 +56,7 @@ class Rule:
   def __repr__( self ):
     return vis.ReprVisitor().visit(self)
     
-  def __getitem__( self, handle = None ):
+  def __getitem__( self, handle ):
     return Transform( self, handle )
     
 def lexerEmpty( _, __, lexer ):
@@ -90,19 +77,17 @@ def flatten( l ):
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Parser(Rule):
-  def __init__( self, rule, handlers, terminals, onExit):
+  def __init__( self, rule, transforms, terminals ):
     self.rule = copy.deepcopy(rule)
-    self.handlers = handlers
+    self.transforms = transforms
     self.terminals = terminals
-    self.onExit = onExit
     super().__init__()
     
   def __call__( self, lexer, input = None ):
     if input is not None:
       lexer.set(input)
-    visitor = vis.ParseVisitor( lexer, self.handlers, self.terminals )
-    fallthrough = self.rule.ParseVisitor( visitor )
-    return self.onExit(fallthrough, visitor.state)
+    visitor = vis.ParseVisitor( lexer, self.terminals, self.transforms )
+    return self.rule.ParseVisitor( visitor )
   
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
@@ -185,50 +170,3 @@ class Terminal(Rule):
     self.handle = self if handle is None else handle
     # self.task = handled
     super().__init__()
-    
-_empty = lambda arg : []
-  
-'''@Visitable( vis.ReprVisitor, vis.ParseVisitor )
-class TerminalString(Terminal):
-  def __init__( self, regex):
-    super().__init__( generator.task.StringTask( regex ) )'''
-    
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
-class Ignore(Rule):
-  def __init__( self, rule ):
-    self.rule = make(rule)
-    super().__init__()
-    
-'''@Visitable( vis.ReprVisitor, vis.ParseVisitor )
-class Always(Rule):
-  pass
-  
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
-class Never(Rule):
-  pass
-  
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
-class Push(Rule):
-  def __init__(self, rule):
-    self.rule = make(rule)
-    super().__init__()
-
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
-class Copy(Rule):
-  def __init__(self, name, rule):
-    self.name = name
-    self.rule = make(rule)
-    super().__init__()
-
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
-class Cut(Rule):
-  def __init__(self, name, rule):
-    self.name = name
-    self.rule = make(rule)
-    super().__init__()
-    
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
-class Paste(Rule):
-  def __init__(self, name):
-    self.name = name
-    super().__init__()'''
