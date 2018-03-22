@@ -1,27 +1,7 @@
-import generator as gen
-import CNC
 from CNC.language import Arithmetic as cmd
 from enum import Enum, unique
-import collections
-
-expression  = gen.Handle()
-term        = gen.Handle()
-pow         = gen.Handle()
-
-_int          = gen.make('int')
-variable      = ( 'Q' & _int['sink'])['sink'] & ~( '=' & expression )
-subexpression = "(" & expression & ")"
-
-_primary = ( 'number' | variable | subexpression )["sink"]
-
-expression.rule = ( term & +( '+-' & expression ) )["sink"]
-term.rule       = ( pow & +( '*/' & term ) )["sink"]
-pow.rule        = ( _primary & +( '^' & pow ) )["sink"]
-
-handlers = {
-  "sink"       : gen.Sink,
-  "source"     : gen.Source
-}
+import grammars.math as math
+import generator as gen
 
 @unique
 class ExpressionToken( Enum ):
@@ -47,13 +27,25 @@ tokenLookup = gen.makeLookup( {
   TermToken.mult        : cmd.MUL, 
   TermToken.div         : cmd.DIV, 
   PowToken.pow          : cmd.POW, 
-  AssignToken           : cmd.SET
+  AssignToken.assign    : cmd.LET
 } )
+
+handlers = {
+  "sink"       : gen.Sink,
+  "source"     : gen.Source
+}
+
+def p( x ):
+  def impl( ret ):
+    print(x)
+    return ret
+  return impl
 
 terminals = {
   'number'  : gen.make_terminal( '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' ) >> gen.group(0) >> float,
   'int'     : gen.make_terminal( '(\\d.)' ) >> gen.group(0) >> int,
-  'Q'       : gen.make_terminal( 'Q' ),
+  'setQ'    : gen.make_terminal( 'Q' ).ignore(cmd.SETQ),
+  'getQ'    : gen.make_terminal( 'Q' ).ignore(cmd.GETQ),
   '='       : tokenLookup( AssignToken ),
   '('       : gen.StringTask('[(]').ignore(),
   ')'       : gen.StringTask('[)]').ignore(),
@@ -64,12 +56,6 @@ terminals = {
 
 l = gen.Lexer()
 
-Parse   = gen.Parser( expression['source'], terminals, handlers )
-primary = gen.Parser( _primary['source'], terminals, handlers )
-number  = gen.Parser( gen.make('number') , handlers, terminals )
-
-import time
-start = time.time()
-for i in range(1000):
-  q = Parse(l, "1^(2-3/4)^2/3")
-print( str(time.time() - start) )
+Parse   = gen.Parser( math.expression['source'], terminals, handlers )
+primary = gen.Parser( math._primary['source'], terminals, handlers )
+number  = gen.Parser( gen.make('number'), terminals, handlers )

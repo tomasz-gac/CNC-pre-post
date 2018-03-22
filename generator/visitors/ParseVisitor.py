@@ -3,14 +3,14 @@ from copy import copy, deepcopy
 from .Failure import ParserFailedException
 
 class ParseVisitor(vis.Visitor):
-  def __init__( self, lexer, transforms, terminals ):
+  def __init__( self, lexer, terminals, transforms ):
     self.transforms = transforms
     self.terminals = terminals
     self.lexer = lexer
     self.state = [] # ParserState()
   
   def _fork( self ):
-    frk = ParseVisitor( self.lexer.fork(), self.transforms, self.terminals )
+    frk = ParseVisitor( self.lexer.fork(), self.terminals, self.transforms )
     frk.state = self.state[:]
     return frk
   
@@ -24,18 +24,24 @@ class ParseVisitor(vis.Visitor):
   def Transform( visited, self ):
     result = visited.rule.ParseVisitor( self )
     try:
-      transformed = visited.transform( result, self.state)
+      transformed = visited.transform( result, self.state )
     except AttributeError:
-      visited.transform = self.transforms[visited.handle]
-      transformed = visited.transform( result, self.state)      
-    return transformed    
+      try:
+        visited.transform = self.transforms[visited.handle]
+        transformed = visited.transform( result, self.state)      
+      except KeyError:
+        raise RuntimeError('Parser does not handle transform '+str(visited.handle))
+    return transformed
     
   def Terminal( visited, self ):
     try:
       result = self.lexer.get( visited.terminal )
     except AttributeError:
-      visited.terminal = self.terminals[visited.handle]
-      result = self.lexer.get( visited.terminal )    
+      try:
+        visited.terminal = self.terminals[visited.handle]
+        result = self.lexer.get( visited.terminal )
+      except KeyError:
+        raise RuntimeError('Parser does not handle terminal '+str(visited.handle))
     return [result] if result is not None else None
     
   def Handle( visited, self ):
@@ -60,12 +66,12 @@ class ParseVisitor(vis.Visitor):
     return result
     
   def Alternative( visited, self ):    
-    save = self._fork() # entry state
     for rule in visited.options:
+      fork = self._fork() # entry state
       try:
         return rule.ParseVisitor( self )  # try visiting
       except ParserFailedException:
-        self._join( save )  # if failed - restore entry state
+        self._join(fork)        
     
     raise ParserFailedException() # all options exhausted with no match
     

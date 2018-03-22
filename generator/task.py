@@ -29,8 +29,8 @@ class Handler:
     return Handler
     
 class TerminalBase:
-  def ignore( self ):
-    return Ignore(self)
+  def ignore( self, returned = None ):
+    return Ignore( self, returned )
     
   def __rshift__( self, wrapper ):
     return Wrapper( self, wrapper )
@@ -48,11 +48,12 @@ def make_terminals( terminals ):
   return { key : make_terminal(value) for (key,value) in terminals.items() }
 
 class Ignore(TerminalBase):
-  def __init__( self, task ):
+  def __init__( self, task, returned = None ):
     self.task = make_terminal(task)
+    self.returned = returned
   def __call__( self, line ):
     result, rest = self.task(line)
-    return None, rest
+    return self.returned, rest
     #override for unnecessary wrapping
   def ignore( self ):
     return self

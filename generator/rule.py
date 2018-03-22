@@ -77,8 +77,8 @@ def flatten( l ):
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Parser(Rule):
-  def __init__( self, rule, transforms, terminals ):
-    self.rule = copy.deepcopy(rule)
+  def __init__( self, rule, terminals, transforms ):
+    self.rule = rule
     self.transforms = transforms
     self.terminals = terminals
     super().__init__()
@@ -87,6 +87,7 @@ class Parser(Rule):
     if input is not None:
       lexer.set(input)
     visitor = vis.ParseVisitor( lexer, self.terminals, self.transforms )
+    self.state = visitor.state
     return self.rule.ParseVisitor( visitor )
   
     
