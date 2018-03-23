@@ -3,23 +3,35 @@ from copy import copy, deepcopy
 from .Failure import ParserFailedException
 
 class ParseVisitor(vis.Visitor):
-  def __init__( self, lexer, terminals, transforms ):
+  def __init__( self, terminals, transforms, preprocess ):
     self.transforms = transforms
     self.terminals = terminals
-    self.lexer = lexer
+    # self.lexer = lexer
     self.state = [] # ParserState()
+    
+    self._input = ''  # lexer input
+    self.preprocess = preprocess
   
   def _fork( self ):
-    frk = ParseVisitor( self.lexer.fork(), self.terminals, self.transforms )
+    frk = ParseVisitor( self.terminals, self.transforms, self.preprocess )
     frk.state = self.state[:]
+    frk._input = self._input[:]
     return frk
   
   def _join( self, frk ):
-    self.lexer.join( frk.lexer )
+    # self.lexer.join( frk.lexer )
     self.state = frk.state
+    self._input = frk._input
+    
+
+  def set( self, line ):
+    self._input = self.preprocess( line )
+    
     
   def Parser( visited, self ):
-    return visited( self.lexer )
+    result = visited( self._input )
+    self.set( visited.rest )
+    return result
     
   def Transform( visited, self ):
     result = visited.rule.ParseVisitor( self )
@@ -34,14 +46,23 @@ class ParseVisitor(vis.Visitor):
     return transformed
     
   def Terminal( visited, self ):
+    terminal = None
     try:
-      result = self.lexer.get( visited.terminal )
+      terminal = visited.terminal      
     except AttributeError:
       try:
         visited.terminal = self.terminals[visited.handle]
-        result = self.lexer.get( visited.terminal )
+        terminal = visited.terminal
       except KeyError:
         raise RuntimeError('Parser does not handle terminal '+str(visited.handle))
+    
+    result, rest = terminal( self._input )
+    if rest is not None:
+      self.success = True
+      self.set(rest)
+    else:
+      self.success = False
+    
     return [result] if result is not None else None
     
   def Handle( visited, self ):

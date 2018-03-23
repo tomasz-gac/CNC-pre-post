@@ -77,18 +77,19 @@ def flatten( l ):
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Parser(Rule):
-  def __init__( self, rule, terminals, transforms ):
+  def __init__( self, rule, terminals, transforms, preprocess = lambda s : s.lstrip(' ')  ):
     self.rule = rule
     self.transforms = transforms
     self.terminals = terminals
+    self.preprocess = preprocess
     super().__init__()
     
-  def __call__( self, lexer, input = None ):
-    if input is not None:
-      lexer.set(input)
-    visitor = vis.ParseVisitor( lexer, self.terminals, self.transforms )
-    self.state = visitor.state
-    return self.rule.ParseVisitor( visitor )
+  def __call__( self, input ):
+    visitor = vis.ParseVisitor( self.terminals, self.transforms, self.preprocess )
+    visitor.set(input)
+    result = self.rule.ParseVisitor( visitor )
+    self.rest = visitor._input
+    return result
   
     
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )

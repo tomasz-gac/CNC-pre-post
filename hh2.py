@@ -102,5 +102,5 @@ def mp( grammar ):
 import time
 start = time.time()
 for i in range(100000):
-  q = Parse(l, 'L X+50 Y-30 Z+150 R0 FMAX' )
+  q = Parse('L X+50 Y-30 Z+150 R0 FMAX' )
 print( time.time() - start )
