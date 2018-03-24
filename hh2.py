@@ -8,6 +8,8 @@ import expression2 as expr
 import grammars.heidenhain as hh
 from enum import Enum, unique
 
+from copy import deepcopy
+
 @unique
 class GOTOtokens(Enum):
   linear    = "L(P)?"
@@ -98,8 +100,25 @@ terminals = t.make({
   'expression'        : expr.Parse
 })
 
-Parse = gen.Parser( hh.heidenhain, terminals, handlers )
+class Once:
+  def __init__( self, cmp ):
+    self.cmp = cmp
+    self.visited = []
+    self.i = 0
+    
+  def __call__( self, visited ):
+    if visited in self.visited:
+      return
+    '''self.i += 1
+    print( self.i )'''
+    self.visited.append( visited )
+    self.cmp(visited)
+    visited.visit_children( self )
 
+    
+Parse = gen.Parser( hh.heidenhain, terminals, gen.ReorderInjector() )
+
+      
 def bench( n = 1000 ):
   import time
   start = time.time()
@@ -107,7 +126,7 @@ def bench( n = 1000 ):
   for i in range(n):
     q = Parse('L X+50 Y-30 Z+150 R0 FMAX' )
   print( time.time() - start )
-  # print(q[0])
-  # print(q[1])
+  print(q[0])
+  print(q[1])
   
 # bench()

@@ -1,4 +1,4 @@
-from generator.visitors.ParseVisitor  import Parser
+from generator.terminal       import Parser
 from generator.terminal       import Handler
 from generator.terminal       import Task
 from generator.terminal       import TaskHandler
@@ -8,11 +8,13 @@ from generator.terminal       import make_lookup
 from generator.terminal       import group
 from generator.terminal       import get
 
+from generator.visitors.ParseVisitor  import ReorderInjector
+from generator.visitors.ParseVisitor  import InorderInjector
+
 from generator.transform import Sink
 from generator.transform import Source
 
 from generator.rule import Rule
-from generator.rule import Transform
 from generator.rule import Handle
 from generator.rule import Not
 from generator.rule import Optional

@@ -3,125 +3,140 @@ from copy import copy, deepcopy
 from .Failure import ParserFailedException
 from generator.terminal import TerminalBase
 
-# This visitor has reversed order of parameters in handling functions
-# because we directly call the bounce-back method of Visitable
-# This way we avoid call to Visitor's visit method and gain performance
+# Injector class injects accept method to type
+# accept method implementation is yanked from method with name
+# corresponding to injected type name
 
-class Parser(TerminalBase):
-  __slots__ = 'rule', 'transforms', 'terminals', 'state', '__input', 'preprocess'
-  def __init__( self, rule, terminals, transforms, preprocess = lambda s : s.lstrip(' ')  ):
-    self.rule = rule
-    self.transforms = transforms
-    self.terminals  = terminals
-    self.preprocess = preprocess
+class Injector:
+  def __init__( self ):
+    self.injected = []
+  def __call__( self, injected ):
+    if injected in self.injected:
+      return
+    else:
+      self.injected.append( injected )
     
-    self.state = []
-    self.__input = None
-    
+    name = type(injected).__name__
+    myname = type(self).__name__    
+    if not hasattr( type(injected), 'accept' ):
+      if hasattr( type(self), name ):
+        method = getattr( type(self), name )
+        setattr( injected, 'accept', method )
+      else:
+        raise RuntimeError("Class " + myname + " does not support visitation of type " + name )
+    injected.visit_children( self )
+
+class ParseInjector( Injector ):
+  __slots__ = 'transforms', 'terminals'
+  def __init__( self ):
     super().__init__()
   
-  def __call__( self, input ):
-    self.input = input
-    self.state = []
-    result = self.rule.Parser( self )
-    return result, self.input
-  
-  def _fork( self ):
-    frk = Parser( self.rule, self.terminals, self.transforms, self.preprocess )
-    frk.state = self.state[:]
-    frk.__input = self.__input[:]
-    return frk
-  
-  def _join( self, frk ):
-    self.state = frk.state
-    self.__input = frk.__input
-    
-  @property
-  def input( self ):
-    return self.__input
-    
-  @input.setter
-  def input( self, line ):
-    self.__input = self.preprocess( line )
-    
-  def Terminal( visited, self ):
+  def Terminal( injected, parser ):
     try:
-      terminal = visited.terminal      
+      terminal = injected.terminal      
     except AttributeError:
       try:
-        visited.terminal = self.terminals[visited.handle]
-        terminal = visited.terminal
+        injected.terminal = parser.terminals[injected.handle]
+        terminal = injected.terminal
       except KeyError:
-        raise RuntimeError('Parser does not handle terminal '+str(visited.handle))
+        raise RuntimeError('Parser does not handle terminal '+str(injected.handle))
     
-    result, rest = terminal( self.input )
+    result, rest = terminal( parser.input )
     if rest is not None:
-      self.input = rest
+      parser.input = rest
     
     return result
   
-  def Transform( visited, self ):
-    result = visited.rule.Parser( self )
+  '''def Transform( injected, parser ):
+    result = injected.rule.ParseInjector( parser )
     try:
-      transformed = visited.transform( result, self )
+      transformed = injected.transform( result, parser )
     except AttributeError:
       try:
-        visited.transform = self.transforms[visited.handle]
-        transformed = visited.transform( result, self )      
+        injected.transform = parser.injector.transforms[injected.handle]
+        transformed = injected.transform( result, parser )      
       except KeyError:
-        raise RuntimeError('Parser does not handle transform '+str(visited.handle))
-    return transformed
+        raise RuntimeError('Parser does not handle transform '+str(injected.handle))
+    return transformed'''
     
-  def Handle( visited, self ):
-    return visited.rule.Parser( self )
+  def Handle( injected, parser ):
+    return injected.rule.accept( injected.rule, parser )
     
-  def Not( visited, self ):
+  def Not( injected, parser ):
     try:
-      result = visited.rule.Parser( self )
+      result = injected.rule.accept( injected.rule, parser )
     except ParserFailedException:
       return None
     
     raise ParserFailedException()
     
-  def Optional( visited, self ):
-    fork = self._fork()
+  def Optional( injected, parser ):
+    fork = parser._fork()
     try:
-      result = visited.rule.Parser( fork )
+      result = injected.rule.accept( injected.rule, fork )
     except ParserFailedException:
       return None
     
-    self._join( fork )
+    parser._join( fork )
     return result
     
-  def Alternative( visited, self ):    
-    for rule in visited.options:
-      fork = self._fork() # entry state
+  def Alternative( injected, parser ):    
+    for rule in injected.rules:
+      fork = parser._fork() # entry state
       try:
-        return rule.Parser( self )  # try visiting
+        return rule.accept( rule, parser )  # try visiting
       except ParserFailedException:
-        self._join(fork)        
+        parser._join(fork)        
     
     raise ParserFailedException() # all options exhausted with no match
     
     
-  def Sequence( visited, self ):
+  def Sequence( injected, parser ):
     sequence = []
-    for rule in visited.sequence:
-      result = rule.Parser( self )
+    for rule in injected.rules:
+      result = rule.accept( rule, parser )
       if result is not None:
         sequence += result
        
     return sequence
     
-  def Repeat( visited, self ):
+  def Repeat( injected, parser ):
     sequence = []
     save = None
     try:
       while True:
-        save = self._fork() #save state from before visitation
-        result = visited.rule.Parser( self )
+        save = parser._fork() #save state from before visitation
+        result = injected.rule.accept( injected.rule, parser )
         if result is not None:
           sequence += result 
     except ParserFailedException:
-      self._join( save )  # repeat until failure. Discard failed state
-      return sequence      
+      parser._join( save )  # repeat until failure. Discard failed state
+      return sequence
+      
+class ReorderInjector( ParseInjector ):
+  def __init__( self ):
+    super().__init__( )
+    
+  def Push( injected, parser ):
+    result = injected.rule.accept( injected.rule, parser )
+    if result is not None:
+      parser.state += result
+    return None
+  
+  def Pull( injected, parser ):
+    result = injected.rule.accept( injected.rule, parser )
+    if isinstance( result, list ) and len(result) == 0:
+      return parser.state
+    if result is not None:
+      raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )
+    return parser.state
+  
+class InorderInjector( ParseInjector ):
+  def __init__( self ):
+    super().__init__( )
+    
+  def Push( injected, parser ):
+    return injected.rule.accept( injected.rule, parser )
+  
+  def Pull( injected, parser ):
+    return injected.rule.accept( injected.rule, parser )

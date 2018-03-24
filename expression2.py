@@ -56,6 +56,8 @@ terminals = {
   '^'       : tokenLookup( PowToken )
 }
 
-Parse   = gen.Parser( math.expression['source'], terminals, handlers )
-primary = gen.Parser( math._primary['source'], terminals, handlers )
-number  = gen.Parser( r.make('number'), terminals, handlers )
+inj = gen.ReorderInjector()
+
+Parse   = gen.Parser( math.expression.pull(), terminals, inj )
+primary = gen.Parser( math._primary.pull(), terminals, inj )
+number  = gen.Parser( r.make('number'), terminals, inj )

@@ -5,13 +5,13 @@ expression  = r.Handle()
 term        = r.Handle()
 pow         = r.Handle()
 
-_int          = r.make('int')['sink']
-getQ          = ( 'getQ' & _int)['sink'] 
-setQ          = ( 'setQ' & _int)['sink'] & '=' & expression
+_int          = r.make('int').push()
+getQ          = ( 'getQ' & _int).push()
+setQ          = ( 'setQ' & _int).push() & '=' & expression
 subexpression = "(" & expression & ")"
 
-_primary = ( 'number' | setQ | getQ | subexpression )["sink"]
+_primary = ( 'number' | setQ | getQ | subexpression ).push()
 
-expression.rule = ( term & +( '+-' & expression ) )["sink"]
-term.rule       = ( pow & +( '*/' & term ) )["sink"]
-pow.rule        = ( _primary & +( '^' & pow ) )["sink"]
+expression.rule = ( term & +( '+-' & expression ) ).push()
+term.rule       = ( pow & +( '*/' & term ) ).push()
+pow.rule        = ( _primary & +( '^' & pow ) ).push()

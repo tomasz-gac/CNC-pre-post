@@ -1,6 +1,6 @@
 import re
 from enum import Enum, EnumMeta, unique
-from copy import copy
+from copy import copy, deepcopy
 import generator as gen
     
 class TerminalBase:
@@ -20,6 +20,51 @@ def make( t ):
   if isinstance( t, dict ):
     return { key : make(value) for (key,value) in t.items() }
   return gen.TaskHandler( t )
+
+class Parser(TerminalBase):
+  __slots__ = 'rule', 'state', '__input', 'injector', 'preprocess'
+  def __init__( self, rule, terminals, injector, preprocess = lambda s : s.lstrip(' ') ):
+    self.rule = deepcopy( rule )
+    self.injector = injector
+    self.preprocess = preprocess
+    self.terminals = terminals
+    
+    self.state = []
+    self.__input = None
+    
+    injector( self.rule )
+  
+  def __call__( self, input ):
+    self.input = input
+    self.state = []
+    result = self.rule.accept( self.rule, self )
+    return result, self.input
+  
+    #reimplementation of __init__ without injection and deepcopying
+  def _fork( self ):
+    frk = Parser.__new__(Parser)
+    
+    frk.rule = self.rule
+    frk.injector = self.injector
+    frk.preprocess = self.preprocess
+    frk.terminals = self.terminals
+    
+    frk.state = self.state[:]
+    frk.__input = self.__input[:]
+    return frk
+  
+  def _join( self, frk ):
+    self.state = frk.state
+    self.__input = frk.__input
+    
+  @property
+  def input( self ):
+    return self.__input
+    
+  @input.setter
+  def input( self, line ):
+    self.__input = self.preprocess( line )
+
   
 class Ignore(TerminalBase):
   def __init__( self, task, returned = None ):
@@ -28,7 +73,6 @@ class Ignore(TerminalBase):
   def __call__( self, line ):
     result, rest = self.task(line)
     return self.returned, rest
-    #override for unnecessary wrapping
 
 class Wrapper(TerminalBase):
   def __init__( self, wrapped, wrapper ):
