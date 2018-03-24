@@ -98,7 +98,7 @@ terminals = t.make({
   'expression'        : expr.Parse
 })
 
-Parse = t.Parser( hh.heidenhain, terminals, handlers )
+Parse = gen.Parser( hh.heidenhain, terminals, handlers )
 
 def bench( n = 1000 ):
   import time
@@ -107,7 +107,7 @@ def bench( n = 1000 ):
   for i in range(n):
     q = Parse('L X+50 Y-30 Z+150 R0 FMAX' )
   print( time.time() - start )
-  print(q[0])
-  print(q[1])
+  # print(q[0])
+  # print(q[1])
   
-bench()
+# bench()

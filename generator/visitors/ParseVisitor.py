@@ -1,28 +1,38 @@
 import generator.visitor as vis
 from copy import copy, deepcopy
 from .Failure import ParserFailedException
+from generator.terminal import TerminalBase
 
 # This visitor has reversed order of parameters in handling functions
 # because we directly call the bounce-back method of Visitable
 # This way we avoid call to Visitor's visit method and gain performance
 
-class ParseVisitor(vis.Visitor):
-  __slots__ = 'transforms', 'terminals', 'state', '__input', 'preprocess'
-  def __init__( self, terminals, transforms, preprocess ):
+class Parser(TerminalBase):
+  __slots__ = 'rule', 'transforms', 'terminals', 'state', '__input', 'preprocess'
+  def __init__( self, rule, terminals, transforms, preprocess = lambda s : s.lstrip(' ')  ):
+    self.rule = rule
     self.transforms = transforms
-    self.terminals = terminals
-    self.state = []     
-    self.__input = None
+    self.terminals  = terminals
     self.preprocess = preprocess
+    
+    self.state = []
+    self.__input = None
+    
+    super().__init__()
+  
+  def __call__( self, input ):
+    self.input = input
+    self.state = []
+    result = self.rule.Parser( self )
+    return result, self.input
   
   def _fork( self ):
-    frk = ParseVisitor( self.terminals, self.transforms, self.preprocess )
+    frk = Parser( self.rule, self.terminals, self.transforms, self.preprocess )
     frk.state = self.state[:]
     frk.__input = self.__input[:]
     return frk
   
   def _join( self, frk ):
-    # self.lexer.join( frk.lexer )
     self.state = frk.state
     self.__input = frk.__input
     
@@ -34,20 +44,7 @@ class ParseVisitor(vis.Visitor):
   def input( self, line ):
     self.__input = self.preprocess( line )
     
-  def Transform( visited, self ):
-    result = visited.rule.ParseVisitor( self )
-    try:
-      transformed = visited.transform( result, self.state )
-    except AttributeError:
-      try:
-        visited.transform = self.transforms[visited.handle]
-        transformed = visited.transform( result, self.state)      
-      except KeyError:
-        raise RuntimeError('Parser does not handle transform '+str(visited.handle))
-    return transformed #, self.state
-    
   def Terminal( visited, self ):
-    # terminal = self.terminals[visited.handle] # None
     try:
       terminal = visited.terminal      
     except AttributeError:
@@ -61,14 +58,26 @@ class ParseVisitor(vis.Visitor):
     if rest is not None:
       self.input = rest
     
-    return result#  if result is not None else None
+    return result
+  
+  def Transform( visited, self ):
+    result = visited.rule.Parser( self )
+    try:
+      transformed = visited.transform( result, self )
+    except AttributeError:
+      try:
+        visited.transform = self.transforms[visited.handle]
+        transformed = visited.transform( result, self )      
+      except KeyError:
+        raise RuntimeError('Parser does not handle transform '+str(visited.handle))
+    return transformed
     
   def Handle( visited, self ):
-    return visited.rule.ParseVisitor( self )
+    return visited.rule.Parser( self )
     
   def Not( visited, self ):
     try:
-      result = visited.rule.ParseVisitor( self )
+      result = visited.rule.Parser( self )
     except ParserFailedException:
       return None
     
@@ -77,7 +86,7 @@ class ParseVisitor(vis.Visitor):
   def Optional( visited, self ):
     fork = self._fork()
     try:
-      result = visited.rule.ParseVisitor( fork )
+      result = visited.rule.Parser( fork )
     except ParserFailedException:
       return None
     
@@ -88,7 +97,7 @@ class ParseVisitor(vis.Visitor):
     for rule in visited.options:
       fork = self._fork() # entry state
       try:
-        return rule.ParseVisitor( self )  # try visiting
+        return rule.Parser( self )  # try visiting
       except ParserFailedException:
         self._join(fork)        
     
@@ -98,7 +107,7 @@ class ParseVisitor(vis.Visitor):
   def Sequence( visited, self ):
     sequence = []
     for rule in visited.sequence:
-      result = rule.ParseVisitor( self )
+      result = rule.Parser( self )
       if result is not None:
         sequence += result
        
@@ -110,7 +119,7 @@ class ParseVisitor(vis.Visitor):
     try:
       while True:
         save = self._fork() #save state from before visitation
-        result = visited.rule.ParseVisitor( self )
+        result = visited.rule.Parser( self )
         if result is not None:
           sequence += result 
     except ParserFailedException:

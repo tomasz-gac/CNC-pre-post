@@ -6,17 +6,11 @@ import copy
 def make( item ):
   if isinstance( item, Rule ):
     return item
-  '''if isinstance( item, str ):
-    return TerminalString( item )
-  if isinstance( item, EnumMeta ):
-    return Terminal( generator.Task(item) )
-  return Terminal( generator.HandledTask(item) )'''
   return Terminal( item )
   
   # raise RuntimeError("Cannot use type " + type(item).__name__ + " in parser definition.")  
 
 class Rule:
-
   def __or__( self, rhs ):
     if isinstance( rhs, list ):
       return Alternative( [self] + [ make(x) for x in rhs ] )
@@ -58,25 +52,8 @@ class Rule:
     
   def __getitem__( self, handle ):
     return Transform( self, handle )
-    
-'''@Visitable( vis.ReprVisitor, vis.ParseVisitor )
-class Parser(Rule):
-  __slots__ = 'rule', 'transforms', 'terminals', 'preprocess', '__input'
-  def __init__( self, rule, terminals, transforms, preprocess = lambda s : s.lstrip(' ')  ):
-    self.rule = copy.deepcopy(rule)
-    self.transforms = transforms
-    self.terminals  = terminals
-    self.preprocess = preprocess
-    super().__init__()
-    
-  def __call__( self, input ):
-    visitor = vis.ParseVisitor( self.terminals, self.transforms, self.preprocess )
-    visitor.set(input)
-    result = self.rule.ParseVisitor( visitor )
-    self.input = visitor.input
-    return result'''
-  
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
+      
+@Visitable( vis.ReprVisitor, vis.Parser )
 class Transform(Rule):
   def __init__( self, rule, handle = None ):
     if handle is None:
@@ -85,13 +62,13 @@ class Transform(Rule):
     self.handle = handle
     super().__init__()
   
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
+@Visitable( vis.ReprVisitor, vis.Parser )
 class Handle(Rule):
   def __init__( self, rule = None ):
     self.rule = rule
     super().__init__()
   
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )  
+@Visitable( vis.ReprVisitor, vis.Parser )  
 class Not(Rule):
   def __init__( self, rule ):
     self.rule = rule
@@ -100,12 +77,12 @@ class Not(Rule):
   def __neg__( self ):
     return self.rule
     
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
+@Visitable( vis.ReprVisitor, vis.Parser )
 class Optional(Rule):
   def __init__( self, rule ):
     self.rule = rule
 
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
+@Visitable( vis.ReprVisitor, vis.Parser )
 class Alternative(Rule):
   def __init__( self, options ):
     self.options = options
@@ -121,7 +98,7 @@ class Alternative(Rule):
       return Alternative( other.options + self.options )
     return Alternative( [make(other)] + self.options )
 
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
+@Visitable( vis.ReprVisitor, vis.Parser )
 class Sequence(Rule):
   def __init__( self, sequence ):
     self.sequence = sequence
@@ -144,13 +121,13 @@ class Sequence(Rule):
     return Sequence( [make(other)] + self.sequence )
 
     
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
+@Visitable( vis.ReprVisitor, vis.Parser )
 class Repeat(Rule):
   def __init__( self, rule ):
     self.rule = rule
     super().__init__()
     
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
+@Visitable( vis.ReprVisitor, vis.Parser )
 class Terminal(Rule):
   def __init__( self, handle ):
     self.handle = self if handle is None else handle

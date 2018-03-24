@@ -1,4 +1,4 @@
-from generator.terminal       import Parser
+from generator.visitors.ParseVisitor  import Parser
 from generator.terminal       import Handler
 from generator.terminal       import Task
 from generator.terminal       import TaskHandler

@@ -1,8 +1,7 @@
 import re
 from enum import Enum, EnumMeta, unique
-import copy
+from copy import copy
 import generator as gen
-import generator.visitors.ParseVisitor as ParseVisitor
     
 class TerminalBase:
   def ignore( self, returned = None ):
@@ -21,22 +20,6 @@ def make( t ):
   if isinstance( t, dict ):
     return { key : make(value) for (key,value) in t.items() }
   return gen.TaskHandler( t )
-
-class Parser(TerminalBase):
-  __slots__ = 'rule', 'transforms', 'terminals', 'preprocess'
-  def __init__( self, rule, terminals, transforms, preprocess = lambda s : s.lstrip(' ')  ):
-    self.rule = copy.deepcopy(rule)
-    self.transforms = transforms
-    self.terminals  = terminals
-    self.preprocess = preprocess
-    super().__init__()
-    
-  def __call__( self, input ):
-    visitor = ParseVisitor( self.terminals, self.transforms, self.preprocess )
-    visitor.input = input
-    result = self.rule.ParseVisitor( visitor )
-    return result, visitor.input
-
   
 class Ignore(TerminalBase):
   def __init__( self, task, returned = None ):
@@ -83,7 +66,7 @@ class Task(TerminalBase):
   
     # no deep copying regexes. Members must be immutable
   def __deepcopy__( self, memo ):
-    return copy.copy(self)
+    return copy(self)
   
   def __call__( self, line ):
     self.line = line   
