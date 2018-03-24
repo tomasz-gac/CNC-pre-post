@@ -2,36 +2,37 @@ import generator.visitor as vis
 from copy import copy, deepcopy
 from .Failure import ParserFailedException
 
+# This visitor has reversed order of parameters in handling functions
+# because we directly call the bounce-back method of Visitable
+# This way we avoid call to Visitor's visit method and gain performance
+
 class ParseVisitor(vis.Visitor):
+  __slots__ = 'transforms', 'terminals', 'state', '__input', 'preprocess'
   def __init__( self, terminals, transforms, preprocess ):
     self.transforms = transforms
     self.terminals = terminals
-    # self.lexer = lexer
-    self.state = [] # ParserState()
-    
-    self._input = ''  # lexer input
+    self.state = []     
+    self.__input = None
     self.preprocess = preprocess
   
   def _fork( self ):
     frk = ParseVisitor( self.terminals, self.transforms, self.preprocess )
     frk.state = self.state[:]
-    frk._input = self._input[:]
+    frk.__input = self.__input[:]
     return frk
   
   def _join( self, frk ):
     # self.lexer.join( frk.lexer )
     self.state = frk.state
-    self._input = frk._input
+    self.__input = frk.__input
     
-
-  def set( self, line ):
-    self._input = self.preprocess( line )
+  @property
+  def input( self ):
+    return self.__input
     
-    
-  def Parser( visited, self ):
-    result = visited( self._input )
-    self.set( visited.rest )
-    return result
+  @input.setter
+  def input( self, line ):
+    self.__input = self.preprocess( line )
     
   def Transform( visited, self ):
     result = visited.rule.ParseVisitor( self )
@@ -43,10 +44,10 @@ class ParseVisitor(vis.Visitor):
         transformed = visited.transform( result, self.state)      
       except KeyError:
         raise RuntimeError('Parser does not handle transform '+str(visited.handle))
-    return transformed
+    return transformed #, self.state
     
   def Terminal( visited, self ):
-    terminal = None
+    # terminal = self.terminals[visited.handle] # None
     try:
       terminal = visited.terminal      
     except AttributeError:
@@ -56,14 +57,11 @@ class ParseVisitor(vis.Visitor):
       except KeyError:
         raise RuntimeError('Parser does not handle terminal '+str(visited.handle))
     
-    result, rest = terminal( self._input )
+    result, rest = terminal( self.input )
     if rest is not None:
-      self.success = True
-      self.set(rest)
-    else:
-      self.success = False
+      self.input = rest
     
-    return [result] if result is not None else None
+    return result#  if result is not None else None
     
   def Handle( visited, self ):
     return visited.rule.ParseVisitor( self )

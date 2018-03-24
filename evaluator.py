@@ -60,4 +60,3 @@ class Evaluator:
     return stack[0]
     
 ev = Evaluator()
-l = gen.Lexer()

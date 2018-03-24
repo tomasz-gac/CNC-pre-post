@@ -59,28 +59,13 @@ class Rule:
   def __getitem__( self, handle ):
     return Transform( self, handle )
     
-def lexerEmpty( _, __, lexer ):
-  return not lexer.hasInput()
-
-def _flatten(l):
-  for el in l:
-    if isinstance(el, collections.Iterable) and not isinstance(el, (str, bytes, dict, set)):
-      yield from flatten(el)
-    else:
-      yield el
-
-def flatten( l ):
-  if isinstance(l, collections.Iterable) and not isinstance( l, (dict, set) ):
-    return _flatten(l)
-  else:
-    return l
-    
-@Visitable( vis.ReprVisitor, vis.ParseVisitor )
+'''@Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Parser(Rule):
+  __slots__ = 'rule', 'transforms', 'terminals', 'preprocess', '__input'
   def __init__( self, rule, terminals, transforms, preprocess = lambda s : s.lstrip(' ')  ):
-    self.rule = rule
+    self.rule = copy.deepcopy(rule)
     self.transforms = transforms
-    self.terminals = terminals
+    self.terminals  = terminals
     self.preprocess = preprocess
     super().__init__()
     
@@ -88,10 +73,9 @@ class Parser(Rule):
     visitor = vis.ParseVisitor( self.terminals, self.transforms, self.preprocess )
     visitor.set(input)
     result = self.rule.ParseVisitor( visitor )
-    self.rest = visitor._input
-    return result
+    self.input = visitor.input
+    return result'''
   
-    
 @Visitable( vis.ReprVisitor, vis.ParseVisitor )
 class Transform(Rule):
   def __init__( self, rule, handle = None ):

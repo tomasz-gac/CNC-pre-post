@@ -1,10 +1,11 @@
 import generator as gen
+import generator.rule as r
 
-expression  = gen.Handle()
-term        = gen.Handle()
-pow         = gen.Handle()
+expression  = r.Handle()
+term        = r.Handle()
+pow         = r.Handle()
 
-_int          = gen.make('int')['sink']
+_int          = r.make('int')['sink']
 getQ          = ( 'getQ' & _int)['sink'] 
 setQ          = ( 'setQ' & _int)['sink'] & '=' & expression
 subexpression = "(" & expression & ")"

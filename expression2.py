@@ -2,6 +2,8 @@ from CNC.language import Arithmetic as cmd
 from enum import Enum, unique
 import grammars.math as math
 import generator as gen
+import generator.terminal as t
+import generator.rule as r
 
 @unique
 class ExpressionToken( Enum ):
@@ -21,13 +23,13 @@ class PowToken( Enum ):
 class AssignToken( Enum ):
   assign = '[=]'
   
-tokenLookup = gen.makeLookup( { 
-  ExpressionToken.plus  : cmd.ADD, 
-  ExpressionToken.minus : cmd.SUB, 
-  TermToken.mult        : cmd.MUL, 
-  TermToken.div         : cmd.DIV, 
-  PowToken.pow          : cmd.POW, 
-  AssignToken.assign    : cmd.LET
+tokenLookup = t.make_lookup( { 
+  ExpressionToken.plus  : [ cmd.ADD ], 
+  ExpressionToken.minus : [ cmd.SUB ], 
+  TermToken.mult        : [ cmd.MUL ], 
+  TermToken.div         : [ cmd.DIV ], 
+  PowToken.pow          : [ cmd.POW ], 
+  AssignToken.assign    : [ cmd.LET ]
 } )
 
 handlers = {
@@ -42,20 +44,18 @@ def p( x ):
   return impl
 
 terminals = {
-  'number'  : gen.make_terminal( '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' ) >> gen.group(0) >> float,
-  'int'     : gen.make_terminal( '(\\d.)' ) >> gen.group(0) >> int,
-  'setQ'    : gen.make_terminal( 'Q' ).ignore(cmd.SETQ),
-  'getQ'    : gen.make_terminal( 'Q' ).ignore(cmd.GETQ),
+  'number'  : t.make( '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' ) >> gen.group(float),
+  'int'     : t.make( '(\\d.)' ) >> gen.group(int),
+  'setQ'    : t.make( 'Q' ).ignore(cmd.SETQ),
+  'getQ'    : t.make( 'Q' ).ignore(cmd.GETQ),
   '='       : tokenLookup( AssignToken ),
-  '('       : gen.StringTask('[(]').ignore(),
-  ')'       : gen.StringTask('[)]').ignore(),
+  '('       : t.make('[(]').ignore(),
+  ')'       : t.make('[)]').ignore(),
   '+-'      : tokenLookup( ExpressionToken ),
   '*/'      : tokenLookup( TermToken ),
   '^'       : tokenLookup( PowToken )
 }
 
-l = gen.Lexer()
-
 Parse   = gen.Parser( math.expression['source'], terminals, handlers )
 primary = gen.Parser( math._primary['source'], terminals, handlers )
-number  = gen.Parser( gen.make('number'), terminals, handlers )
+number  = gen.Parser( r.make('number'), terminals, handlers )
