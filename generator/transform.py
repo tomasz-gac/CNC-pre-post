@@ -6,11 +6,11 @@ def Sink( result, parser ):
   return None
 
 def Source( fallthrough, parser ):
-  result, parser.state = parser.state, []
+  # result, parser.state = parser.state, []
   if isinstance( fallthrough, list ) and len(fallthrough) == 0:
-    return result
+    return parser.state
   if fallthrough is not None:
     raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )
-  return result
+  return parser.state
 
     
