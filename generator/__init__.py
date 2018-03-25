@@ -17,7 +17,3 @@ from generator.terminal   import Ignore
 from generator.terminal   import make_lookup
 from generator.terminal   import group
 from generator.terminal   import get
-
-from generator.injector   import ReorderInjector
-from generator.injector   import InorderInjector
-

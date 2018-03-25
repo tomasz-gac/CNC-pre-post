@@ -1,6 +1,6 @@
 import generator.terminal as t
 import generator.rule     as r
-import generator.injector as inj
+import generator.compile  as c
 
 from CNC.language import Registers as reg
 import CNC.language as CNC
@@ -96,7 +96,8 @@ terminals = t.make({
   'expression'        : expr.Parse
 })
 
-Parse = t.Parser( hh.heidenhain, terminals, inj.ReorderInjector() )
+compiler = c.Reordering( terminals )
+Parse = t.Parser( c.compile( hh.heidenhain, compiler ) )
 
       
 def bench( n = 1000 ):

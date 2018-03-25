@@ -25,12 +25,10 @@ class ParserFailedException( Exception ):
   
 class Parser(TerminalBase):
   __slots__ = 'rule', 'state', '__input', 'injector', 'preprocess'
-  def __init__( self, rule, terminals, injector, preprocess = lambda s : s.lstrip(' ') ):
-    self.rule = injector( deepcopy( rule ) )
-    
+  def __init__( self, rule, preprocess = lambda s : s.lstrip(' ') ):
+    self.rule       = rule
     self.preprocess = preprocess
-    self.terminals = terminals
-    
+
     self.state = []
     self.__input = None
   
@@ -43,12 +41,9 @@ class Parser(TerminalBase):
     # reimplementation of __init__ without injection and deepcopying
     # One can call _fork only on initialized objects
   def _fork( self ):
-    frk = Parser.__new__(Parser)
-    
+    frk = Parser.__new__(Parser)    
     frk.rule = self.rule
-    frk.preprocess = self.preprocess
-    frk.terminals = self.terminals
-    
+    frk.preprocess = self.preprocess    
     frk.state = self.state[:]
     frk.__input = self.__input[:]
     return frk
@@ -92,7 +87,7 @@ def get( descriptor ):
   def impl( token ):
     return [ descriptor.__get__( token[0] ) ]
   return impl
-  
+
   # Class accepting an Enum with values treated as regex
   # __call__ accepts a string and fills the Task.match and type of matched Enum
 class Task(TerminalBase):
@@ -103,6 +98,7 @@ class Task(TerminalBase):
   def setPattern( self, typeEnum ):
       #clear state variables
     self._typeEnum = typeEnum
+    self.match = None
     self.groups = None
     self.type = None
       #set the regex lookup dict

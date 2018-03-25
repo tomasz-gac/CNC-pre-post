@@ -3,7 +3,7 @@ from enum         import Enum, unique
 import grammars.math      as math
 import generator.terminal as t
 import generator.rule     as r
-import generator.injector as inj
+import generator.compile  as c
 
 @unique
 class ExpressionToken( Enum ):
@@ -46,8 +46,8 @@ terminals = {
   '^'       : tokenLookup( PowToken )
 }
 
-inj = inj.ReorderInjector()
+compiler = c.Reordering( terminals )
 
-Parse   = t.Parser( math.expression.pull(), terminals, inj )
-primary = t.Parser( math.primary.pull(), terminals, inj )
-number  = t.Parser( r.make('number'), terminals, inj )
+Parse   = t.Parser( c.compile( math.expression.pull(), compiler ) )
+primary = t.Parser( c.compile( math.primary.pull(), compiler ) )
+number  = t.Parser( c.compile( r.make('number'), compiler ) )
