@@ -1,10 +1,8 @@
-import generator.visitor as vis
-from copy import copy, deepcopy
-from .Failure import ParserFailedException
 from generator.terminal import TerminalBase
+from generator.terminal import ParserFailedException
 
-# Injector class injects accept method to type
-# accept method implementation is yanked from method with name
+# Injector class injects accept method to a given type
+# Accept method implementation is yanked from method with name
 # corresponding to injected type name
 
 class Injector:
@@ -25,6 +23,7 @@ class Injector:
       else:
         raise RuntimeError("Class " + myname + " does not support visitation of type " + name )
     injected.visit_children( self )
+    return injected
 
 class ParseInjector( Injector ):
   __slots__ = 'transforms', 'terminals'

@@ -1,13 +1,14 @@
-import generator as gen
 import generator.terminal as t
-import generator.rule as r
+import generator.rule     as r
+import generator.injector as inj
 
 from CNC.language import Registers as reg
 import CNC.language as CNC
-import expression2 as expr
-import grammars.heidenhain as hh
-from enum import Enum, unique
 
+import expression2          as expr
+import grammars.heidenhain  as hh
+
+from enum import Enum, unique
 from copy import deepcopy
 
 @unique
@@ -72,11 +73,6 @@ directionLookup = t.make_lookup( {
 , Direction.CCW : [ CNC.Direction.CCW,  reg.DIRECTION ]
 } )
 
-handlers = {
-  "sink"       : gen.Sink,
-  "source"     : gen.Source
-}
-
 terminals = t.make({
   'coord'             : t.make( CoordinateTokens ) >> handleCoord,
   'F'                 : t.make('F').ignore( [ reg.FEED ] ),
@@ -100,23 +96,7 @@ terminals = t.make({
   'expression'        : expr.Parse
 })
 
-class Once:
-  def __init__( self, cmp ):
-    self.cmp = cmp
-    self.visited = []
-    self.i = 0
-    
-  def __call__( self, visited ):
-    if visited in self.visited:
-      return
-    '''self.i += 1
-    print( self.i )'''
-    self.visited.append( visited )
-    self.cmp(visited)
-    visited.visit_children( self )
-
-    
-Parse = gen.Parser( hh.heidenhain, terminals, gen.ReorderInjector() )
+Parse = t.Parser( hh.heidenhain, terminals, inj.ReorderInjector() )
 
       
 def bench( n = 1000 ):
@@ -129,4 +109,4 @@ def bench( n = 1000 ):
   print(q[0])
   print(q[1])
   
-# bench()
+bench()

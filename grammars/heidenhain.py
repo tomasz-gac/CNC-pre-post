@@ -1,4 +1,3 @@
-import generator as gen
 import generator.rule as r
 
 coordinate = ('coord' & r.make('primary').push()).push()

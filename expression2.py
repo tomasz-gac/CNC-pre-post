@@ -1,9 +1,9 @@
 from CNC.language import Arithmetic as cmd
-from enum import Enum, unique
-import grammars.math as math
-import generator as gen
+from enum         import Enum, unique
+import grammars.math      as math
 import generator.terminal as t
-import generator.rule as r
+import generator.rule     as r
+import generator.injector as inj
 
 @unique
 class ExpressionToken( Enum ):
@@ -32,20 +32,10 @@ tokenLookup = t.make_lookup( {
   AssignToken.assign    : [ cmd.LET ]
 } )
 
-handlers = {
-  "sink"       : gen.Sink,
-  "source"     : gen.Source
-}
-
-def p( x ):
-  def impl( ret ):
-    print(x)
-    return ret
-  return impl
 
 terminals = {
-  'number'  : t.make( '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' ) >> gen.group(float),
-  'int'     : t.make( '(\\d.)' ) >> gen.group(int),
+  'number'  : t.make( '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' ) >> t.group(float),
+  'int'     : t.make( '(\\d.)' ) >> t.group(int),
   'setQ'    : t.make( 'Q' ).ignore(cmd.SETQ),
   'getQ'    : t.make( 'Q' ).ignore(cmd.GETQ),
   '='       : tokenLookup( AssignToken ),
@@ -56,8 +46,8 @@ terminals = {
   '^'       : tokenLookup( PowToken )
 }
 
-inj = gen.ReorderInjector()
+inj = inj.ReorderInjector()
 
-Parse   = gen.Parser( math.expression.pull(), terminals, inj )
-primary = gen.Parser( math._primary.pull(), terminals, inj )
-number  = gen.Parser( r.make('number'), terminals, inj )
+Parse   = t.Parser( math.expression.pull(), terminals, inj )
+primary = t.Parser( math._primary.pull(), terminals, inj )
+number  = t.Parser( r.make('number'), terminals, inj )

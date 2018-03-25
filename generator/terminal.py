@@ -1,7 +1,6 @@
 import re
-from enum import Enum, EnumMeta, unique
+from enum import EnumMeta
 from copy import copy, deepcopy
-import generator as gen
     
 class TerminalBase:
   def ignore( self, returned = None ):
@@ -14,25 +13,28 @@ def make( t ):
   if isinstance( t, TerminalBase ):
     return t
   if isinstance( t, EnumMeta ):
-    return gen.Task( t )
+    return Task( t )
   if isinstance( t, str ):
-    return gen.StringTask( t )
+    return StringTask( t )
   if isinstance( t, dict ):
     return { key : make(value) for (key,value) in t.items() }
-  return gen.TaskHandler( t )
+  return TaskHandler( t )
 
+class ParserFailedException( Exception ):
+  pass
+  
 class Parser(TerminalBase):
   __slots__ = 'rule', 'state', '__input', 'injector', 'preprocess'
   def __init__( self, rule, terminals, injector, preprocess = lambda s : s.lstrip(' ') ):
-    self.rule = deepcopy( rule )
-    self.injector = injector
+    self.rule = injector( deepcopy( rule ) )
+    
     self.preprocess = preprocess
     self.terminals = terminals
     
     self.state = []
     self.__input = None
     
-    injector( self.rule )
+    
   
   def __call__( self, input ):
     self.input = input
@@ -40,12 +42,12 @@ class Parser(TerminalBase):
     result = self.rule.accept( self.rule, self )
     return result, self.input
   
-    #reimplementation of __init__ without injection and deepcopying
+    # reimplementation of __init__ without injection and deepcopying
+    # One can call _fork only on initialized objects
   def _fork( self ):
     frk = Parser.__new__(Parser)
     
     frk.rule = self.rule
-    frk.injector = self.injector
     frk.preprocess = self.preprocess
     frk.terminals = self.terminals
     
@@ -124,7 +126,7 @@ class Task(TerminalBase):
         self.type = taskType
         return [ self ], match.string[match.end(0):]
     
-    raise gen.ParserFailedException()
+    raise ParserFailedException()
     
   def __repr__( self ):
     return ( "<Task"
@@ -133,6 +135,8 @@ class Task(TerminalBase):
       # + ((" groups: "+str(self.groups)) if self.groups else "")
       + ">" )
 
+  # Class that maps terminals to pre-defined lookup values
+  # Requires terminal to return a list with a single value
 class Lookup(TerminalBase):
   def __init__( self, terminal, table ):
     self.terminal = make(terminal)
