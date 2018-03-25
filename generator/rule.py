@@ -1,5 +1,4 @@
 from generator.ReprVisitor import ReprVisitor
-from generator.visitor import Visitor, Visitable
 import copy
     
 def make( item ):
@@ -58,10 +57,8 @@ class Rule:
   def __len__( self ):
     raise NotImplementedException()
   
-  def print_tree( self ):
-   print (ReprVisitor().visit(self))
-    
-  
+  def __str__( self ):
+   return self.__repr__() + (ReprVisitor().visit(self, True))
       
 class Unary(Rule):
   def __init__(self, rule):

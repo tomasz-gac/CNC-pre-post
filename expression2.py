@@ -49,5 +49,5 @@ terminals = {
 inj = inj.ReorderInjector()
 
 Parse   = t.Parser( math.expression.pull(), terminals, inj )
-primary = t.Parser( math._primary.pull(), terminals, inj )
+primary = t.Parser( math.primary.pull(), terminals, inj )
 number  = t.Parser( r.make('number'), terminals, inj )
