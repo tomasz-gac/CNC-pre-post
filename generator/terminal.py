@@ -33,8 +33,6 @@ class Parser(TerminalBase):
     
     self.state = []
     self.__input = None
-    
-    
   
   def __call__( self, input ):
     self.input = input

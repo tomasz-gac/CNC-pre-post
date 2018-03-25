@@ -1,5 +1,6 @@
 from generator.terminal import TerminalBase
 from generator.terminal import ParserFailedException
+from generator.RecursionGuard import RecursionGuard      
 
 # Injector class injects accept method to a given type
 # Accept method implementation is yanked from method with name
@@ -7,12 +8,10 @@ from generator.terminal import ParserFailedException
 
 class Injector:
   def __init__( self ):
-    self.injected = []
+    self.visited = RecursionGuard()
   def __call__( self, injected ):
-    if injected in self.injected:
+    if self.visited( injected ):
       return
-    else:
-      self.injected.append( injected )
     
     name = type(injected).__name__
     myname = type(self).__name__    
@@ -22,7 +21,8 @@ class Injector:
         setattr( injected, 'accept', method )
       else:
         raise RuntimeError("Class " + myname + " does not support visitation of type " + name )
-    injected.visit_children( self )
+    for child in injected:
+      self( child )
     return injected
 
 class ParseInjector( Injector ):

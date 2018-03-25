@@ -1,5 +1,4 @@
-import generator
-import generator.visitors as vis
+from generator.ReprVisitor import ReprVisitor
 from generator.visitor import Visitor, Visitable
 import copy
     
@@ -47,45 +46,56 @@ class Rule:
   def __invert__(self):
     return Optional( self )
   
-  # def __repr__( self ):
-  #  return vis.ReprVisitor().visit(self)
-    
-  # def __getitem__( self, handle ):
-  #  return Transform( self, handle )
-    
   def push( self ):
     return Push(self)
     
   def pull( self ):
     return Pull(self)
+    
+  def __iter__( self ):
+    raise NotImplementedException()
+    
+  def __len__( self ):
+    raise NotImplementedException()
+  
+  def print_tree( self ):
+   print (ReprVisitor().visit(self))
+    
+  
       
 class Unary(Rule):
   def __init__(self, rule):
     self.rule = rule
     super().__init__()
       
-  def visit_children( self, visitor ):    
-    visitor( self.rule )
+  def __iter__( self ):    
+    return iter( [ self.rule ] )
+    
+  def __len__( self ):
+    return 1
   
 class Nary(Rule):
   def __init__(self, rules ):
     self.rules = rules
     super().__init__()
     
-  def visit_children( self, visitor ):    
-    for rule in self.rules:
-      visitor( rule )
+  def __iter__( self ):    
+    return iter( self.rules )
   
-@Visitable( vis.ReprVisitor )
+  def __len__( self ):
+    return len(self.rules)
+  
 class Terminal(Rule):
   def __init__( self, handle ):
-    self.handle = self if handle is None else handle
+    self.handle = handle
     super().__init__()
     
-  def visit_children( self, visitor ):
-    pass
+  def __iter__( self ):
+    return iter(())
   
-'''@Visitable( vis.ReprVisitor )
+  def __len__( self ):
+    return 0
+'''
 class Transform(Unary):
   def __init__( self, rule, handle = None ):
     if handle is None:
@@ -93,12 +103,10 @@ class Transform(Unary):
     self.handle = handle
     super().__init__(rule)'''
   
-@Visitable( vis.ReprVisitor )
 class Handle(Unary):
   def __init__( self, rule = None ):
     super().__init__(rule)
   
-@Visitable( vis.ReprVisitor )  
 class Not(Rule):
   def __init__( self, rule ):
     super().__init__(rule)
@@ -106,12 +114,10 @@ class Not(Rule):
   def __neg__( self ):
     return self.rule
     
-@Visitable( vis.ReprVisitor )
 class Optional(Unary):
   def __init__( self, rule ):
     super().__init__(rule)
 
-@Visitable( vis.ReprVisitor )
 class Alternative(Nary):
   def __init__( self, rules ):
     super().__init__(rules)
@@ -126,7 +132,6 @@ class Alternative(Nary):
       return Alternative( other.rules + self.rules )
     return Alternative( [make(other)] + self.rules )
 
-@Visitable( vis.ReprVisitor )
 class Sequence(Nary):
   def __init__( self, rules ):
     super().__init__( rules )
@@ -141,8 +146,6 @@ class Sequence(Nary):
       return Sequence( other.rules + self.rules )
     return Sequence( [make(other)] + self.rules )
 
-    
-@Visitable( vis.ReprVisitor )
 class Repeat(Unary):
   def __init__( self, rule ):
     super().__init__(rule)
