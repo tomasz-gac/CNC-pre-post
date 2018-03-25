@@ -46,21 +46,21 @@ class RuleCompilerBase:
     except KeyError:
       raise RuntimeError('Parser does not handle terminal '+str(target.handle)) 
     
-    def accept( targetSelf, parser ):
-      result, parser.input = targetSelf.terminal( parser.input )
+    def accept( targetSelf, state ):
+      result, state.input = targetSelf.terminal( state.input )
       return result
     
     return accept
     
   def Handle( self, target ):
-    def accept( targetSelf, parser ):
-      return targetSelf.rule.accept( targetSelf.rule, parser )
+    def accept( targetSelf, state ):
+      return targetSelf.rule.accept( targetSelf.rule, state )
     return accept
     
   def Not( self, target ):
-    def accept( targetSelf, parser ):
+    def accept( targetSelf, state ):
       try:
-        result = targetSelf.rule.accept( targetSelf.rule, parser )
+        result = targetSelf.rule.accept( targetSelf.rule, state )
       except ParserFailedException:
         return None
       
@@ -68,34 +68,34 @@ class RuleCompilerBase:
     return accept
     
   def Optional( self, target ):  
-    def accept( targetSelf, parser ):
-      fork = parser._fork()
+    def accept( targetSelf, state ):
+      fork = state._fork()
       try:
         result = targetSelf.rule.accept( targetSelf.rule, fork )
       except ParserFailedException:
         return None
       
-      parser._join( fork )
+      state._join( fork )
       return result
     return accept
   
   def Alternative( self, target ):
-    def accept( targetSelf, parser ):
+    def accept( targetSelf, state ):
       for rule in targetSelf.rules:
-        fork = parser._fork() # entry state
+        fork = state._fork() # entry state
         try:
-          return rule.accept( rule, parser )  # try visiting
+          return rule.accept( rule, state )  # try visiting
         except ParserFailedException:
-          parser._join(fork)        
+          state._join(fork)        
       
       raise ParserFailedException() # all options exhausted with no match
     return accept
     
   def Sequence( self, target ):
-    def accept( targetSelf, parser ):
+    def accept( targetSelf, state ):
       sequence = []
       for rule in targetSelf.rules:
-        result = rule.accept( rule, parser )
+        result = rule.accept( rule, state )
         if result is not None:
           sequence += result
          
@@ -103,17 +103,17 @@ class RuleCompilerBase:
     return accept
     
   def Repeat( self, target ):
-    def accept( targetSelf, parser ):
+    def accept( targetSelf, state ):
       sequence = []
       save = None
       try:
         while True:
-          save = parser._fork() #save state from before visitation
-          result = targetSelf.rule.accept( targetSelf.rule, parser )
+          save = state._fork() #save state from before visitation
+          result = targetSelf.rule.accept( targetSelf.rule, state )
           if result is not None:
             sequence += result 
       except ParserFailedException:
-        parser._join( save )  # repeat until failure. Discard failed state
+        state._join( save )  # repeat until failure. Discard failed state
         return sequence
     return accept
       
@@ -122,21 +122,21 @@ class Reordering( RuleCompilerBase ):
     super().__init__( terminals )
     
   def Push( self, target ):
-    def accept( targetSelf, parser ):
-      result = targetSelf.rule.accept( targetSelf.rule, parser )
+    def accept( targetSelf, state ):
+      result = targetSelf.rule.accept( targetSelf.rule, state )
       if result is not None:
-        parser.state += result
+        state.state += result
       return None
     return accept
   
   def Pull( self, target ):
-    def accept( targetSelf, parser ):
-      result = targetSelf.rule.accept( targetSelf.rule, parser )
+    def accept( targetSelf, state ):
+      result = targetSelf.rule.accept( targetSelf.rule, state )
       if isinstance( result, list ) and len(result) == 0:
-        return parser.state
+        return state.state
       if result is not None:
         raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )
-      return parser.state
+      return state.state
     return accept
   
 class Ordered( RuleCompilerBase ):
@@ -144,11 +144,11 @@ class Ordered( RuleCompilerBase ):
     super().__init__( terminals )
     
   def Push( self, target ):
-    def accept( targetSelf, parser ):
-      return targetSelf.rule.accept( targetSelf.rule, parser )
+    def accept( targetSelf, state ):
+      return targetSelf.rule.accept( targetSelf.rule, state )
     return accept
   
   def Pull( self, target ):
-    def accept( targetSelf, parser ):
-      return targetSelf.rule.accept( targetSelf.rule, parser )
+    def accept( targetSelf, state ):
+      return targetSelf.rule.accept( targetSelf.rule, state )
     return accept

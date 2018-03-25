@@ -23,27 +23,19 @@ def make( t ):
 class ParserFailedException( Exception ):
   pass
   
-class Parser(TerminalBase):
-  __slots__ = 'rule', 'state', '__input', 'injector', 'preprocess'
-  def __init__( self, rule, preprocess = lambda s : s.lstrip(' ') ):
-    self.rule       = rule
+class ParserState:
+  __slots__ = 'rule', 'state', '__input', 'preprocess'
+  def __init__( self, input, preprocess ):
     self.preprocess = preprocess
-
+    
     self.state = []
-    self.__input = None
-  
-  def __call__( self, input ):
-    self.input = input
-    self.state = []
-    result = self.rule.accept( self.rule, self )
-    return result, self.input
+    self.__input = input
   
     # reimplementation of __init__ without injection and deepcopying
     # One can call _fork only on initialized objects
   def _fork( self ):
-    frk = Parser.__new__(Parser)    
-    frk.rule = self.rule
-    frk.preprocess = self.preprocess    
+    frk = ParserState.__new__(ParserState)
+    frk.preprocess = self.preprocess
     frk.state = self.state[:]
     frk.__input = self.__input[:]
     return frk
@@ -59,7 +51,16 @@ class Parser(TerminalBase):
   @input.setter
   def input( self, line ):
     self.__input = self.preprocess( line )
-
+  
+class Parser(TerminalBase):
+  __slots__ = 'rule'
+  def __init__( self, rule ):
+    self.rule       = rule
+  
+  def __call__( self, input, preprocess = lambda s : s.lstrip(' ') ):
+    state = ParserState( input, preprocess )
+    result = self.rule.accept( self.rule, state )
+    return result, state.input
   
 class Ignore(TerminalBase):
   def __init__( self, task, returned = None ):

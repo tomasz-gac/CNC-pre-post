@@ -97,7 +97,8 @@ terminals = t.make({
 })
 
 compiler = c.Reordering( terminals )
-Parse = t.Parser( c.compile( hh.heidenhain, compiler ) )
+h = c.compile( hh.heidenhain, compiler )
+Parse = t.Parser( h )
 
       
 def bench( n = 1000 ):
@@ -105,7 +106,7 @@ def bench( n = 1000 ):
   start = time.time()
   q = None
   for i in range(n):
-    q = Parse('L X+50 Y-30 Z+150 R0 FMAX' )
+    q = Parse( 'L X+50 Y-30 Z+150 R0 FMAX' )
   print( time.time() - start )
   print(q[0])
   print(q[1])
