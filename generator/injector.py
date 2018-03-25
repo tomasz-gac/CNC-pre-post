@@ -1,6 +1,5 @@
 from generator.terminal import TerminalBase
 from generator.terminal import ParserFailedException
-from generator.RecursionGuard import RecursionGuard      
 
 # Injector class injects accept method to a given type
 # Accept method implementation is yanked from method with name
@@ -8,22 +7,27 @@ from generator.RecursionGuard import RecursionGuard
 
 class Injector:
   def __init__( self ):
-    self.visited = RecursionGuard()
-  def __call__( self, injected ):
-    if self.visited( injected ):
-      return
-    
+    self._visited = set()
+  def __call__( self, injected, reinject = False ):
+    method_name = 'accept'
     name = type(injected).__name__
-    myname = type(self).__name__    
-    if not hasattr( type(injected), 'accept' ):
-      if hasattr( type(self), name ):
-        method = getattr( type(self), name )
-        setattr( injected, 'accept', method )
-      else:
-        raise RuntimeError("Class " + myname + " does not support visitation of type " + name )
+    
+    if injected in self._visited:
+      return injected
+    else:
+      if (not reinject) and hasattr( injected, method_name ):
+        raise RuntimeError("Object " + injected.__repr__() + " has already been injected with method " + method_name )
+      if not hasattr( type(self), name ):
+        raise RuntimeError("Class " + type(self).__name__ + " does not support visitation of type " + name )
+      self._visited.add(injected)
+    
+    method = getattr( type(self), name )
+    setattr( injected, method_name, method )
+
     for child in injected:
-      self( child )
+      self( child, reinject )
     return injected
+    
 
 class ParseInjector( Injector ):
   __slots__ = 'transforms', 'terminals'
@@ -45,18 +49,6 @@ class ParseInjector( Injector ):
       parser.input = rest
     
     return result
-  
-  '''def Transform( injected, parser ):
-    result = injected.rule.ParseInjector( parser )
-    try:
-      transformed = injected.transform( result, parser )
-    except AttributeError:
-      try:
-        injected.transform = parser.injector.transforms[injected.handle]
-        transformed = injected.transform( result, parser )      
-      except KeyError:
-        raise RuntimeError('Parser does not handle transform '+str(injected.handle))
-    return transformed'''
     
   def Handle( injected, parser ):
     return injected.rule.accept( injected.rule, parser )

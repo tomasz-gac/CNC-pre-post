@@ -1,28 +1,26 @@
-from generator.RecursionGuard import RecursionGuard
-
 class ReprVisitor:
   def __init__(self):
-    # self._depth = 0
-    self.identTable = ['+']
+    self.identTable = ['+'] # so that we can use identTable[-1]
     self.visited = []
-    self._depth = 0
     
-  def visit( self, rule, last ):
-    self._depth += 1
-    self.identTable[-1] = '+'
-    result = '\n' + "".join(self.identTable)
-    self.identTable[self._depth-1] = ' ' if last else '|'
-    
-    self.identTable.append('+')
+  def visit( self, rule, islast ):
+    result = self.ident( islast ) # insert identiation
     if rule in self.visited:
-      result += "<<Rule "+str(self.visited.index(rule)+1)+':'+self.getname(rule)+ " recursion>>"
+      result += "->"+str(self.visited.index(rule)+1)+':'+self.getname(rule)
     else:
       self.visited.append(rule)
       result += str(len(self.visited)) + ":" + self.get_repr( rule )
-    self._depth -= 1
-    del self.identTable[-1]
+    del self.identTable[-1] # remove identiation
     return result
     
+  def ident( self, last ):
+    self.identTable[-1] = '+'                   # change to split
+    result = '\n' + "".join(self.identTable)    # print ident
+      # if last element stop printing in next
+    self.identTable[-1] = ' ' if last else '|'
+    self.identTable.append('+')                 # more identiation
+    return result
+  
   def get_repr( self, rule ):
     s = self.getname(rule)
       # also works for terminals
