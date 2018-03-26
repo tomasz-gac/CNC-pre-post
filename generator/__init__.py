@@ -7,7 +7,7 @@ from generator.rule       import Sequence
 from generator.rule       import Repeat
 from generator.rule       import Terminal
 
-from generator.terminal   import Parser
+from generator.terminal   import StrParser
 from generator.terminal   import ParserFailedException
 from generator.terminal   import Handler
 from generator.terminal   import Task

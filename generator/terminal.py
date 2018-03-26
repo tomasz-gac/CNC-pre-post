@@ -1,6 +1,7 @@
 import re
 from enum import EnumMeta
 from copy import copy, deepcopy
+from generator.injector import Injector
     
 class TerminalBase:
   def ignore( self, returned = None ):
@@ -22,26 +23,35 @@ def make( t ):
 
 class ParserFailedException( Exception ):
   pass
-  
-class ParserState:
-  __slots__ = 'rule', 'state', '__input', 'preprocess'
-  def __init__( self, input, preprocess ):
-    self.preprocess = preprocess
+
+def make_parser( State ):
+  class Parser(TerminalBase):
+    __slots__ = 'rule'
+    def __init__( self, rule, compiler, recompile = False ):
+      self.rule = Injector(compiler)( deepcopy( rule ), recompile )
     
-    self.state = []
-    self.__input = input
+    def __call__( self, input ):
+      state = State( input )
+      result = self.rule.accept( self.rule, state )
+      return result, state.input
+  return Parser
+
+class StringState:
+  __slots__ = 'rule', 'stack', 'preprocess', '__input'
+  def __init__( self, input ):
+    self.stack = []
+    self.__input = input    
   
     # reimplementation of __init__ without injection and deepcopying
     # One can call _fork only on initialized objects
   def _fork( self ):
-    frk = ParserState.__new__(ParserState)
-    frk.preprocess = self.preprocess
-    frk.state = self.state[:]
+    frk = StringState.__new__(StringState)
+    frk.stack = self.stack[:]
     frk.__input = self.__input[:]
     return frk
   
   def _join( self, frk ):
-    self.state = frk.state
+    self.stack = frk.stack
     self.__input = frk.__input
     
   @property
@@ -50,17 +60,9 @@ class ParserState:
     
   @input.setter
   def input( self, line ):
-    self.__input = self.preprocess( line )
-  
-class Parser(TerminalBase):
-  __slots__ = 'rule'
-  def __init__( self, rule ):
-    self.rule       = rule
-  
-  def __call__( self, input, preprocess = lambda s : s.lstrip(' ') ):
-    state = ParserState( input, preprocess )
-    result = self.rule.accept( self.rule, state )
-    return result, state.input
+    self.__input = line.lstrip(' ')
+
+StrParser = make_parser(StringState)
   
 class Ignore(TerminalBase):
   def __init__( self, task, returned = None ):

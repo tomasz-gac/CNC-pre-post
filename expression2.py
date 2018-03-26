@@ -3,7 +3,7 @@ from enum         import Enum, unique
 import grammars.math      as math
 import generator.terminal as t
 import generator.rule     as r
-import generator.compile  as c
+import generator.compiler as c
 
 @unique
 class ExpressionToken( Enum ):
@@ -48,6 +48,6 @@ terminals = {
 
 compiler = c.Reordering( terminals )
 
-Parse   = t.Parser( c.compile( math.expression.pull(), compiler ) )
-primary = t.Parser( c.compile( math.primary.pull(), compiler ) )
-number  = t.Parser( c.compile( r.make('number'), compiler ) )
+Parse   = t.StrParser( math.expression.pull(), compiler )
+primary = t.StrParser( math.primary.pull(), compiler )
+number  = t.StrParser( r.make('number'), compiler )
