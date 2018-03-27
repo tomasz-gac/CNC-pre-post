@@ -1,26 +1,32 @@
 import generator.rule as r
 
-coordinate = ('coord' & r.make('primary').push()).push()
-point      = coordinate & +coordinate
+coordCartesian = ('coordCartesian'  & r.make('primary').push()).push()
+coordPolar     = ('coordPolar'      & r.make('primary').push()).push()
+
+pointCartesian = coordCartesian & +coordCartesian
+pointPolar     = coordPolar & +coordPolar
+
 feed       = ( "F" & ( "MAX" | r.make('primary') ).push() ).push()
 compensation = r.make('compensation')
 direction    = r.make('direction')
 
 gotoTail = ( ~direction & ~compensation & ~feed ).push()
-goto = 'L/C(P)' & ~point & gotoTail
-circleCenter = 'CC' & point
+
+goto = ( 'L/C' & ~pointCartesian | 'LP/CP' & ~pointPolar) & gotoTail
+
+circleCenter = 'CC' & coordCartesian
 
 auxilary = 'M' & r.make('number').push()
 
 positioning = ( ( goto | circleCenter ) & (+auxilary).push() ).push()
-positioningShort = ( point & gotoTail & (+auxilary).push() ).push()
+positioningShort = ( ( pointCartesian | pointPolar ) & gotoTail & (+auxilary).push() ).push()
 
-comment   = r.make('comment')
-begin_pgm = 'begin_pgm'
-end_pgm   = 'end_pgm'
-BLKformStart = 'block form start' & point
-BLKformEnd   = 'block form end' & point
-fn_f         = 'fn_f' & r.make('expression')
+comment       = r.make('comment')
+begin_pgm     = 'begin_pgm'
+end_pgm       = 'end_pgm'
+BLKformStart  = 'block form start' & coordCartesian
+BLKformEnd    = 'block form end' & coordCartesian
+fn_f          = 'fn_f' & r.make('expression')
 
 toolCall = ( 
   'tool call' & ( 
@@ -46,8 +52,8 @@ heidenhain = (
 & ~comment
 ).push().pull()
 
-coordinate.name       = 'coordinate'
-point.name            = 'point'
+coordCartesian.name   = 'coordCartesian'
+coordCartesian.name   = 'coordCartesian'
 feed.name             = 'feed'
 gotoTail.name         = 'gotoTail'
 goto.name             = 'goto'

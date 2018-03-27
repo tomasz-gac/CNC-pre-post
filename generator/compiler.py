@@ -28,42 +28,38 @@ class RuleCompilerBase:
       try:
         result = targetSelf.rule.accept( targetSelf.rule, state )
       except ParserFailedException:
-        return None
+        return []
       
       raise ParserFailedException()
     return _Not
     
   def Optional( self, target ):  
     def _Optional( targetSelf, state ):
-      fork = state._fork()
-      try:
-        result = targetSelf.rule.accept( targetSelf.rule, fork )
+      save = state.fork()
+      try:        
+        return targetSelf.rule.accept( targetSelf.rule, state )
       except ParserFailedException:
-        return None
-      
-      state._join( fork )
-      return result
+        state.join( save )
+        return []
     return _Optional
   
   def Alternative( self, target ):
     def _Alternative( targetSelf, state ):
       for rule in targetSelf.rules:
-        fork = state._fork() # entry state
+        fork = state.fork() # entry state
         try:
           return rule.accept( rule, state )  # try visiting
         except ParserFailedException:
-          state._join(fork)        
+          state.join(fork)        
       
       raise ParserFailedException() # all options exhausted with no match
     return _Alternative
     
   def Sequence( self, target ):
     def _Sequence( targetSelf, state ):
-      sequence = []
+      sequence = [  ]
       for rule in targetSelf.rules:
-        result = rule.accept( rule, state )
-        if result is not None:
-          sequence += result
+        sequence += rule.accept( rule, state )
          
       return sequence
     return _Sequence
@@ -74,12 +70,10 @@ class RuleCompilerBase:
       save = None
       try:
         while True:
-          save = state._fork() #save state from before visitation
-          result = targetSelf.rule.accept( targetSelf.rule, state )
-          if result is not None:
-            sequence += result 
+          save = state.fork() #save state from before visitation
+          sequence += targetSelf.rule.accept( targetSelf.rule, state )
       except ParserFailedException:
-        state._join( save )  # repeat until failure. Discard failed state
+        state.join( save )  # repeat until failure. Discard failed state
         return sequence
     return _Repeat
       
@@ -90,17 +84,14 @@ class Reordering( RuleCompilerBase ):
   def Push( self, target ):
     def _Push( targetSelf, state ):
       result = targetSelf.rule.accept( targetSelf.rule, state )
-      if result is not None:
-        state.stack += result
-      return None
+      state.stack += result
+      return []
     return _Push
   
   def Pull( self, target ):
     def _Pull( targetSelf, state ):
       result = targetSelf.rule.accept( targetSelf.rule, state )
-      if isinstance( result, list ) and len(result) == 0:
-        return state.stack
-      if result is not None:
+      if len(result) > 0:
         raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )
       return state.stack
     return _Pull

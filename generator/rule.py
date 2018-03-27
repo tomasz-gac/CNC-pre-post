@@ -92,14 +92,8 @@ class Terminal(Rule):
   
   def __len__( self ):
     return 0
-'''
-class Transform(Unary):
-  def __init__( self, rule, handle = None ):
-    if handle is None:
-        self.handle = self
-    self.handle = handle
-    super().__init__(rule)'''
-  
+
+
 class Handle(Unary):
   def __init__( self, rule = None ):
     super().__init__(rule)

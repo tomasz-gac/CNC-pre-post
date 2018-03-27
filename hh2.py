@@ -12,10 +12,15 @@ from enum import Enum, unique
 from copy import deepcopy
 
 @unique
-class GOTOtokens(Enum):
-  linear    = "L(P)?"
-  circular  = "C(P)? " # does not match CC
+class GOTOtokensCartesian(Enum):
+  linear    = "L "
+  circular  = "C " # whitespace does not match CC
 
+@unique
+class GOTOtokensPolar(Enum):
+  linear    = "LP"
+  circular  = "CP" # whitespace does not match CC 
+  
 @unique
 class ToolCallTokens(Enum):
   DR = 'DR\\s*='
@@ -23,15 +28,19 @@ class ToolCallTokens(Enum):
   S  = 'S'
 
 @unique
-class CoordinateTokens(Enum):
+class CartCoordinateTokens(Enum):
   X = "(I)?(X)"
   Y = "(I)?(Y)"
   Z = "(I)?(Z)"
   A = "(I)?(A)"
   B = "(I)?(B)"
   C = "(I)?(C)"
+  
+@unique
+class PolarCoordinateTokens(Enum):
   PA = "(I)?(P)(A)"
   PR = "(I)?(P)(R)"
+
 coordmap = { 'X' : reg.X, 'Y' : reg.Y, 'Z' : reg.Z, 'A' : reg.ANG, 'R' : reg.RAD }
 maskmap = { reg.X : reg.XINC, reg.Y : reg.YINC, reg.Z : reg.ZINC, reg.ANG : reg.ANGINC, reg.RAD : reg.RADINC }
   
@@ -74,12 +83,14 @@ directionLookup = t.make_lookup( {
 } )
 
 terminals = t.make({
-  'coord'             : t.make( CoordinateTokens ) >> handleCoord,
+  'coordCartesian'    : t.make( CartCoordinateTokens ) >> handleCoord,
+  'coordPolar'        : t.make( PolarCoordinateTokens ) >> handleCoord,
   'F'                 : t.make('F').ignore( [ reg.FEED ] ),
   'MAX'               : t.make('MAX').ignore( [ -1 ] ),
   'compensation'      : compensationLookup(Compensation),
   'direction'         : directionLookup( Direction ),
-  'L/C(P)'            : GOTOtokens,
+  'L/C'               : GOTOtokensCartesian,
+  'LP/CP'             : GOTOtokensPolar,
   'CC'                : 'CC',
   'M'                 : 'M',
   'begin_pgm'         : 'BEGIN PGM (.+) (MM|INCH)',

@@ -4,7 +4,7 @@ from copy import copy, deepcopy
 from generator.injector import Injector
     
 class TerminalBase:
-  def ignore( self, returned = None ):
+  def ignore( self, returned = [] ):
     return Ignore( self, returned )
     
   def __rshift__( self, wrapper ):
@@ -44,13 +44,13 @@ class StringState:
   
     # reimplementation of __init__ without injection and deepcopying
     # One can call _fork only on initialized objects
-  def _fork( self ):
+  def fork( self ):
     frk = StringState.__new__(StringState)
     frk.stack = self.stack[:]
     frk.__input = self.__input[:]
     return frk
   
-  def _join( self, frk ):
+  def join( self, frk ):
     self.stack = frk.stack
     self.__input = frk.__input
     
@@ -65,7 +65,7 @@ class StringState:
 StrParser = make_parser(StringState)
   
 class Ignore(TerminalBase):
-  def __init__( self, task, returned = None ):
+  def __init__( self, task, returned = [] ):
     self.task = make(task)
     self.returned = returned
   def __call__( self, line ):
@@ -141,7 +141,6 @@ class Lookup(TerminalBase):
     
   def __call__( self, line ):
     result, rest = self.terminal( line )
-      # table has to handle None
     return self.table[ result[0].type ], rest
 
 def make_lookup( table ):
