@@ -84,7 +84,10 @@ class Reordering( RuleCompilerBase ):
   def Push( self, target ):
     def _Push( targetSelf, state ):
       result = targetSelf.rule.accept( targetSelf.rule, state )
-      state.stack += result
+      try:
+        state.stack[targetSelf.output] += result
+      except KeyError:
+        state.stack[targetSelf.output] = result
       return []
     return _Push
   
@@ -93,7 +96,7 @@ class Reordering( RuleCompilerBase ):
       result = targetSelf.rule.accept( targetSelf.rule, state )
       if len(result) > 0:
         raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )
-      return state.stack
+      return state.stack[targetSelf.output]
     return _Pull
   
 class Ordered( RuleCompilerBase ):

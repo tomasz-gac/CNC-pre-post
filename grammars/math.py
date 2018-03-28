@@ -8,9 +8,9 @@ expression.name = 'expression'
 term.name = 'term'
 pow.name = 'pow'
 
-_int          = r.make('int').push()
-getQ          = ( 'getQ' & _int).push()
-setQ          = ( 'setQ' & _int).push() & '=' & expression
+_int          = r.make('int')
+getQ          = ( 'getQ' & _int.push()).push()
+setQ          = ((( 'setQ' & _int.push(2)).push(2) & '=').push(2) & expression).pull(2)
 subexpression = "(" & expression & ")"
 subexpression.name = 'subexpression'
 

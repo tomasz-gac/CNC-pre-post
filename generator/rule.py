@@ -45,11 +45,11 @@ class Rule:
   def __invert__(self):
     return Optional( self )
   
-  def push( self ):
-    return Push(self)
+  def push( self, output = 'output' ):
+    return Push(self, output)
     
-  def pull( self ):
-    return Pull(self)
+  def pull( self, output = 'output' ):
+    return Pull(self, output)
     
   def __iter__( self ):
     raise NotImplementedException()
@@ -142,9 +142,11 @@ class Repeat(Unary):
     super().__init__(rule)
 
 class Push(Unary):
-  def __init__( self, rule ):
+  def __init__( self, rule, output ):
+    self.output = output
     super().__init__(rule)
     
 class Pull(Unary):
-  def __init__( self, rule ):
+  def __init__( self, rule, output ):
+    self.output = output
     super().__init__(rule)

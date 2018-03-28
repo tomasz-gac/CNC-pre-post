@@ -28,59 +28,57 @@ class Handler:
     Handler.handled = self.EnumType
     return Handler
 
+@Handler( cmd )
+class ArithmeticEvaluator:
+  def __init__( self, registers = {}, symtable = {} ):
+    self.registers = registers
+    self.symtable = symtable
+    
+  def ADD( self, stack ):
+    stack[-2] = stack[-2] + stack[-1]
+    del stack[-1]
+  
+  def SUB( self, stack ):
+    stack[-2] = stack[-2] - stack[-1]
+    del stack[-1]
+    
+  def MUL( self, stack ):
+    stack[-2] = stack[-2] * stack[-1]
+    del stack[-1]
+  
+  def DIV( self, stack ):
+    stack[-2] = stack[-2] / stack[-1]
+    del stack[-1]
+  
+  def POW( self, stack ):
+    stack[-2] = stack[-2] ** stack[-1]
+    del stack[-1]
+  
+  def LET( self, stack ):
+    self.symtable[stack[-1]] = stack[-2]
+    del stack[-1]
+  
+  def SETQ( self, stack ):
+    pass
+    
+  def GETQ( self, stack ):
+    stack[-1] = self.symtable[stack[-1]]
+    
+  def SETREG( self, stack ):
+    self.registers[stack[-1]] = stack[-2]
+    del stack[-2:]
 
-
+def _append( symbol, stack ):
+  stack.append(symbol)
+    
 class Evaluator:
-  __slots__ = '_dispatch', '_symtable'
-  def __init__( self ):
-    self._symtable = {}
-  
-  @Handler( cmd )
-  class CMDdispatcher:
-    def ADD( self, stack ):
-      stack[-2] = stack[-2] + stack[-1]
-      del stack[-1]
-    
-    def SUB( self, stack ):
-      stack[-2] = stack[-2] - stack[-1]
-      del stack[-1]
-      
-    def MUL( self, stack ):
-      stack[-2] = stack[-2] * stack[-1]
-      del stack[-1]
-    
-    def DIV( self, stack ):
-      stack[-2] = stack[-2] / stack[-1]
-      del stack[-1]
-    
-    def POW( self, stack ):
-      stack[-2] = stack[-2] ** stack[-1]
-      del stack[-1]
-    
-    def LET( self, stack ):
-      self._symtable[stack[-2]] = stack[-1]
-      stack[-2] = stack[-1]
-      del stack[-1]
-    
-    def SETQ( self, stack ):
-      pass
-      
-    def GETQ( self, stack ):
-      stack[-1] = self._symtable[stack[-1]]
-      
-    def SETREG( self, stack ):
-      raise NotImplementedError()
-  
+  def __init__( self, evaluators ):
+    self.evaluators = { evaluator.enum : evaluator for evaluator in evaluators }
+     
   def __call__( self, expression ):
     stack = []
-    dispatcher = Evaluator.CMDdispatcher()
     for symbol in expression:
-      if isinstance( symbol, ( float, int ) ):
-        stack.append(symbol)
-      else:
-        dispatcher( symbol, stack )
-    if len(stack) != 1:
-      raise RuntimeError('Invalid stack provided for evaluation. Result: ' + str(stack))
-    return stack[0]
-    
-ev = Evaluator()
+      self.evaluators.get( type(symbol), _append )( symbol, stack )
+    return stack
+
+ev = Evaluator( [ArithmeticEvaluator()] )

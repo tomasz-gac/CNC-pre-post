@@ -36,8 +36,8 @@ tokenLookup = t.make_lookup( {
 terminals = {
   'number'  : t.make( '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' ) >> t.group(float),
   'int'     : t.make( '(\\d.)' ) >> t.group(int),
-  'setQ'    : t.make( 'Q' ).ignore(cmd.SETQ),
-  'getQ'    : t.make( 'Q' ).ignore(cmd.GETQ),
+  'setQ'    : t.make( 'Q' ).ignore([cmd.SETQ]),
+  'getQ'    : t.make( 'Q' ).ignore([cmd.GETQ]),
   '='       : tokenLookup( AssignToken ),
   '('       : t.make('[(]').ignore(),
   ')'       : t.make('[)]').ignore(),

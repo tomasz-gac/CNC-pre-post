@@ -4,6 +4,7 @@ import generator.compiler as c
 
 from CNC.language import Registers  as reg
 from CNC.language import Arithmetic as art
+from CNC.language import Commands as cmd
 import CNC.language as CNC
 
 import expression2          as expr
@@ -20,7 +21,15 @@ class GOTOtokensCartesian(Enum):
 @unique
 class GOTOtokensPolar(Enum):
   linear    = "LP"
-  circular  = "CP" # whitespace does not match CC 
+  circular  = "CP"
+
+cmdLookup = t.make_lookup({
+  GOTOtokensCartesian.linear    : [ cmd.LINCART ],
+  GOTOtokensCartesian.circular  : [ cmd.CIRCCART ],
+  GOTOtokensPolar.linear        : [ cmd.LINPOL ],
+  GOTOtokensPolar.circular      : [ cmd.CIRCPOL ]
+})
+
   
 @unique
 class ToolCallTokens(Enum):
@@ -90,9 +99,9 @@ terminals = t.make({
   'MAX'               : t.make('MAX').ignore( [ -1 ] ),
   'compensation'      : compensationLookup(Compensation),
   'direction'         : directionLookup( Direction ),
-  'L/C'               : GOTOtokensCartesian,
-  'LP/CP'             : GOTOtokensPolar,
-  'CC'                : 'CC',
+  'L/C'               : cmdLookup(GOTOtokensCartesian),
+  'LP/CP'             : cmdLookup(GOTOtokensPolar),
+  'CC'                : t.make('CC').ignore(),
   'M'                 : 'M',
   'begin_pgm'         : 'BEGIN PGM (.+) (MM|INCH)',
   'end_pgm'           : 'END PGM (.+)',

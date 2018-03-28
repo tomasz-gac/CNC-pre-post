@@ -39,14 +39,14 @@ def make_parser( State ):
 class StringState:
   __slots__ = 'rule', 'stack', 'preprocess', '__input'
   def __init__( self, input ):
-    self.stack = []
+    self.stack = {}
     self.__input = input    
   
     # reimplementation of __init__ without injection and deepcopying
     # One can call _fork only on initialized objects
   def fork( self ):
     frk = StringState.__new__(StringState)
-    frk.stack = self.stack[:]
+    frk.stack = { key : value[:] for (key, value) in self.stack.items() }
     frk.__input = self.__input[:]
     return frk
   
