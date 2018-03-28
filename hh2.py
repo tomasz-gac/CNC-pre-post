@@ -2,7 +2,8 @@ import generator.terminal as t
 import generator.rule     as r
 import generator.compiler as c
 
-from CNC.language import Registers as reg
+from CNC.language import Registers  as reg
+from CNC.language import Arithmetic as art
 import CNC.language as CNC
 
 import expression2          as expr
@@ -58,7 +59,7 @@ def handleCoord( token ):
     symbol = token.groups[1]
   symbol = coordmap[symbol]
   inc = maskmap[symbol]
-  return [ symbol, int(incremental), inc ]
+  return [ symbol, art.SETREG, int(incremental), inc, art.SETREG ]
 
 @unique
 class Compensation(Enum):
@@ -67,9 +68,9 @@ class Compensation(Enum):
   RL = 'RL'  
   
 compensationLookup = t.make_lookup( { 
-  Compensation.R0 : [ CNC.Compensation.NONE, reg.COMPENSATION ]
-, Compensation.RL : [ CNC.Compensation.LEFT, reg.COMPENSATION ]
-, Compensation.RR : [ CNC.Compensation.RIGHT, reg.COMPENSATION ]
+  Compensation.R0 : [ CNC.Compensation.NONE, reg.COMPENSATION, art.SETREG ]
+, Compensation.RL : [ CNC.Compensation.LEFT, reg.COMPENSATION, art.SETREG ]
+, Compensation.RR : [ CNC.Compensation.RIGHT, reg.COMPENSATION, art.SETREG ]
 } )
 
 @unique
@@ -78,14 +79,14 @@ class Direction( Enum ):
   CCW = 'DR[+]'
 
 directionLookup = t.make_lookup( { 
-  Direction.CW  : [ CNC.Direction.CW,   reg.DIRECTION ]
-, Direction.CCW : [ CNC.Direction.CCW,  reg.DIRECTION ]
+  Direction.CW  : [ CNC.Direction.CW,   reg.DIRECTION, art.SETREG ]
+, Direction.CCW : [ CNC.Direction.CCW,  reg.DIRECTION, art.SETREG ]
 } )
 
 terminals = t.make({
   'coordCartesian'    : t.make( CartCoordinateTokens ) >> handleCoord,
   'coordPolar'        : t.make( PolarCoordinateTokens ) >> handleCoord,
-  'F'                 : t.make('F').ignore( [ reg.FEED ] ),
+  'F'                 : t.make('F').ignore( [ reg.FEED, art.SETREG ] ),
   'MAX'               : t.make('MAX').ignore( [ -1 ] ),
   'compensation'      : compensationLookup(Compensation),
   'direction'         : directionLookup( Direction ),
