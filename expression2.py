@@ -1,4 +1,4 @@
-from CNC.language import Arithmetic as cmd
+from CNC.language import Commands as cmd
 from enum         import Enum, unique
 import grammars.math      as math
 import generator.terminal as t

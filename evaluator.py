@@ -62,7 +62,10 @@ class ArithmeticEvaluator:
     pass
     
   def GETQ( self, stack ):
-    stack[-1] = self.symtable[stack[-1]]
+    try:
+      stack[-1] = self.symtable[stack[-1]]
+    except KeyError:
+      raise RuntimeError('Unknown variable : Q'+stack[-1])
     
   def SETREG( self, stack ):
     self.registers[stack[-1]] = stack[-2]

@@ -1,7 +1,7 @@
 from enum import Enum, unique
 
 @unique
-class Arithmetic(Enum):
+class Commands(Enum):
   ADD   = 0,
   SUB   = 1,
   MUL   = 2,
@@ -10,14 +10,8 @@ class Arithmetic(Enum):
   LET   = 5,
   SETQ  = 6,
   GETQ  = 7,
-  SETREG = 8
-
-@unique
-class Commands(Enum):
-  LINCART  = 0
-  LINPOL   = 1
-  CIRCCART = 3
-  CIRCPOL  = 4
+  SETREG = 8,
+  MOVE   = 9
   
 @unique
 class Registers(Enum):
@@ -57,6 +51,7 @@ class Registers(Enum):
   UNITS        = 28  # MACHINE UNITS
   FEED         = 29  # MACHINE FEED
   SPINSPEED    = 30  # SPINDLE SPEED
+  MOTIONMODE   = 31  # POSITIONING MOTION MODE
   
 @unique
 class Compensation(Enum):
@@ -68,3 +63,8 @@ class Compensation(Enum):
 class Direction(Enum):
   CW = 0
   CCW = 1
+  
+@unique
+class Motion(Enum):
+  LINEAR = 0
+  CIRCULAR = 1

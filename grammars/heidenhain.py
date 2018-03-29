@@ -12,14 +12,14 @@ direction    = r.make('direction')
 
 gotoTail = ( ~direction & ~compensation & ~feed ).push()
 
-goto = ( 'L/C' & ~pointCartesian | 'LP/CP' & ~pointPolar) & gotoTail
+goto = ( 'L/C' & ~pointCartesian | 'LP/CP' & ~pointPolar & ~coordCartesian) & gotoTail
 
 circleCenter = 'CC' & coordCartesian
 
 auxilary = 'M' & r.make('number').push()
 
 positioning = ( ( goto | circleCenter ) & (+auxilary).push() ).push()
-positioningShort = ( ( pointCartesian | pointPolar ) & gotoTail & (+auxilary).push() ).push()
+positioningShort = ( ( pointCartesian | pointPolar & ~coordCartesian ) & gotoTail & (+auxilary).push() ).push()
 
 comment       = r.make('comment')
 begin_pgm     = 'begin_pgm'

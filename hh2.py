@@ -3,7 +3,6 @@ import generator.rule     as r
 import generator.compiler as c
 
 from CNC.language import Registers  as reg
-from CNC.language import Arithmetic as art
 from CNC.language import Commands as cmd
 import CNC.language as CNC
 
@@ -24,10 +23,10 @@ class GOTOtokensPolar(Enum):
   circular  = "CP"
 
 cmdLookup = t.make_lookup({
-  GOTOtokensCartesian.linear    : [ cmd.LINCART ],
-  GOTOtokensCartesian.circular  : [ cmd.CIRCCART ],
-  GOTOtokensPolar.linear        : [ cmd.LINPOL ],
-  GOTOtokensPolar.circular      : [ cmd.CIRCPOL ]
+  GOTOtokensCartesian.linear    : [ CNC.Motion.LINEAR,    reg.MOTIONMODE, cmd.SETREG, cmd.MOVE ],
+  GOTOtokensCartesian.circular  : [ CNC.Motion.CIRCULAR,  reg.MOTIONMODE, cmd.SETREG, cmd.MOVE ],
+  GOTOtokensPolar.linear        : [ CNC.Motion.LINEAR,    reg.MOTIONMODE, cmd.SETREG, cmd.MOVE ],
+  GOTOtokensPolar.circular      : [ CNC.Motion.CIRCULAR,  reg.MOTIONMODE, cmd.SETREG, cmd.MOVE ]
 })
 
   
@@ -68,7 +67,7 @@ def handleCoord( token ):
     symbol = token.groups[1]
   symbol = coordmap[symbol]
   inc = maskmap[symbol]
-  return [ symbol, art.SETREG, int(incremental), inc, art.SETREG ]
+  return [ symbol, cmd.SETREG, int(incremental), inc, cmd.SETREG ]
 
 @unique
 class Compensation(Enum):
@@ -77,9 +76,9 @@ class Compensation(Enum):
   RL = 'RL'  
   
 compensationLookup = t.make_lookup( { 
-  Compensation.R0 : [ CNC.Compensation.NONE, reg.COMPENSATION, art.SETREG ]
-, Compensation.RL : [ CNC.Compensation.LEFT, reg.COMPENSATION, art.SETREG ]
-, Compensation.RR : [ CNC.Compensation.RIGHT, reg.COMPENSATION, art.SETREG ]
+  Compensation.R0 : [ CNC.Compensation.NONE, reg.COMPENSATION, cmd.SETREG ]
+, Compensation.RL : [ CNC.Compensation.LEFT, reg.COMPENSATION, cmd.SETREG ]
+, Compensation.RR : [ CNC.Compensation.RIGHT, reg.COMPENSATION, cmd.SETREG ]
 } )
 
 @unique
@@ -88,14 +87,14 @@ class Direction( Enum ):
   CCW = 'DR[+]'
 
 directionLookup = t.make_lookup( { 
-  Direction.CW  : [ CNC.Direction.CW,   reg.DIRECTION, art.SETREG ]
-, Direction.CCW : [ CNC.Direction.CCW,  reg.DIRECTION, art.SETREG ]
+  Direction.CW  : [ CNC.Direction.CW,   reg.DIRECTION, cmd.SETREG ]
+, Direction.CCW : [ CNC.Direction.CCW,  reg.DIRECTION, cmd.SETREG ]
 } )
 
 terminals = t.make({
   'coordCartesian'    : t.make( CartCoordinateTokens ) >> handleCoord,
   'coordPolar'        : t.make( PolarCoordinateTokens ) >> handleCoord,
-  'F'                 : t.make('F').ignore( [ reg.FEED, art.SETREG ] ),
+  'F'                 : t.make('F').ignore( [ reg.FEED, cmd.SETREG ] ),
   'MAX'               : t.make('MAX').ignore( [ -1 ] ),
   'compensation'      : compensationLookup(Compensation),
   'direction'         : directionLookup( Direction ),
