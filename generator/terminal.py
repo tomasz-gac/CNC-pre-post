@@ -46,7 +46,7 @@ class StringState:
     # One can call _fork only on initialized objects
   def fork( self ):
     frk = StringState.__new__(StringState)
-    frk.stack = { key : value[:] for (key, value) in self.stack.items() }
+    frk.stack = { key : value.copy() for (key, value) in self.stack.items() }
     frk.__input = self.__input[:]
     return frk
   

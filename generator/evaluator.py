@@ -1,7 +1,3 @@
-from CNC.language import Arithmetic as cmd
-import expression2 as expr
-import generator as gen
-
 def _handleEnum( self, task, *args ):
   return type(self)._dispatch[task]( self, *args )
 
@@ -27,61 +23,26 @@ class Handler:
     Handler.__call__ = _handleEnum
     Handler.handled = self.EnumType
     return Handler
-
-@Handler( cmd )
-class ArithmeticEvaluator:
-  def __init__( self, registers = {}, symtable = {} ):
-    self.registers = registers
-    self.symtable = symtable
-    
-  def ADD( self, stack ):
-    stack[-2] = stack[-2] + stack[-1]
-    del stack[-1]
   
-  def SUB( self, stack ):
-    stack[-2] = stack[-2] - stack[-1]
-    del stack[-1]
-    
-  def MUL( self, stack ):
-    stack[-2] = stack[-2] * stack[-1]
-    del stack[-1]
-  
-  def DIV( self, stack ):
-    stack[-2] = stack[-2] / stack[-1]
-    del stack[-1]
-  
-  def POW( self, stack ):
-    stack[-2] = stack[-2] ** stack[-1]
-    del stack[-1]
-  
-  def LET( self, stack ):
-    self.symtable[stack[-1]] = stack[-2]
-    del stack[-1]
-  
-  def SETQ( self, stack ):
-    pass
-    
-  def GETQ( self, stack ):
-    try:
-      stack[-1] = self.symtable[stack[-1]]
-    except KeyError:
-      raise RuntimeError('Unknown variable : Q'+stack[-1])
-    
-  def SETREG( self, stack ):
-    self.registers[stack[-1]] = stack[-2]
-    del stack[-2:]
-
 def _append( symbol, stack ):
   stack.append(symbol)
     
 class Evaluator:
   def __init__( self, evaluators ):
     self.evaluators = { evaluator.enum : evaluator for evaluator in evaluators }
+    if len(self.evaluators) < len(evaluators):
+      raise RuntimeError('Multiple handlers provided for Evaluator handle the same Enum type')
+    values = []
+    for evaluator in evaluators:
+      values += [ item.value for item in list(type(evaluator).enum) ]
+    if len(values) != len(set(values)):
+      raise RuntimeError('Enum values of handlers provided for Evaluator are not unique')
      
   def __call__( self, expression ):
     stack = []
     for symbol in expression:
       self.evaluators.get( type(symbol), _append )( symbol, stack )
     return stack
-
-ev = Evaluator( [ArithmeticEvaluator()] )
+    
+  def __getitem__(self, item):
+    return self.evaluators[item]

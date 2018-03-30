@@ -1,9 +1,11 @@
-from CNC.language import Commands as cmd
-from enum         import Enum, unique
-import grammars.math      as math
-import generator.terminal as t
-import generator.rule     as r
-import generator.compiler as c
+import  expression.grammar      as grammar
+from    expression.commands import Arithmetic as cmd
+
+import  generator.terminal as t
+import  generator.rule     as r
+import  generator.compiler as c
+
+from enum import Enum, unique
 
 @unique
 class ExpressionToken( Enum ):
@@ -22,7 +24,7 @@ class PowToken( Enum ):
 @unique 
 class AssignToken( Enum ):
   assign = '[=]'
-  
+
 tokenLookup = t.make_lookup( { 
   ExpressionToken.plus  : [ cmd.ADD ], 
   ExpressionToken.minus : [ cmd.SUB ], 
@@ -48,6 +50,6 @@ terminals = {
 
 compiler = c.Reordering( terminals )
 
-Parse   = t.StrParser( math.expression.pull(), compiler )
-primary = t.StrParser( math.primary.pull(), compiler )
+Parse   = t.StrParser( grammar.expression.pull(), compiler )
+primary = t.StrParser( grammar.primary.pull(), compiler )
 number  = t.StrParser( r.make('number'), compiler )

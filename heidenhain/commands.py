@@ -1,20 +1,11 @@
-from enum import Enum, unique
+from enum import IntEnum, unique
 
 @unique
-class Commands(Enum):
-  ADD   = 0,
-  SUB   = 1,
-  MUL   = 2,
-  DIV   = 3,
-  POW   = 4,
-  LET   = 5,
-  SETQ  = 6,
-  GETQ  = 7,
-  SETREG = 8,
-  MOVE   = 9
-  
+class Commands(IntEnum):
+  MOVE = 9
+
 @unique
-class Registers(Enum):
+class Registers(IntEnum):
   # CURRENT X Y Z A B C
   X = 0
   Y = 1
@@ -52,19 +43,30 @@ class Registers(Enum):
   FEED         = 29  # MACHINE FEED
   SPINSPEED    = 30  # SPINDLE SPEED
   MOTIONMODE   = 31  # POSITIONING MOTION MODE
+
+incmap = { 
+  Registers.X : Registers.XINC, Registers.Y : Registers.YINC, Registers.Z : Registers.ZINC, 
+  Registers.A : Registers.AINC, Registers.B : Registers.BINC, Registers.C : Registers.CINC, 
+  Registers.ANG : Registers.ANGINC, Registers.RAD : Registers.RADINC 
+}
   
 @unique
-class Compensation(Enum):
+class Units(IntEnum):
+  MM    = 0
+  INCH  = 1
+  
+@unique
+class Compensation(IntEnum):
   NONE = 0
   LEFT = 1
   RIGHT = 2
 
 @unique
-class Direction(Enum):
+class Direction(IntEnum):
   CW = 0
   CCW = 1
   
 @unique
-class Motion(Enum):
+class Motion(IntEnum):
   LINEAR = 0
   CIRCULAR = 1

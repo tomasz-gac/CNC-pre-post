@@ -2,12 +2,17 @@ import generator.terminal as t
 import generator.rule     as r
 import generator.compiler as c
 
-from CNC.language import Registers  as reg
-from CNC.language import Commands as cmd
-import CNC.language as CNC
+import heidenhain.commands as commands
+from heidenhain.commands import Registers     as reg
+from heidenhain.commands import Commands      as cmd
+from heidenhain.commands import Motion        as mot
+from heidenhain.commands import Compensation  as comp
+from heidenhain.commands import Direction     as dir
 
-import expression2          as expr
-import grammars.heidenhain  as hh
+from expression.commands import Arithmetic    as art
+
+import expression.parser    as expr
+import heidenhain.grammar   as hh
 
 from enum import Enum, unique
 from copy import deepcopy
@@ -23,10 +28,10 @@ class GOTOtokensPolar(Enum):
   circular  = "CP"
 
 cmdLookup = t.make_lookup({
-  GOTOtokensCartesian.linear    : [ CNC.Motion.LINEAR,    reg.MOTIONMODE, cmd.SETREG, cmd.MOVE ],
-  GOTOtokensCartesian.circular  : [ CNC.Motion.CIRCULAR,  reg.MOTIONMODE, cmd.SETREG, cmd.MOVE ],
-  GOTOtokensPolar.linear        : [ CNC.Motion.LINEAR,    reg.MOTIONMODE, cmd.SETREG, cmd.MOVE ],
-  GOTOtokensPolar.circular      : [ CNC.Motion.CIRCULAR,  reg.MOTIONMODE, cmd.SETREG, cmd.MOVE ]
+  GOTOtokensCartesian.linear    : [ mot.LINEAR,    reg.MOTIONMODE, art.SETREG, cmd.MOVE ],
+  GOTOtokensCartesian.circular  : [ mot.CIRCULAR,  reg.MOTIONMODE, art.SETREG, cmd.MOVE ],
+  GOTOtokensPolar.linear        : [ mot.LINEAR,    reg.MOTIONMODE, art.SETREG, cmd.MOVE ],
+  GOTOtokensPolar.circular      : [ mot.CIRCULAR,  reg.MOTIONMODE, art.SETREG, cmd.MOVE ]
 })
 
   
@@ -50,8 +55,11 @@ class PolarCoordinateTokens(Enum):
   PA = "(I)?(P)(A)"
   PR = "(I)?(P)(R)"
 
-coordmap = { 'X' : reg.X, 'Y' : reg.Y, 'Z' : reg.Z, 'A' : reg.ANG, 'R' : reg.RAD }
-maskmap = { reg.X : reg.XINC, reg.Y : reg.YINC, reg.Z : reg.ZINC, reg.ANG : reg.ANGINC, reg.RAD : reg.RADINC }
+coordmap = { 
+  'X' : reg.X, 'Y' : reg.Y, 'Z' : reg.Z, 
+  'A' : reg.A, 'B' : reg.B, 'C' : reg.C, 
+  'R' : reg.RAD 
+}
   
 def handleCoord( token ):
   token = token[0]
@@ -66,8 +74,10 @@ def handleCoord( token ):
     incremental = token.groups[0] is 'I'
     symbol = token.groups[1]
   symbol = coordmap[symbol]
-  inc = maskmap[symbol]
-  return [ symbol, cmd.SETREG, int(incremental), inc, cmd.SETREG ]
+  if symbol is reg.A and polar: 
+    symbol = reg.ANG
+  inc = commands.incmap[symbol]
+  return [ symbol, art.SETREG, int(incremental), inc, art.SETREG ]
 
 @unique
 class Compensation(Enum):
@@ -76,9 +86,9 @@ class Compensation(Enum):
   RL = 'RL'  
   
 compensationLookup = t.make_lookup( { 
-  Compensation.R0 : [ CNC.Compensation.NONE, reg.COMPENSATION, cmd.SETREG ]
-, Compensation.RL : [ CNC.Compensation.LEFT, reg.COMPENSATION, cmd.SETREG ]
-, Compensation.RR : [ CNC.Compensation.RIGHT, reg.COMPENSATION, cmd.SETREG ]
+  Compensation.R0 : [ comp.NONE,  reg.COMPENSATION, art.SETREG ]
+, Compensation.RL : [ comp.LEFT,  reg.COMPENSATION, art.SETREG ]
+, Compensation.RR : [ comp.RIGHT, reg.COMPENSATION, art.SETREG ]
 } )
 
 @unique
@@ -87,14 +97,14 @@ class Direction( Enum ):
   CCW = 'DR[+]'
 
 directionLookup = t.make_lookup( { 
-  Direction.CW  : [ CNC.Direction.CW,   reg.DIRECTION, cmd.SETREG ]
-, Direction.CCW : [ CNC.Direction.CCW,  reg.DIRECTION, cmd.SETREG ]
+  Direction.CW  : [ dir.CW,   reg.DIRECTION, art.SETREG ]
+, Direction.CCW : [ dir.CCW,  reg.DIRECTION, art.SETREG ]
 } )
 
 terminals = t.make({
   'coordCartesian'    : t.make( CartCoordinateTokens ) >> handleCoord,
   'coordPolar'        : t.make( PolarCoordinateTokens ) >> handleCoord,
-  'F'                 : t.make('F').ignore( [ reg.FEED, cmd.SETREG ] ),
+  'F'                 : t.make('F').ignore( [ reg.FEED, art.SETREG ] ),
   'MAX'               : t.make('MAX').ignore( [ -1 ] ),
   'compensation'      : compensationLookup(Compensation),
   'direction'         : directionLookup( Direction ),
