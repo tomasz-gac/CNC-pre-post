@@ -23,7 +23,18 @@ class Handler:
     Handler.__call__ = _handleEnum
     Handler.handled = self.EnumType
     return Handler
-  
+
+    
+# Convert handler function from signature (self, stack) to (self, a1, a2, ..., aNargs)    
+def stack2args( nargs ):
+  def decorate( fn ):
+    def decorated( symbol, stack ):
+      args = stack[-nargs:]
+      del stack[-nargs:]
+      stack += fn( symbol, *args )
+    return decorated
+  return decorate
+        
 def _append( symbol, stack ):
   stack.append(symbol)
     
@@ -41,7 +52,7 @@ class Evaluator:
   def __call__( self, expression ):
     stack = []
     for symbol in expression:
-      self.evaluators.get( type(symbol), _append )( symbol, stack )
+      evaluator = self.evaluators.get( type(symbol), _append )( symbol, stack )
     return stack
     
   def __getitem__(self, item):

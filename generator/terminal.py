@@ -72,6 +72,13 @@ class Ignore(TerminalBase):
     result, rest = self.task(line)
     return self.returned, rest
 
+class Return(TerminalBase):
+  def __init__( self, returned ):
+    self.returned = returned
+  def __call__( self, line ):
+    return self.returned, line
+
+    
 class Wrapper(TerminalBase):
   def __init__( self, wrapped, wrapper ):
     self.wrapped = wrapped

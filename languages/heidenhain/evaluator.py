@@ -1,13 +1,13 @@
 import generator.evaluator as ev
 
-import heidenhain.commands as cmd
+import languages.heidenhain.commands as cmd
 
-from heidenhain.commands import Registers     as reg
-from heidenhain.commands import Motion        as mot
-from heidenhain.commands import Compensation  as comp
-from heidenhain.commands import Direction     as dir
+from languages.heidenhain.commands import Registers     as reg
+from languages.heidenhain.commands import Motion        as mot
+from languages.heidenhain.commands import Compensation  as comp
+from languages.heidenhain.commands import Direction     as dir
 
-from expression.evaluator import ArithmeticEvaluator
+from languages.expression.evaluator import ArithmeticEvaluator
 
 import copy
 import math
@@ -27,11 +27,19 @@ class CommandEvaluator:
     self.state      = machine_state()
     self.prevState  = machine_state()
     
-  def MOVE( self, stack ):
+  def SET( self, stack ):
     self.prevState = self.state.copy()
     registers = self.arithmetic.registers
     # if registers[reg.MOTIONMODE] is mot.LINEAR:
-      
+  
+  def STOP( self, stack ):
+    pass
+  
+  def OPTSTOP( self, stack ):
+    pass
+  
+  def TOOLCHANGE( self, stack ):
+    pass
 
 
 def angNorm( a ):

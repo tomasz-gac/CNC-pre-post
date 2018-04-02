@@ -1,5 +1,5 @@
 from enum import IntEnum, unique
-
+  
 @unique
 class Arithmetic(IntEnum):
   ADD   = 0,

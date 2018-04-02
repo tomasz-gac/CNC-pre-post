@@ -2,24 +2,27 @@ import generator.rule as r
 
 coordCartesian = ('coordCartesian'  & r.make('primary').push()).push()
 coordPolar     = ('coordPolar'      & r.make('primary').push()).push()
+coordCC        = ('coordCC'         & r.make('primary').push()).push()
 
 pointCartesian = coordCartesian & +coordCartesian
 pointPolar     = coordPolar & +coordPolar
 
 feed       = ( "F" & ( "MAX" | r.make('primary') ).push() ).push()
-compensation = r.make('compensation')
-direction    = r.make('direction')
+compensation = r.make('compensation').push()
+direction    = r.make('direction').push()
 
-gotoTail = ( ~direction & ~compensation & ~feed ).push()
+gotoTail = ~direction & ~compensation & ~feed
 
 goto = ( 'L/C' & ~pointCartesian | 'LP/CP' & ~pointPolar & ~coordCartesian) & gotoTail
 
-circleCenter = 'CC' & coordCartesian
+circleCenter = 'CC' & coordCC & coordCC
 
-auxilary = 'M' & r.make('number').push()
+auxilary = r.make('auxilary')
 
 positioning = ( ( goto | circleCenter ) & (+auxilary).push() ).push()
-positioningShort = ( ( pointCartesian | pointPolar & ~coordCartesian ) & gotoTail & (+auxilary).push() ).push()
+positioningShort = ( 
+    ( pointCartesian | pointPolar & ~coordCartesian ) & gotoTail & (+auxilary).push() & 'set'
+  ).push()
 
 comment       = r.make('comment')
 begin_pgm     = 'begin_pgm'
@@ -53,7 +56,8 @@ heidenhain = (
 ).push().pull()
 
 coordCartesian.name   = 'coordCartesian'
-coordCartesian.name   = 'coordCartesian'
+coordPolar.name       = 'coordPolar'
+coordCC.name          = 'coordCC'
 feed.name             = 'feed'
 gotoTail.name         = 'gotoTail'
 goto.name             = 'goto'

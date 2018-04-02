@@ -8,7 +8,7 @@ def movePolar( start1, start2, center1, center2, A, AINC, R, RINC ):
   r1, r2 = (start1 - center1), (start2 - center2)
   targetA = A*math.pi/180
   targetR = R            
-  if AINC:  targetA += angNorm(math.atan2(r2, r1))
+  if AINC: targetA += angNorm(math.atan2(r2, r1))
   if RINC: targetR  += (r1*r1+r2*r2)**0.5
   
   target1 = center1 + targetR*math.cos(targetA)
