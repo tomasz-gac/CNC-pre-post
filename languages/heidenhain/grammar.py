@@ -41,7 +41,7 @@ toolCall = (
   ).push() 
 
 heidenhain = (
- ~r.make('number') & ( 
+ ~r.make('lineno').push() & ( 
   positioning       |
   fn_f              |
   toolCall          |

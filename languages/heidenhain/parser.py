@@ -137,6 +137,7 @@ terminals = t.make({
   'coordCartesian'    : t.make( CartCoordinateTokens ) >> handleCoord( coordmap ),
   'coordPolar'        : t.make( PolarCoordinateTokens ) >> handleCoord( coordmap ),
   'coordCC'           : t.make( CartCoordinateTokens ) >> handleCoord( CCcoordmap ),
+  'lineno'            : expr.number >> (lambda x : [ x[0], reg.LINENO, art.SETREG ]),
   'F'                 : t.make('F').ignore( [ reg.FEED, art.SETREG ] ),
   'MAX'               : t.make('MAX').ignore( [ -1 ] ),
   'compensation'      : compensationLookup(Compensation),
