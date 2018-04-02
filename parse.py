@@ -1,4 +1,4 @@
-from concurrent.futures import ProcessPoolExecutor, as_completed
+# from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 import sys
 import generator as gen
@@ -44,7 +44,7 @@ def main():
   
   print('start')
   t = time.time()
-  with ProcessPoolExecutor(max_workers=workers) as executor:
+  '''with ProcessPoolExecutor(max_workers=workers) as executor:
         # Start the load operations and mark each future with its index in the result
       future_to_index = {executor.submit(parse, chunk, i*n): i for i, chunk in enumerate(Chunks)}
       for future in as_completed(future_to_index):
@@ -56,13 +56,13 @@ def main():
           except Exception as exc:
               print('Process generated an exception: %s' % (exc))
           else:
-              print('Process ' + str(index) + ' finished')
-  # parseOutput = parse( pgmList, 0 )
+              print('Process ' + str(index) + ' finished')'''
+  parseOutput = parse( pgmList, 0 )
   elapsed = time.time() - t
   print( str(elapsed) + "s elapsed" )
   
     #collapse the list of lists into a list
-  parseOutput = [ item for sublist in result for item in sublist ]
+  # parseOutput = [ item for sublist in result for item in sublist ]
     #output to file
   
   fname = splitext(basename(sys.argv[1]))[0]+".p"
