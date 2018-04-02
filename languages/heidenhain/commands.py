@@ -3,9 +3,14 @@ from enum import IntEnum, unique
 @unique
 class Commands(IntEnum):
   SET = 9         # UPDATE STATE ASSUMING INVARIANTS
-  STOP = 10       # PROGRAM STOP
-  OPTSTOP = 11    # PROGRAM OPTIONAL STOP
-  TOOLCHANGE = 12 # CHANGE TOOL TO Registers.TOOLNO
+  IGNORE = 10     # DISCARD STATE BUFFER
+  STOP = 11       # PROGRAM STOP
+  OPTSTOP = 12    # PROGRAM OPTIONAL STOP
+  TOOLCHANGE = 13 # CHANGE TOOL TO Registers.TOOLNO
+  SPINCW     = 14 # SPINDLE ON CLOCKWISE
+  SPINCCW    = 15 # SPINDLE ON COUNTER CLOCKWISE
+  SPINOFF    = 16 # SPINDLE OFF
+  
 
 @unique
 class Registers(IntEnum):
@@ -41,10 +46,11 @@ class Registers(IntEnum):
   UNITS        = 25  # MACHINE UNITS
   FEED         = 26  # MACHINE FEED
   SPINSPEED    = 27  # SPINDLE SPEED
-  MOTIONMODE   = 28  # POSITIONING MOTION MODE
-  TOOLNO       = 29  # TOOL NUMBER
-  TOOLDL       = 30  # TOOL DELTA LENGTH
-  TOOLDR       = 31  # TOOL DELTA RADIUS
+  MOTIONMODE   = 29  # POSITIONING MOTION MODE
+  TOOLNO       = 30  # TOOL NUMBER
+  TOOLDL       = 31  # TOOL DELTA LENGTH
+  TOOLDR       = 32  # TOOL DELTA RADIUS
+  COOLANT      = 33  # COOLANT TYPE
   
 
 incmap = { 
@@ -74,3 +80,10 @@ class Direction(IntEnum):
 class Motion(IntEnum):
   LINEAR = 0
   CIRCULAR = 1
+  
+@unique
+class Coolant(IntEnum):
+  OFF   = 0
+  FLOOD = 1
+  MIST  = 2
+  AIR   = 3

@@ -1,9 +1,8 @@
-import concurrent.futures
+from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 import sys
 import generator as gen
-import heidenhain
-import CNC.AST
+import languages.heidenhain.parser as hh
 import math
 import pickle
 from os.path import basename, abspath, splitext
@@ -11,20 +10,21 @@ from os.path import basename, abspath, splitext
 def parse( program, lineOffset ):
   results = []        #result list
   
-  lexer  = gen.Lexer()
-  parser = heidenhain.Parse
+  parser = hh.Parse
   
   for i, line in enumerate(program):
       #append the line number marker, start at 1 and use the worker thread offset
-    results.append(CNC.AST.LineNumber(i+lineOffset+1))
+    # results.append(CNC.AST.LineNumber(i+lineOffset+1))
     try:
-      result, parserSuccess = parser( lexer, line.rstrip() )
-      if not parserSuccess or result is gen.ParserFailed or lexer.hasInput():
-        print('Parser failed at line :'+str(line))
+      result, rest = parser( line.rstrip('\n') )
+      if len(rest) > 0:
+        raise RuntimeError( 'Parser failed at line ' + line + ' rest: "' + rest + '"' )
       else:
         results += result
     except RuntimeError as err:
-      print(str(line)+':'+str(err))
+      print(str(err))
+    except gen.ParserFailedException:
+      print('Parser failed at line ' + line)
   return results
 
   # split the lst into chunks of size sz
@@ -42,14 +42,12 @@ def main():
   Chunks = split(pgmList, n)
   result = [ None for i in range(0,workers) ]
   
-  module = heidenhain
-  
   print('start')
   t = time.time()
-  with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
+  with ProcessPoolExecutor(max_workers=workers) as executor:
         # Start the load operations and mark each future with its index in the result
       future_to_index = {executor.submit(parse, chunk, i*n): i for i, chunk in enumerate(Chunks)}
-      for future in concurrent.futures.as_completed(future_to_index):
+      for future in as_completed(future_to_index):
             #get the index of the future
           index = future_to_index[future]
           try:

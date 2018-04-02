@@ -27,8 +27,8 @@ positioningShort = (
 comment       = r.make('comment')
 begin_pgm     = 'begin_pgm'
 end_pgm       = 'end_pgm'
-BLKformStart  = 'block form start' & coordCartesian
-BLKformEnd    = 'block form end' & coordCartesian
+BLKformStart  = 'block form start' & pointCartesian
+BLKformEnd    = 'block form end' & pointCartesian
 fn_f          = 'fn_f' & r.make('expression')
 
 toolCall = ( 
@@ -50,7 +50,8 @@ heidenhain = (
   BLKformStart      |
   BLKformEnd        |
   auxilary          |
-  positioningShort
+  positioningShort  |
+  comment
   )
 & ~comment
 ).push().pull()

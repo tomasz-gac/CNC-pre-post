@@ -8,6 +8,7 @@ from languages.heidenhain.commands import Commands      as cmd
 from languages.heidenhain.commands import Motion        as mot
 from languages.heidenhain.commands import Compensation  as comp
 from languages.heidenhain.commands import Direction     as dir
+from languages.heidenhain.commands import Coolant       as cool
 
 from languages.expression.commands import Arithmetic    as art
 
@@ -118,8 +119,18 @@ directionLookup = t.make_lookup( {
 
 def handleAux( result ):
   aux = int(result[0].groups[0])
-  command = { 0 : cmd.STOP, 1 : cmd.OPTSTOP, 6 : cmd.TOOLCHANGE }
-  return [ command[aux] ]
+  command = { 
+    0  : [ cmd.STOP ], 
+    1  : [ cmd.OPTSTOP ], 
+    3  : [ cmd.SPINCW ],
+    4  : [ cmd.SPINCCW ],
+    5  : [ cmd.SPINOFF ],
+    6  : [ cmd.TOOLCHANGE ], 
+    8  : [ cool.FLOOD ],
+    9  : [ cool.OFF ],
+    91 : [  ]
+  }
+  return command[aux]
 
 
 terminals = t.make({
@@ -138,8 +149,8 @@ terminals = t.make({
   'begin_pgm'         : t.make('BEGIN PGM (.+) (MM|INCH)').ignore(),
   'end_pgm'           : t.make('END PGM (.+)').ignore(),
   'comment'           : t.make('[;][ ]*(.*)').ignore(),
-  'block form start'  : t.make('BLK FORM 0\\.1 (X|Y|Z)').ignore(),
-  'block form end'    : t.make('BLK FORM 0\\.2').ignore(),
+  'block form start'  : t.make('BLK FORM 0\\.1 (X|Y|Z)').ignore( [cmd.IGNORE] ),
+  'block form end'    : t.make('BLK FORM 0\\.2').ignore( [cmd.IGNORE] ),
   'fn_f'              : t.make('FN 0\\:').ignore(),
   'tool call'         : t.make('TOOL CALL').ignore( [reg.TOOLNO, art.SETREG, cmd.SET] ),
   'tool axis'         : t.make('(X|Y|Z)').ignore(),
@@ -162,4 +173,3 @@ def bench( n = 1000 ):
   print(q[0])
   print(q[1])
   
-bench()
