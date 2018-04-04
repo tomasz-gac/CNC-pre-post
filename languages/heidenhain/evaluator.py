@@ -15,7 +15,8 @@ import copy
 import math
 
 def machine_state():
-  state = { key : 0 for key in list(reg) }.update( { key : 0 for key in list(pos) } )
+  state = { key : 0 for key in list(reg) }
+  state.update( { key : 0 for key in list(pos) } )
   state[reg.COMPENSATION] = comp.NONE
   state[reg.DIRECTION]    = dir.CW
   state[reg.UNITS]        = cmd.Units.MM
@@ -41,12 +42,15 @@ class CommandEvaluator:
   
   def UPDATE( self, stack ):
     self.prevState = self.state.copy()
-    symtable = self.arithmetic.symtable
+    self.state.update( { key : value for (key, value) in self.arithmetic.symtable.items() if key in reg } )
+    self.arithmetic.symtable = { 
+      key : value for (key, value) in self.arithmetic.symtable.items() if key not in reg 
+    }
   
   def DISCARD( self, stack ):
     self.arithmetic.symtable.clear()
     
-  @ev.stack2arg(1)
+  @ev.stack2args(1)
   def TMP( self, register ):
     self.tmp[ register ] = self.state[register]
     return []
@@ -58,6 +62,9 @@ class CommandEvaluator:
     pass
   
   def TOOLCHANGE( self, stack ):
+    pass
+    
+  def END( self, stack ):
     pass
 
 

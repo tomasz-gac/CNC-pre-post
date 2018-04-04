@@ -2,64 +2,79 @@ from enum import IntEnum, unique
 
 @unique
 class Commands(IntEnum):
-  UPDATE  = 8     # UPDATE REGISTERS
-  MOVE    = 9     # UPDATE AND MOVE TO POSITION ASSUMING COORDINATE INVARIANTS
-  DISCARD = 10    # DISCARD STATE BUFFER
-  TMP     = 11    # SET REGISTER VALUE AS TEMPORARY AND RESTORE IT AFTER UPDATE
-  STOP    = 12    # PROGRAM STOP
-  OPTSTOP = 13    # PROGRAM OPTIONAL STOP
-  TOOLCHANGE = 14 # CHANGE TOOL TO Registers.TOOLNO
-  
-@unique
-class Position(IntEnum):
-  # CURRENT X Y Z A B C
-  X = 0
-  Y = 1
-  Z = 2
-  A = 3
-  B = 4
-  C = 5
-  # CURRENT ANGLE AND RADIUS RELATIVE TO CC
-  ANG = 6
-  RAD = 7
-  # INCREMENTAL VALUES FOR X Y Z A B C CX CY CZ ANG RAD
-  XINC   = 8
-  YINC   = 9
-  ZINC   = 10
-  AINC   = 11
-  BINC   = 12
-  CINC   = 13
-  ANGINC = 14
-  RADINC = 15
- 
+  INVARIANT   = 8  # UPDATE STATE GIVEN INVARIANT
+  UPDATE      = 9  # UPDATE STATE
+  DISCARD     = 10 # DISCARD STATE BUFFER
+  TMP         = 11 # SET REGISTER VALUE AS TEMPORARY AND RESTORE IT AFTER INVARIANT
+  STOP        = 12 # PROGRAM STOP
+  OPTSTOP     = 13 # PROGRAM OPTIONAL STOP
+  TOOLCHANGE  = 14 # CHANGE TOOL TO Registers.TOOLNO
+  END         = 15 # END PROGRAM
+
 @unique
 class Registers(IntEnum):
-  # CIRCLE CENTER X Y Z
-  CX = 16
-  CY = 17
-  CZ = 18
-  CXINC  = 19
-  CYINC  = 20
-  CZINC  = 21
-  COMPENSATION = 22  # COMPENSATION TYPE
-  DIRECTION    = 23  # CIRCLE DIRECTION
-  LINENO       = 24  # LINE NUMBER
-  UNITS        = 25  # MACHINE UNITS
-  FEED         = 26  # MACHINE FEED
-  SPINSPEED    = 27  # SPINDLE SPEED
-  SPINDIR      = 28  # SPINDLE ROTATION DIRECTION
-  MOTIONMODE   = 29  # POSITIONING MOTION MODE
-  TOOLNO       = 30  # TOOL NUMBER
-  TOOLDL       = 31  # TOOL DELTA LENGTH
-  TOOLDR       = 32  # TOOL DELTA RADIUS
-  COOLANT      = 33  # COOLANT TYPE
-  WCS          = 34  # WORLD COORDINATE SYSTEM NUMBER
+  COMPENSATION = 0   # COMPENSATION TYPE
+  DIRECTION    = 1   # CIRCLE DIRECTION
+  LINENO       = 2   # LINE NUMBER
+  UNITS        = 3   # MACHINE UNITS
+  FEED         = 4   # MACHINE FEED
+  SPINSPEED    = 5   # SPINDLE SPEED
+  SPINDIR      = 6   # SPINDLE ROTATION DIRECTION
+  MOTIONMODE   = 7   # POSITIONING MOTION MODE
+  TOOLNO       = 8   # TOOL NUMBER
+  TOOLDL       = 9   # TOOL DELTA LENGTH
+  TOOLDR       = 10  # TOOL DELTA RADIUS
+  COOLANT      = 11  # COOLANT TYPE
+  WCS          = 12  # WORLD COORDINATE SYSTEM NUMBER
+
+  
+@unique
+class Cartesian(IntEnum):
+  # ABSOLUTE
+  X = 13
+  Y = 14
+  Z = 15
+  # INCREMENTAL
+  XINC   = 16
+  YINC   = 17
+  ZINC   = 18
+  
+@unique
+class Polar(IntEnum):
+  # ABSOLUTE
+  ANG = 19
+  RAD = 20
+  # INCREMENTAL
+  ANGINC = 21
+  RADINC = 22
+  
+@unique
+class Angular(IntEnum):
+  # ABSOLUTE
+  A = 23
+  B = 24
+  C = 25
+  # INCREMENTAL
+  AINC   = 26
+  BINC   = 27
+  CINC   = 28
+
+@unique
+class Center(IntEnum): # CIRCLE CENTER X Y Z
+  X = 29
+  Y = 30
+  Z = 31
+  XINC  = 32
+  YINC  = 33
+  ZINC  = 34
+  
+ 
 
 incmap = { 
-  Position.X : Position.XINC, Position.Y : Position.YINC, Position.Z : Position.ZINC, 
-  Position.A : Position.AINC, Position.B : Position.BINC, Position.C : Position.CINC, 
-  Position.ANG : Position.ANGINC, Position.RAD : Position.RADINC,
-  Registers.CX : Registers.CXINC, Registers.CY : Registers.CYINC, Registers.CZ : Registers.CZINC
+  Cartesian.X : Cartesian.XINC, Cartesian.Y : Cartesian.YINC, Cartesian.Z : Cartesian.ZINC, 
+  Polar.ANG : Polar.ANGINC, Polar.RAD : Polar.RADINC,
+  Angular.A : Angular.AINC, Angular.B : Angular.BINC, Angular.C : Angular.CINC, 
+  Center.X : Center.XINC, Center.Y : Center.YINC, Center.Z : Center.ZINC
 }
   
  

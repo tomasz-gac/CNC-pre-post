@@ -67,9 +67,9 @@ def main():
   
   fname = splitext(basename(sys.argv[1]))[0]+".p"
   
-  output  = open( fname, 'wb' )
+  '''output  = open( fname, 'wb' )
   pickle.dump( parseOutput, output )
-  output.close()
+  output.close()'''
   return parseOutput
       
   

@@ -3,9 +3,13 @@ import generator.rule     as r
 import generator.compiler as c
 
 import languages.heidenhain.commands as commands
-from languages.heidenhain.commands import Position      as pos
-from languages.heidenhain.commands import Registers     as reg
+
 from languages.heidenhain.commands import Commands      as cmd
+from languages.heidenhain.commands import Registers     as reg
+from languages.heidenhain.commands import Cartesian     as cart
+from languages.heidenhain.commands import Polar         as pol
+from languages.heidenhain.commands import Angular       as ang
+from languages.heidenhain.commands import Center        as cen
 from languages.heidenhain.commands import Motion        as mot
 from languages.heidenhain.commands import Compensation  as comp
 from languages.heidenhain.commands import Direction     as dir
@@ -31,10 +35,10 @@ class GOTOtokensPolar(Enum):
   circular  = "CP"
 
 cmdLookup = t.make_lookup({
-  GOTOtokensCartesian.linear    : [ mot.LINEAR,    reg.MOTIONMODE, art.SET, cmd.MOVE ],
-  GOTOtokensCartesian.circular  : [ mot.CIRCULAR,  reg.MOTIONMODE, art.SET, cmd.MOVE ],
-  GOTOtokensPolar.linear        : [ mot.LINEAR,    reg.MOTIONMODE, art.SET, cmd.MOVE ],
-  GOTOtokensPolar.circular      : [ mot.CIRCULAR,  reg.MOTIONMODE, art.SET, cmd.MOVE ]
+  GOTOtokensCartesian.linear    : [ mot.LINEAR,    reg.MOTIONMODE, art.SET, cmd.INVARIANT ],
+  GOTOtokensCartesian.circular  : [ mot.CIRCULAR,  reg.MOTIONMODE, art.SET, cmd.INVARIANT ],
+  GOTOtokensPolar.linear        : [ mot.LINEAR,    reg.MOTIONMODE, art.SET, cmd.INVARIANT ],
+  GOTOtokensPolar.circular      : [ mot.CIRCULAR,  reg.MOTIONMODE, art.SET, cmd.INVARIANT ]
 })
 
   
@@ -66,18 +70,20 @@ class PolarCoordinateTokens(Enum):
   PR = "(I)?(PR)"
 
 coordmap = { 
-  'X' : pos.X, 'Y' : pos.Y, 'Z' : pos.Z, 
-  'A' : pos.A, 'B' : pos.B, 'C' : pos.C, 
-  'PA' : pos.ANG , 'PR' : pos.RAD 
+  CartCoordinateTokens.X : cart.X, CartCoordinateTokens.Y : cart.Y, CartCoordinateTokens.Z : cart.Z, 
+  CartCoordinateTokens.A : ang.A, CartCoordinateTokens.B : ang.B, CartCoordinateTokens.C : ang.C, 
+  PolarCoordinateTokens.PA : pol.ANG, PolarCoordinateTokens.PR : pol.RAD 
 }
 
-CCcoordmap = { 'X' : reg.CX, 'Y' : reg.CY, 'Z' : reg.CZ }
+CCcoordmap = { 
+ CartCoordinateTokens.X : cen.X, CartCoordinateTokens.Y : cen.Y, CartCoordinateTokens.Z : cen.Z
+}
 
 
 def handleCoord( map ):
   def _handleCoord( token ):
     token = token[0]
-    symbol = map[token.groups[1]]
+    symbol = map[token.type]
     if token.groups[0] is 'I':
       symbol = commands.incmap[symbol]
     return [ symbol, art.SET ]
@@ -116,9 +122,15 @@ def handleAux( result ):
     6  : [ cmd.TOOLCHANGE ], 
     8  : [ cool.FLOOD, reg.COOLANT, art.SET ],
     9  : [ cool.OFF,   reg.COOLANT, art.SET ],
+    30 : [ cmd.END ],
     91 : [ reg.WCS, cmd.TMP, 0, reg.WCS, art.SET ]
   }
-  return command[aux]
+  try:
+    return command[aux]
+  except KeyError:
+    raise RuntimeError('Unknown auxillary function M'+str(aux) )
+    
+  
 
 
 terminals = t.make({
@@ -132,7 +144,7 @@ terminals = t.make({
   'direction'         : directionLookup( Direction ),
   'L/C'               : cmdLookup(GOTOtokensCartesian),
   'LP/CP'             : cmdLookup(GOTOtokensPolar),
-  'MOVE'              : t.Return( [ cmd.MOVE ] ),
+  'MOVE'              : t.Return( [ cmd.INVARIANT ] ),
   'UPDATE'            : t.Return( [ cmd.UPDATE ] ),
   'CC'                : t.make('CC').ignore( [cmd.UPDATE] ),
   'auxilary'          : t.make( 'M(\\d+)' ) >> handleAux,
