@@ -28,23 +28,20 @@ class ArithmeticEvaluator:
     return [ A ** B ]
   
   @ev.stack2args(2)
-  def LET( self, A, B ):
+  def SET( self, A, B ):
     self.symtable[B] = A
-    return [ A ]
-  
-  def SETQ( self, stack ):
-    pass
+    return []
   
   @ev.stack2args(1)
-  def GETQ( self, A ):
+  def GET( self, A ):
     try:
       return [ self.symtable[A] ]
     except KeyError:
       raise RuntimeError('Unknown variable : Q'+str(A))
-  
+      
   @ev.stack2args(2)
-  def SETREG( self, A, B ):
-    self.registers[B] = A
-    return []
+  def LET( self, A, B ):
+    self.symtable[B] = A
+    return [ A ]
     
 Evaluator = ev.Evaluator( [ArithmeticEvaluator()] )

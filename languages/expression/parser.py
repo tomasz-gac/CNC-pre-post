@@ -34,18 +34,16 @@ tokenLookup = t.make_lookup( {
   AssignToken.assign    : [ cmd.LET ]
 } )
 
-
 terminals = {
-  'number'  : t.make( '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' ) >> t.group(float),
-  'int'     : t.make( '(\\d+)' ) >> t.group(int),
-  'setQ'    : t.make( 'Q' ).ignore([cmd.SETQ]),
-  'getQ'    : t.make( 'Q' ).ignore([cmd.GETQ]),
-  '='       : tokenLookup( AssignToken ),
-  '('       : t.make('[(]').ignore(),
-  ')'       : t.make('[)]').ignore(),
-  '+-'      : tokenLookup( ExpressionToken ),
-  '*/'      : tokenLookup( TermToken ),
-  '^'       : tokenLookup( PowToken )
+  'number'          : t.make( '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' ) >> t.group(float),
+  'identifier'      : t.make( '(([a-zA-Z_]+\\d*)+)' ) >> t.group( str ),
+  'GET'             : t.Return( [cmd.GET] ),
+  '='               : tokenLookup( AssignToken ),
+  '('               : t.make('[(]').ignore(),
+  ')'               : t.make('[)]').ignore(),
+  '+-'              : tokenLookup( ExpressionToken ),
+  '*/'              : tokenLookup( TermToken ),
+  '^'               : tokenLookup( PowToken )
 }
 
 compiler = c.Reordering( terminals )

@@ -8,13 +8,13 @@ expression.name = 'expression'
 term.name = 'term'
 pow.name = 'pow'
 
-_int          = r.make('int')
-getQ          = ( 'getQ' & _int.push()).push()
-setQ          = ((( 'setQ' & _int.push(2)).push(2) & '=').push(2) & expression).pull(2)
-subexpression = "(" & expression & ")"
+identifier         = r.make('identifier')
+get_identifier     = identifier & 'GET'
+set_identifier     = ((identifier.push(2) & '=').push(2) & expression).pull(2)
+subexpression      = "(" & expression & ")"
 subexpression.name = 'subexpression'
 
-primary = ( 'number' | setQ | getQ | subexpression ).push()
+primary = ( 'number' | set_identifier | get_identifier | subexpression ).push()
 primary.name = 'primary'
 
 expression.rule = ( term & +( '+-' & expression ) ).push()

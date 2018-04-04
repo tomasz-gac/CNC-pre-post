@@ -1,8 +1,8 @@
 import generator.rule as r
 
-coordCartesian = ('coordCartesian'  & r.make('primary').push()).push()
-coordPolar     = ('coordPolar'      & r.make('primary').push()).push()
-coordCC        = ('coordCC'         & r.make('primary').push()).push()
+coordCartesian = ('XYZABC'  & r.make('primary').push()).push()
+coordPolar     = ('PAPR'    & r.make('primary').push()).push()
+coordCC        = ('CCXYZ'   & r.make('primary').push()).push()
 
 pointCartesian = coordCartesian & +coordCartesian
 pointPolar     = coordPolar & +coordPolar
@@ -17,11 +17,11 @@ goto = ( 'L/C' & ~pointCartesian | 'LP/CP' & ~pointPolar & ~coordCartesian) & go
 
 circleCenter = 'CC' & coordCC & coordCC
 
-auxilary = r.make('auxilary')
+auxilary = ( 'auxilary' & +r.make('auxilary') ).push()
 
-positioning = ( ( goto | circleCenter ) & (+auxilary).push() ).push()
+positioning = ( ( goto | circleCenter ) & ~auxilary ).push()
 positioningShort = ( 
-    ( pointCartesian | pointPolar & ~coordCartesian ) & gotoTail & (+auxilary).push() & 'set'
+    ( pointCartesian | pointPolar & ~coordCartesian ) & gotoTail & ~auxilary & 'MOVE'
   ).push()
 
 comment       = r.make('comment')
@@ -29,28 +29,28 @@ begin_pgm     = 'begin_pgm'
 end_pgm       = 'end_pgm'
 BLKformStart  = 'block form start' & pointCartesian
 BLKformEnd    = 'block form end' & pointCartesian
-fn_f          = 'fn_f' & r.make('expression')
+fn_f          = ('fn_f' & r.make('expression').push()).push()
 
 toolCall = ( 
   'tool call' & ( 
     r.make('primary') & ( 
       "tool axis" & 
-          +( ( 'tool options' & r.make('primary').push()).push() )       
+          +( ( 'tool options' & r.make('primary').push()).push() )
       ).push()
     ).push() 
   ).push() 
 
 heidenhain = (
  ~r.make('lineno').push() & ( 
-  positioning       |
-  fn_f              |
-  toolCall          |
-  begin_pgm         |
-  end_pgm           |
-  BLKformStart      |
-  BLKformEnd        |
-  auxilary          |
-  positioningShort  |
+  positioning         |
+  fn_f                |
+  toolCall            |
+  begin_pgm           |
+  end_pgm             |
+  BLKformStart        |
+  BLKformEnd          |
+  auxilary & 'UPDATE' |
+  positioningShort    |
   comment
   )
 & ~comment

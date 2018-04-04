@@ -3,9 +3,11 @@ import generator.evaluator as ev
 import languages.heidenhain.commands as cmd
 
 from languages.heidenhain.commands import Registers     as reg
+from languages.heidenhain.commands import Position      as pos
 from languages.heidenhain.commands import Motion        as mot
 from languages.heidenhain.commands import Compensation  as comp
 from languages.heidenhain.commands import Direction     as dir
+from languages.heidenhain.commands import Spindle       as spin
 
 from languages.expression.evaluator import ArithmeticEvaluator
 
@@ -13,11 +15,12 @@ import copy
 import math
 
 def machine_state():
-  state = { key : 0 for key in list(reg) }
+  state = { key : 0 for key in list(reg) }.update( { key : 0 for key in list(pos) } )
   state[reg.COMPENSATION] = comp.NONE
   state[reg.DIRECTION]    = dir.CW
   state[reg.UNITS]        = cmd.Units.MM
   state[reg.MOTIONMODE]   = mot.LINEAR
+  state[reg.WCS]          = 54
   return state
 
 @ev.Handler( cmd.Commands )
@@ -26,11 +29,27 @@ class CommandEvaluator:
     self.arithmetic = arithmetic
     self.state      = machine_state()
     self.prevState  = machine_state()
+    self.tmp        = {}
     
-  def SET( self, stack ):
+  def _restoreTMP( self ):
+    self.state.update( self.tmp )
+    self.tmp = {}
+    
+  def MOVE( self, stack ):
     self.prevState = self.state.copy()
-    registers = self.arithmetic.registers
-    # if registers[reg.MOTIONMODE] is mot.LINEAR:
+    symtable = self.arithmetic.symtable
+  
+  def UPDATE( self, stack ):
+    self.prevState = self.state.copy()
+    symtable = self.arithmetic.symtable
+  
+  def DISCARD( self, stack ):
+    self.arithmetic.symtable.clear()
+    
+  @ev.stack2arg(1)
+  def TMP( self, register ):
+    self.tmp[ register ] = self.state[register]
+    return []
   
   def STOP( self, stack ):
     pass

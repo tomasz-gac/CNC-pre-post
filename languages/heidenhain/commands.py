@@ -2,18 +2,16 @@ from enum import IntEnum, unique
 
 @unique
 class Commands(IntEnum):
-  SET = 9         # UPDATE STATE ASSUMING INVARIANTS
-  IGNORE = 10     # DISCARD STATE BUFFER
-  STOP = 11       # PROGRAM STOP
-  OPTSTOP = 12    # PROGRAM OPTIONAL STOP
-  TOOLCHANGE = 13 # CHANGE TOOL TO Registers.TOOLNO
-  SPINCW     = 14 # SPINDLE ON CLOCKWISE
-  SPINCCW    = 15 # SPINDLE ON COUNTER CLOCKWISE
-  SPINOFF    = 16 # SPINDLE OFF
+  UPDATE  = 8     # UPDATE REGISTERS
+  MOVE    = 9     # UPDATE AND MOVE TO POSITION ASSUMING COORDINATE INVARIANTS
+  DISCARD = 10    # DISCARD STATE BUFFER
+  TMP     = 11    # SET REGISTER VALUE AS TEMPORARY AND RESTORE IT AFTER UPDATE
+  STOP    = 12    # PROGRAM STOP
+  OPTSTOP = 13    # PROGRAM OPTIONAL STOP
+  TOOLCHANGE = 14 # CHANGE TOOL TO Registers.TOOLNO
   
-
 @unique
-class Registers(IntEnum):
+class Position(IntEnum):
   # CURRENT X Y Z A B C
   X = 0
   Y = 1
@@ -24,42 +22,47 @@ class Registers(IntEnum):
   # CURRENT ANGLE AND RADIUS RELATIVE TO CC
   ANG = 6
   RAD = 7
-  # CIRCLE CENTER X Y Z
-  CX = 8
-  CY = 9
-  CZ = 10
   # INCREMENTAL VALUES FOR X Y Z A B C CX CY CZ ANG RAD
-  XINC   = 11
-  YINC   = 12
-  ZINC   = 13
-  AINC   = 14
-  BINC   = 15
-  CINC   = 16
-  CXINC  = 17
-  CYINC  = 18
-  CZINC  = 19
-  ANGINC = 20
-  RADINC = 21
+  XINC   = 8
+  YINC   = 9
+  ZINC   = 10
+  AINC   = 11
+  BINC   = 12
+  CINC   = 13
+  ANGINC = 14
+  RADINC = 15
+ 
+@unique
+class Registers(IntEnum):
+  # CIRCLE CENTER X Y Z
+  CX = 16
+  CY = 17
+  CZ = 18
+  CXINC  = 19
+  CYINC  = 20
+  CZINC  = 21
   COMPENSATION = 22  # COMPENSATION TYPE
   DIRECTION    = 23  # CIRCLE DIRECTION
   LINENO       = 24  # LINE NUMBER
   UNITS        = 25  # MACHINE UNITS
   FEED         = 26  # MACHINE FEED
   SPINSPEED    = 27  # SPINDLE SPEED
+  SPINDIR      = 28  # SPINDLE ROTATION DIRECTION
   MOTIONMODE   = 29  # POSITIONING MOTION MODE
   TOOLNO       = 30  # TOOL NUMBER
   TOOLDL       = 31  # TOOL DELTA LENGTH
   TOOLDR       = 32  # TOOL DELTA RADIUS
   COOLANT      = 33  # COOLANT TYPE
-  
+  WCS          = 34  # WORLD COORDINATE SYSTEM NUMBER
 
 incmap = { 
-  Registers.X : Registers.XINC, Registers.Y : Registers.YINC, Registers.Z : Registers.ZINC, 
-  Registers.A : Registers.AINC, Registers.B : Registers.BINC, Registers.C : Registers.CINC, 
-  Registers.ANG : Registers.ANGINC, Registers.RAD : Registers.RADINC,
+  Position.X : Position.XINC, Position.Y : Position.YINC, Position.Z : Position.ZINC, 
+  Position.A : Position.AINC, Position.B : Position.BINC, Position.C : Position.CINC, 
+  Position.ANG : Position.ANGINC, Position.RAD : Position.RADINC,
   Registers.CX : Registers.CXINC, Registers.CY : Registers.CYINC, Registers.CZ : Registers.CZINC
 }
   
+ 
 @unique
 class Units(IntEnum):
   MM    = 0
@@ -87,3 +90,9 @@ class Coolant(IntEnum):
   FLOOD = 1
   MIST  = 2
   AIR   = 3
+  
+@unique
+class Spindle(IntEnum):
+  OFF = 0
+  CW  = 1
+  CCW = 2
