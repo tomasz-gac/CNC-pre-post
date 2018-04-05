@@ -11,30 +11,30 @@ def make( item ):
 class Rule:
   def __or__( self, rhs ):
     if isinstance( rhs, list ):
-      return Alternative( [self] + [ make(x) for x in rhs ] )
+      return Alternative( (self,) + tuple( make(x) for x in rhs ) )
     else:
-      return Alternative( [self, make(rhs)] )
+      return Alternative( (self, make(rhs)) )
     
   def __ror__( self, lhs ):
     if isinstance( lhs, list ):
-      return Alternative( [ make(x) for x in lhs ] + [self] )
+      return Alternative( tuple( make(x) for x in lhs ) + (self,) )
     else:
-      return Alternative( [make(lhs), self] )
+      return Alternative( (make(lhs), self) )
     
   def __and__( self, rhs ):
     if isinstance( rhs, list ):
-      return Sequence( [self] + [ make(x) for x in rhs ] )
+      return Sequence( (self,) + tuple( make(x) for x in rhs ) )
     else:
-      return Sequence( [self, make(rhs)] )
+      return Sequence( (self, make(rhs)) )
     
   def __rand__( self, lhs ):
     if isinstance( lhs, list ):
-      return Sequence( [ make(x) for x in lhs ] + [self] )
+      return Sequence( tuple( make(x) for x in lhs ) + (self,) )
     else:
-      return Sequence( [make(lhs), self] )
+      return Sequence( (make(lhs), self) )
     
   def __rmul__( self, other ):
-    return Sequence( [self for _ in range(other)] )
+    return Sequence( tuple(self for _ in range(other)) )
     
   def __pos__( self ):
     return Repeat( self )
@@ -116,12 +116,12 @@ class Alternative(Nary):
   def __or__( self, other ):
     if isinstance(other, Alternative):
       return Alternative( self.rules + other.rules )
-    return Alternative( self.rules + [make(other)] )
+    return Alternative( self.rules + (make(other),) )
   
   def __ror__( self, other ):
     if isinstance(other, Alternative):
       return Alternative( other.rules + self.rules )
-    return Alternative( [make(other)] + self.rules )
+    return Alternative( (make(other),) + self.rules )
 
 class Sequence(Nary):
   def __init__( self, rules ):
@@ -130,12 +130,12 @@ class Sequence(Nary):
   def __and__( self, other ):
     if isinstance(other, Sequence):
       return Sequence( self.rules + other.rules )
-    return Sequence( self.rules + [make(other)] )
+    return Sequence( self.rules + (make(other),) )
   
   def __rand__( self, other ):
     if isinstance(other, Sequence):
       return Sequence( other.rules + self.rules )
-    return Sequence( [make(other)] + self.rules )
+    return Sequence( (make(other),) + self.rules )
 
 class Repeat(Unary):
   def __init__( self, rule ):

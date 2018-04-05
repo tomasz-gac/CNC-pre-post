@@ -44,8 +44,8 @@ cmdLookup = t.make_lookup({
   
 @unique
 class ToolCallTokens(Enum):
-  DR = 'DR\\s*='
-  DL = 'DL\\s*='
+  DR = 'DR\\s*[=]?'
+  DL = 'DL\\s*[=]?'
   S  = 'S'
 
 toolOptLookup = t.make_lookup({
