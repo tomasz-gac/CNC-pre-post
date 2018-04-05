@@ -81,6 +81,20 @@ class Reordering( RuleCompilerBase ):
   def __init__( self, terminals ):
     super().__init__( terminals )
     
+  def Sequence( self, target ):
+    def _Sequence( targetSelf, state ):
+      sequence = [  ]
+      for rule in targetSelf.rules:
+        sequence += rule.accept( rule, state )
+        
+      try:
+        state.stack['output'] += sequence
+      except KeyError:
+        state.stack['output'] = sequence
+      return []
+    return _Sequence
+
+    
   def Push( self, target ):
     def _Push( targetSelf, state ):
       result = targetSelf.rule.accept( targetSelf.rule, state )

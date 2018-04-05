@@ -5,31 +5,29 @@ def make( item ):
   if isinstance( item, Rule ):
     return item
   return Terminal( item )
-  
-  # raise RuntimeError("Cannot use type " + type(item).__name__ + " in parser definition.")  
 
 class Rule:
   def __or__( self, rhs ):
-    if isinstance( rhs, list ):
-      return Alternative( (self,) + tuple( make(x) for x in rhs ) )
+    if isinstance( rhs, tuple ):
+      return Alternative( (self,) + tuple( make(rule) for rule in rhs ) )
     else:
       return Alternative( (self, make(rhs)) )
     
   def __ror__( self, lhs ):
-    if isinstance( lhs, list ):
-      return Alternative( tuple( make(x) for x in lhs ) + (self,) )
+    if isinstance( lhs, tuple ):
+      return Alternative( tuple( make(rule) for rule in lhs ) + (self,) )
     else:
       return Alternative( (make(lhs), self) )
     
   def __and__( self, rhs ):
-    if isinstance( rhs, list ):
-      return Sequence( (self,) + tuple( make(x) for x in rhs ) )
+    if isinstance( rhs, tuple ):
+      return Sequence( (self,) + tuple( make(rule) for rule in rhs ) )
     else:
       return Sequence( (self, make(rhs)) )
     
   def __rand__( self, lhs ):
-    if isinstance( lhs, list ):
-      return Sequence( tuple( make(x) for x in lhs ) + (self,) )
+    if isinstance( lhs, tuple ):
+      return Sequence( tuple( make(rule) for rule in lhs ) + (self,) )
     else:
       return Sequence( (make(lhs), self) )
     
@@ -114,28 +112,32 @@ class Alternative(Nary):
     super().__init__(rules)
     
   def __or__( self, other ):
-    if isinstance(other, Alternative):
-      return Alternative( self.rules + other.rules )
-    return Alternative( self.rules + (make(other),) )
+      # Parantheses are not important
+    self.rules += make(other),
+    return self
   
   def __ror__( self, other ):
-    if isinstance(other, Alternative):
-      return Alternative( other.rules + self.rules )
-    return Alternative( (make(other),) + self.rules )
+      # Parantheses are not important
+    self.rules = (make(other),) + self.rules
+    return self
 
 class Sequence(Nary):
   def __init__( self, rules ):
     super().__init__( rules )
     
   def __and__( self, other ):
-    if isinstance(other, Sequence):
-      return Sequence( self.rules + other.rules )
-    return Sequence( self.rules + (make(other),) )
+      # makes sure that parantheses are preserved
+    if isinstance( other, Sequence ):
+      return Sequence( (self, other) )
+    else:
+      return Sequence( self.rules + (make(other),) )
   
   def __rand__( self, other ):
-    if isinstance(other, Sequence):
-      return Sequence( other.rules + self.rules )
-    return Sequence( (make(other),) + self.rules )
+      # makes sure that parantheses are preserved
+    if isinstance( other, Sequence ):
+      return Sequence( (other, self) )
+    else:
+      return Sequence( (make(other),) + self.rules )
 
 class Repeat(Unary):
   def __init__( self, rule ):

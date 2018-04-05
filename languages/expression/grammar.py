@@ -10,13 +10,13 @@ pow.name = 'pow'
 
 identifier         = r.make('identifier')
 get_identifier     = identifier & 'GET'
-set_identifier     = ((identifier.push(2) & '=').push(2) & expression).pull(2)
+set_identifier     = identifier.push() & '=' & expression
 subexpression      = "(" & expression & ")"
 subexpression.name = 'subexpression'
 
 primary = ( 'number' | set_identifier | get_identifier | subexpression ).push()
 primary.name = 'primary'
 
-expression.rule = ( term & +( '+-' & expression ) ).push()
-term.rule       = ( pow & +( '*/' & term ) ).push()
-pow.rule        = ( primary & +( '^' & pow ) ).push()
+expression.rule = term & +( '+-' & expression )
+term.rule       = pow & +( '*/' & term )
+pow.rule        = primary & +( '^' & pow )

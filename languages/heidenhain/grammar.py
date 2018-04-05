@@ -7,20 +7,21 @@ coordCC        = ('CCXYZ'   & r.make('primary').push()).push()
 pointCartesian = coordCartesian & +coordCartesian
 pointPolar     = coordPolar & +coordPolar
 
-feed       = ( "F" & ( "MAX" | r.make('primary') ).push() ).push()
+feed       = "F" & ( "MAX" | r.make('primary') ).push()
 compensation = r.make('compensation').push()
 direction    = r.make('direction').push()
 
 gotoTail = ~direction & ~compensation & ~feed
 
-goto = ( 'L/C' & ~pointCartesian | 'LP/CP' & ~pointPolar & ~coordCartesian) & gotoTail
+goto = (  'L/C' & (~pointCartesian & gotoTail ) | 
+          'LP/CP' & ( ~pointPolar & ~coordCartesian & gotoTail ) )
 
 circleCenter = 'CC' & coordCC & coordCC
 
-auxilary = ( 'auxilary' & +r.make('auxilary') ).push()
+auxilary = 'auxilary' & +r.make('auxilary')
 
-positioning = ( ( goto | circleCenter ) & ~auxilary ).push()
-positioningShort = ( 
+positioning = ( goto | circleCenter ) & ~auxilary
+positioningShort = (
     ( pointCartesian | pointPolar & ~coordCartesian ) & gotoTail & ~auxilary & 'MOVE'
   ).push()
 
@@ -29,16 +30,11 @@ begin_pgm     = 'begin_pgm'
 end_pgm       = 'end_pgm'
 BLKformStart  = 'block form start' & pointCartesian
 BLKformEnd    = 'block form end' & pointCartesian
-fn_f          = ('fn_f' & r.make('expression').push()).push()
+fn_f          = 'fn_f' & r.make('expression').push()
 
-toolCall = ( 
-  'tool call' & ( 
-    r.make('primary') & ( 
-      "tool axis" & 
-          +( ( 'tool options' & r.make('primary').push()).push() )
-      ).push()
-    ).push() 
-  ).push() 
+toolCall = 'tool call' & ( r.make('primary') & ( 
+  "tool axis" & +( ( 'tool options' & r.make('primary').push() ) ) ) )
+      
 
 heidenhain = (
  ~r.make('lineno').push() & ( 
