@@ -35,10 +35,10 @@ class GOTOtokensPolar(Enum):
   circular  = "CP"
 
 cmdLookup = t.make_lookup({
-  GOTOtokensCartesian.linear    : [ mot.LINEAR,    reg.MOTIONMODE, art.SET, cmd.INVARIANT ],
-  GOTOtokensCartesian.circular  : [ mot.CIRCULAR,  reg.MOTIONMODE, art.SET, cmd.INVARIANT ],
-  GOTOtokensPolar.linear        : [ mot.LINEAR,    reg.MOTIONMODE, art.SET, cmd.INVARIANT ],
-  GOTOtokensPolar.circular      : [ mot.CIRCULAR,  reg.MOTIONMODE, art.SET, cmd.INVARIANT ]
+  GOTOtokensCartesian.linear    : [ mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ],
+  GOTOtokensCartesian.circular  : [ mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ],
+  GOTOtokensPolar.linear        : [ mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ],
+  GOTOtokensPolar.circular      : [ mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ]
 })
 
   
@@ -49,9 +49,9 @@ class ToolCallTokens(Enum):
   S  = 'S'
 
 toolOptLookup = t.make_lookup({
-  ToolCallTokens.DR : [ reg.TOOLDR,    art.SET ],
-  ToolCallTokens.DL : [ reg.TOOLDL,    art.SET ],
-  ToolCallTokens.S  : [ reg.SPINSPEED, art.SET ]
+  ToolCallTokens.DR : [ reg.TOOLDR,    cmd.SET ],
+  ToolCallTokens.DL : [ reg.TOOLDL,    cmd.SET ],
+  ToolCallTokens.S  : [ reg.SPINSPEED, cmd.SET ]
 })
   
   
@@ -86,7 +86,7 @@ def handleCoord( map ):
     symbol = map[token.type]
     if token.groups[0] is 'I':
       symbol = commands.incmap[symbol]
-    return [ symbol, art.SET ]
+    return [ symbol, cmd.SET ]
   return _handleCoord
 
 @unique
@@ -96,9 +96,9 @@ class Compensation(Enum):
   RL = 'RL'  
   
 compensationLookup = t.make_lookup( { 
-  Compensation.R0 : [ comp.NONE,  reg.COMPENSATION, art.SET ]
-, Compensation.RL : [ comp.LEFT,  reg.COMPENSATION, art.SET ]
-, Compensation.RR : [ comp.RIGHT, reg.COMPENSATION, art.SET ]
+  Compensation.R0 : [ comp.NONE,  reg.COMPENSATION, cmd.SET ]
+, Compensation.RL : [ comp.LEFT,  reg.COMPENSATION, cmd.SET ]
+, Compensation.RR : [ comp.RIGHT, reg.COMPENSATION, cmd.SET ]
 } )
 
 @unique
@@ -107,8 +107,8 @@ class Direction( Enum ):
   CCW = 'DR[+]'
 
 directionLookup = t.make_lookup( { 
-  Direction.CW  : [ dir.CW,   reg.DIRECTION, art.SET ]
-, Direction.CCW : [ dir.CCW,  reg.DIRECTION, art.SET ]
+  Direction.CW  : [ dir.CW,   reg.DIRECTION, cmd.SET ]
+, Direction.CCW : [ dir.CCW,  reg.DIRECTION, cmd.SET ]
 } )
 
 def handleAux( result ):
@@ -116,14 +116,14 @@ def handleAux( result ):
   command = { 
     0  : [ cmd.STOP ], 
     1  : [ cmd.OPTSTOP ], 
-    3  : [ spin.CW,  reg.SPINDIR, art.SET ],
-    4  : [ spin.CCW, reg.SPINDIR, art.SET ],
-    5  : [ spin.OFF, reg.SPINDIR, art.SET ],
+    3  : [ spin.CW,  reg.SPINDIR, cmd.SET ],
+    4  : [ spin.CCW, reg.SPINDIR, cmd.SET ],
+    5  : [ spin.OFF, reg.SPINDIR, cmd.SET ],
     6  : [ cmd.TOOLCHANGE ], 
-    8  : [ cool.FLOOD, reg.COOLANT, art.SET ],
-    9  : [ cool.OFF,   reg.COOLANT, art.SET ],
+    8  : [ cool.FLOOD, reg.COOLANT, cmd.SET ],
+    9  : [ cool.OFF,   reg.COOLANT, cmd.SET ],
     30 : [ cmd.END ],
-    91 : [ reg.WCS, cmd.TMP, 0, reg.WCS, art.SET ]
+    91 : [ reg.WCS, cmd.TMP, 0, reg.WCS, cmd.SET ]
   }
   try:
     return command[aux]
@@ -137,8 +137,8 @@ terminals = t.make({
   'XYZABC'            : t.make( CartCoordinateTokens ) >> handleCoord( coordmap ),
   'PAPR'              : t.make( PolarCoordinateTokens ) >> handleCoord( coordmap ),
   'CCXYZ'             : t.make( CartCoordinateTokens ) >> handleCoord( CCcoordmap ),
-  'lineno'            : expr.number >> (lambda x : [ x[0], reg.LINENO, art.SET ]),
-  'F'                 : t.make('F').ignore( [ reg.FEED, art.SET ] ),
+  'lineno'            : expr.number >> (lambda x : [ x[0], reg.LINENO, cmd.SET ]),
+  'F'                 : t.make('F').ignore( [ reg.FEED, cmd.SET ] ),
   'MAX'               : t.make('MAX').ignore( [ -1 ] ),
   'compensation'      : compensationLookup(Compensation),
   'direction'         : directionLookup( Direction ),
@@ -154,7 +154,7 @@ terminals = t.make({
   'block form start'  : t.make('BLK FORM 0\\.1 (X|Y|Z)').ignore( [cmd.DISCARD] ),
   'block form end'    : t.make('BLK FORM 0\\.2').ignore( [cmd.DISCARD] ),
   'fn_f'              : t.make('FN 0\\:').ignore([cmd.UPDATE]),
-  'tool call'         : t.make('TOOL CALL').ignore( [reg.TOOLNO, art.SET, cmd.UPDATE, cmd.TOOLCHANGE] ),
+  'tool call'         : t.make('TOOL CALL').ignore( [reg.TOOLNO, cmd.SET, cmd.UPDATE, cmd.TOOLCHANGE] ),
   'tool axis'         : t.make('(X|Y|Z)').ignore(),
   'tool options'      : toolOptLookup(ToolCallTokens),
   'primary'           : expr.primary,

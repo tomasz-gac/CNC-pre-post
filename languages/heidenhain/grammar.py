@@ -1,9 +1,8 @@
 import generator.rule as r
 
-coordCartesian = ('XYZABC'  & r.make('primary').push()).push()
-coordPolar     = ('PAPR'    & r.make('primary').push()).push()
-coordCC        = ('CCXYZ'   & r.make('primary').push()).push()
-
+coordCartesian = 'XYZABC'  & r.make('primary').push()
+coordPolar     = 'PAPR'    & r.make('primary').push()
+coordCC        = 'CCXYZ'   & r.make('primary').push()
 pointCartesian = coordCartesian & +coordCartesian
 pointPolar     = coordPolar & +coordPolar
 

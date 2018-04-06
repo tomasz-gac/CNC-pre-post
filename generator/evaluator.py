@@ -34,7 +34,22 @@ def stack2args( nargs ):
       stack += fn( symbol, *args )
     return decorated
   return decorate
-        
+
+def symbol( enum, symtable ):
+  
+  def make_set( coord ):
+    def _impl( self, stack ):
+      self.symtable[ coord ] = stack[-1]
+      del stack[-1]
+    return _impl
+  
+  handler = type( 'symbol_'+enum.__name__, (object,), {} )
+  handler.symtable = symtable  
+  for value in enum:
+    setattr( handler, value.name, make_set( value ) )
+  
+  return Handler(enum)(handler)()
+ 
 def _append( symbol, stack ):
   stack.append(symbol)
     

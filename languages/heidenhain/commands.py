@@ -2,8 +2,8 @@ from enum import IntEnum, unique
 
 @unique
 class Commands(IntEnum):
+  SET         = 7  # A B SET -> B = A
   INVARIANT   = 8  # UPDATE STATE GIVEN INVARIANT
-  UPDATE      = 9  # UPDATE STATE
   DISCARD     = 10 # DISCARD STATE BUFFER
   TMP         = 11 # SET REGISTER VALUE AS TEMPORARY AND RESTORE IT AFTER INVARIANT
   STOP        = 12 # PROGRAM STOP

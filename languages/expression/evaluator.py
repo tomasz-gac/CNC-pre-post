@@ -3,8 +3,7 @@ from languages.expression.commands import Arithmetic
 
 @ev.Handler( Arithmetic )
 class ArithmeticEvaluator:
-  def __init__( self, registers = {}, symtable = {} ):
-    self.registers = registers
+  def __init__( self, symtable ):
     self.symtable = symtable
   
   @ev.stack2args(2)
@@ -26,12 +25,7 @@ class ArithmeticEvaluator:
   @ev.stack2args(2)
   def POW( self, A, B ):
     return [ A ** B ]
-  
-  @ev.stack2args(2)
-  def SET( self, A, B ):
-    self.symtable[B] = A
-    return []
-  
+    
   @ev.stack2args(1)
   def GET( self, A ):
     try:
@@ -41,7 +35,7 @@ class ArithmeticEvaluator:
       
   @ev.stack2args(2)
   def LET( self, A, B ):
-    self.symtable[B] = A
-    return [ A ]
+    self.symtable[A] = B
+    return [ B ]
     
-Evaluator = ev.Evaluator( [ArithmeticEvaluator()] )
+Evaluator = ev.Evaluator( [ArithmeticEvaluator( {} )] )
