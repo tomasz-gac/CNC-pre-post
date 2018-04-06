@@ -1,5 +1,5 @@
 import  languages.expression.grammar      as grammar
-from    languages.expression.commands import Arithmetic as cmd
+import    languages.expression.commands   as cmd
 
 import  generator.terminal as t
 import  generator.rule     as r
@@ -35,7 +35,7 @@ tokenLookup = t.make_lookup( {
 } )
 
 terminals = {
-  'number'          : t.make( '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' ) >> t.group(float),
+  'number'          : t.make( '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' ) >> t.group(cmd.PUSH),
   'identifier'      : t.make( '(([a-zA-Z_]+\\d*)+)' ) >> t.group( str ),
   'GET'             : t.Return( [cmd.GET] ),
   '='               : tokenLookup( AssignToken ),

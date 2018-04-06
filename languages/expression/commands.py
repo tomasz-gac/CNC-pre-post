@@ -1,5 +1,6 @@
 from enum import IntEnum, unique
-  
+import generator.evaluator as ev
+ 
 @unique
 class Arithmetic(IntEnum):
   ADD = 0  # A B ADD -> A + B
@@ -9,7 +10,7 @@ class Arithmetic(IntEnum):
   POW = 4  # A B POW -> A ^ B
   LET = 5  # A B LET -> B = A; A
   GET = 7  # A   GET -> A
-  
+
 @ev.stack2args(2)
 def ADD( state, A, B ):
   return [ A + B ]
@@ -44,3 +45,11 @@ def LET( state, A, B ):
   except AtributeError:
     state.symtable = { A : B }
   return [ B ]
+  
+class PUSH:
+  def __init__(self, N ):
+    self.value = float(N)
+  def __call__( self, state ):
+    state.stack.append( self.value )
+  def __repr__(self):
+    return '<PUSH '+str(self.value)+'>'
