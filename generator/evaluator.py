@@ -9,7 +9,7 @@ class Stack2args:
     state.stack += self.function( state, *args )
     
   def __repr__( self ):
-    return ' <Stack2args(' + str(self.function) + ',' + str(self.nargs) + ')>'
+    return '<Stack2args(' + str(self.function) + ',' + str(self.nargs) + ')>'
     
     
 # Convert handler function from signature (state) to (state, a1, a2, ..., aNargs)    

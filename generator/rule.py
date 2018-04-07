@@ -127,18 +127,14 @@ class Sequence(Nary):
     
   def __and__( self, other ):
       # makes sure that parantheses are preserved
+    print('__and__')
     if isinstance( other, Sequence ):
       return Sequence( (self, other) )
+    elif isinstance( other, tuple ):
+      return Sequence( self.rules + tuple( make(rule) for rule in other ) )
     else:
       return Sequence( self.rules + (make(other),) )
   
-  def __rand__( self, other ):
-      # makes sure that parantheses are preserved
-    if isinstance( other, Sequence ):
-      return Sequence( (other, self) )
-    else:
-      return Sequence( (make(other),) + self.rules )
-
 class Repeat(Unary):
   def __init__( self, rule ):
     super().__init__(rule)

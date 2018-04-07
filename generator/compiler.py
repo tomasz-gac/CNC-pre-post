@@ -59,7 +59,9 @@ class RuleCompilerBase:
     def _Sequence( targetSelf, state ):
       sequence = [  ]
       for rule in targetSelf.rules:
-        sequence += rule.accept( rule, state )
+          # Execute eagerly
+        result = rule.accept( rule, state )
+        sequence += result( state )
          
       return sequence
     return _Sequence
@@ -76,44 +78,47 @@ class RuleCompilerBase:
         state.join( save )  # repeat until failure. Discard failed state
         return sequence
     return _Repeat
+    
+  def Push( self, target ):
+      # Do not execute
+    def _Push( targetSelf, state ):
+      result = targetSelf.rule.accept( targetSelf.rule, state )
+      return result
+    return _Push
       
 class Reordering( RuleCompilerBase ):
   def __init__( self, terminals ):
     super().__init__( terminals )
     
   def Sequence( self, target ):
+      # Start executing after obtaining all of sequence
     def _Sequence( targetSelf, state ):
-      sequence = [  ]
+      outputs = [ ]
       for rule in targetSelf.rules:
-        sequence += rule.accept( rule, state )
-        
-      try:
-        state.stack['output'] += sequence
-      except KeyError:
-        state.stack['output'] = sequence
-      return []
-    return _Sequence
-
+        outputs += rule.accept( rule, state )
+      
+      sequence = [ ]
+      for result in outputs:
+        sequence += result(state)
+      return sequence
     
-  def Push( self, target ):
+    return _Sequence   
+    
+  def Push( self, target ):      
     def _Push( targetSelf, state ):
       result = targetSelf.rule.accept( targetSelf.rule, state )
-      try:
-        state.stack[targetSelf.output] += result
-      except KeyError:
-        state.stack[targetSelf.output] = result
-      return []
+      return result( state )
     return _Push
   
-  def Pull( self, target ):
+  '''def Pull( self, target ):
     def _Pull( targetSelf, state ):
       result = targetSelf.rule.accept( targetSelf.rule, state )
       if len(result) > 0:
         raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )
       return state.stack[targetSelf.output]
-    return _Pull
+    return _Pull'''
   
-class Ordered( RuleCompilerBase ):
+'''class Ordered( RuleCompilerBase ):
   def __init__( self, terminals ):
     super().__init__( terminals )
     
@@ -125,4 +130,4 @@ class Ordered( RuleCompilerBase ):
   def Pull( self, target ):
     def _Pull( targetSelf, state ):
       return targetSelf.rule.accept( targetSelf.rule, state )
-    return _Pull
+    return _Pull'''
