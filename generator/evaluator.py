@@ -7,7 +7,7 @@ class Stack2args:
     args = state.stack[-self.nargs:]
     del state.stack[-self.nargs:]
     state.stack += self.function( state, *args )
-    
+        
   def __repr__( self ):
     return '<Stack2args(' + str(self.function) + ',' + str(self.nargs) + ')>'
     

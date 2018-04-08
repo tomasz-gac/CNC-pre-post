@@ -1,53 +1,51 @@
-import  languages.expression.grammar      as grammar
-import    languages.expression.commands   as cmd
+import  languages.expression.grammar  as grammar
+import  languages.expression.commands as cmd
 
 import  generator.terminal as t
 import  generator.rule     as r
 import  generator.compiler as c
 
-from enum import Enum, unique
+class Return:
+  def __init__( self, value ):
+    self.returned = value
+    
+  def __call__( self, *args ):
+    return self.returned
 
-@unique
-class ExpressionToken( Enum ):
-  plus = '[+]'
-  minus = '[-]'
-  
-@unique
-class TermToken( Enum ):
-  mult = '[*]'
-  div = '[/]'
-  
-@unique 
-class PowToken( Enum ):
-  pow = '\\^'
-  
-@unique 
-class AssignToken( Enum ):
-  assign = '[=]'
+expressionToken = t.Pattern({
+  '[+]' : t.ret( cmd.ADD ),
+  '[-]' : t.ret( cmd.SUB )
+})
 
-tokenLookup = t.make_lookup( { 
-  ExpressionToken.plus  : [ cmd.ADD ], 
-  ExpressionToken.minus : [ cmd.SUB ], 
-  TermToken.mult        : [ cmd.MUL ], 
-  TermToken.div         : [ cmd.DIV ], 
-  PowToken.pow          : [ cmd.POW ], 
-  AssignToken.assign    : [ cmd.LET ]
-} )
+termToken = t.Pattern({
+  '[*]' : t.ret( cmd.MUL ),
+  '[/]' : t.ret( cmd.DIV )
+})
+
+powToken = t.Pattern({ '\\^' : t.ret( cmd.POW ) })
+
+assignToken = t.Pattern({ '[=]' : t.ret( cmd.LET )} )
+number = t.Pattern({ 
+  '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' : (lambda match : [ cmd.PUSH(float(match.groups()[0])) ]) 
+})
+identifier = t.Pattern({ 
+  '(([a-zA-Z_]+\\d*)+)' : (lambda match : [ cmd.PUSH(match.groups()[0]) ]) 
+})
 
 terminals = {
-  'number'          : t.make( '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' ) >> t.group(cmd.PUSH),
-  'identifier'      : t.make( '(([a-zA-Z_]+\\d*)+)' ) >> t.group( str ),
+  'number'          : number,
+  'identifier'      : identifier,
   'GET'             : t.Return( [cmd.GET] ),
-  '='               : tokenLookup( AssignToken ),
-  '('               : t.make('[(]').ignore(),
-  ')'               : t.make('[)]').ignore(),
-  '+-'              : tokenLookup( ExpressionToken ),
-  '*/'              : tokenLookup( TermToken ),
-  '^'               : tokenLookup( PowToken )
+  '='               : assignToken,
+  '('               : t.Pattern({ '[(]' : t.ret() }),
+  ')'               : t.Pattern({ '[)]' : t.ret() }),
+  '+-'              : expressionToken,
+  '*/'              : termToken,
+  '^'               : powToken
 }
 
 compiler = c.Reordering( terminals )
 
-Parse   = t.StrParser( grammar.expression.pull(), compiler )
-primary = t.StrParser( grammar.primary.pull(), compiler )
+Parse   = t.StrParser( grammar.expression, compiler )
+primary = t.StrParser( grammar.primary, compiler )
 number  = t.StrParser( r.make('number'), compiler )

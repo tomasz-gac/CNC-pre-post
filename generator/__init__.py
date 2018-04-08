@@ -9,11 +9,9 @@ from generator.rule       import Terminal
 
 from generator.terminal   import StrParser
 from generator.terminal   import ParserFailedException
-from generator.terminal   import Handler
-from generator.terminal   import Task
-from generator.terminal   import TaskHandler
-from generator.terminal   import StringTask
 from generator.terminal   import Ignore
-from generator.terminal   import make_lookup
-from generator.terminal   import group
-from generator.terminal   import get
+from generator.terminal   import Wrapper
+from generator.terminal   import Pattern
+from generator.terminal   import Return
+from generator.terminal   import ret
+

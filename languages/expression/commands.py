@@ -25,20 +25,17 @@ def POW( state, A, B ):
 def GET( state, A ):
   try:
     return [ state.symtable[A] ]
-  except ( KeyError, AtributeError ):
+  except KeyError:
     raise RuntimeError('Unknown variable : '+str(A))
     
 @ev.stack2args(2)
 def LET( state, A, B ):
-  try:
-    state.symtable[A] = B
-  except AtributeError:
-    state.symtable = { A : B }
+  state.symtable[A] = B
   return [ B ]
   
 class PUSH:
   def __init__(self, N ):
-    self.value = float(N)
+    self.value = N
   def __call__( self, state ):
     state.stack.append( self.value )
   def __repr__(self):

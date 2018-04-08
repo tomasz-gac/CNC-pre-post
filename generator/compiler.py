@@ -12,77 +12,77 @@ class RuleCompilerBase:
     except KeyError:
       raise RuntimeError('Parser does not handle terminal '+str(target.handle)) 
     
-    def _Terminal( targetSelf, state ):
-      result, state.input = targetSelf.terminal( state.input )
+    def _Terminal( targetSelf, executor ):
+      result, executor.input = targetSelf.terminal( executor.input )
       return result
     
     return _Terminal
     
   def Handle( self, target ):
-    def _Handle( targetSelf, state ):
-      return targetSelf.rule.accept( targetSelf.rule, state )
+    def _Handle( targetSelf, executor ):
+      return targetSelf.rule.accept( targetSelf.rule, executor )
     return _Handle
     
   def Not( self, target ):
-    def _Not( targetSelf, state ):
+    def _Not( targetSelf, executor ):
       try:
-        result = targetSelf.rule.accept( targetSelf.rule, state )
+        result = targetSelf.rule.accept( targetSelf.rule, executor )
       except ParserFailedException:
         return []
       
-      raise ParserFailedException()
+      raise ParserFailedException('Parser marched a Not statement')
     return _Not
     
   def Optional( self, target ):  
-    def _Optional( targetSelf, state ):
-      save = state.fork()
+    def _Optional( targetSelf, executor ):
+      save = executor.fork()
       try:        
-        return targetSelf.rule.accept( targetSelf.rule, state )
+        return targetSelf.rule.accept( targetSelf.rule, executor )
       except ParserFailedException:
-        state.join( save )
+        executor.join( save )
         return []
     return _Optional
   
   def Alternative( self, target ):
-    def _Alternative( targetSelf, state ):
+    def _Alternative( targetSelf, executor ):
       for rule in targetSelf.rules:
-        fork = state.fork() # entry state
+        fork = executor.fork() # entry executor
         try:
-          return rule.accept( rule, state )  # try visiting
+          return rule.accept( rule, executor )  # try visiting
         except ParserFailedException:
-          state.join(fork)        
+          executor.join(fork)        
       
-      raise ParserFailedException() # all options exhausted with no match
+      raise ParserFailedException('Parser alternative exhausted with no match') # all options exhausted with no match
     return _Alternative
     
   def Sequence( self, target ):
-    def _Sequence( targetSelf, state ):
+    def _Sequence( targetSelf, executor ):
       sequence = [  ]
       for rule in targetSelf.rules:
           # Execute eagerly
-        result = rule.accept( rule, state )
-        sequence += result( state )
+        result = rule.accept( rule, executor )
+        sequence += executor( result )
          
       return sequence
     return _Sequence
     
   def Repeat( self, target ):
-    def _Repeat( targetSelf, state ):
+    def _Repeat( targetSelf, executor ):
       sequence = []
       save = None
       try:
         while True:
-          save = state.fork() #save state from before visitation
-          sequence += targetSelf.rule.accept( targetSelf.rule, state )
+          save = executor.fork() #save executor from before visitation
+          sequence += targetSelf.rule.accept( targetSelf.rule, executor )
       except ParserFailedException:
-        state.join( save )  # repeat until failure. Discard failed state
+        executor.join( save )  # repeat until failure. Discard failed executor
         return sequence
     return _Repeat
     
   def Push( self, target ):
       # Do not execute
-    def _Push( targetSelf, state ):
-      result = targetSelf.rule.accept( targetSelf.rule, state )
+    def _Push( targetSelf, executor ):
+      result = targetSelf.rule.accept( targetSelf.rule, executor )
       return result
     return _Push
       
@@ -92,30 +92,30 @@ class Reordering( RuleCompilerBase ):
     
   def Sequence( self, target ):
       # Start executing after obtaining all of sequence
-    def _Sequence( targetSelf, state ):
-      outputs = [ ]
+    def _Sequence( targetSelf, executor ):
+      outputs = []
       for rule in targetSelf.rules:
-        outputs += rule.accept( rule, state )
+        outputs.append( rule.accept( rule, executor ) )
       
       sequence = [ ]
       for result in outputs:
-        sequence += result(state)
+        sequence += executor( result )
       return sequence
     
     return _Sequence   
     
   def Push( self, target ):      
-    def _Push( targetSelf, state ):
-      result = targetSelf.rule.accept( targetSelf.rule, state )
-      return result( state )
+    def _Push( targetSelf, executor ):
+      result = targetSelf.rule.accept( targetSelf.rule, executor )
+      return executor( result )
     return _Push
   
   '''def Pull( self, target ):
-    def _Pull( targetSelf, state ):
-      result = targetSelf.rule.accept( targetSelf.rule, state )
+    def _Pull( targetSelf, executor ):
+      result = targetSelf.rule.accept( targetSelf.rule, executor )
       if len(result) > 0:
         raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )
-      return state.stack[targetSelf.output]
+      return executor.stack[targetSelf.output]
     return _Pull'''
   
 '''class Ordered( RuleCompilerBase ):
@@ -123,11 +123,11 @@ class Reordering( RuleCompilerBase ):
     super().__init__( terminals )
     
   def Push( self, target ):
-    def _Push( targetSelf, state ):
-      return targetSelf.rule.accept( targetSelf.rule, state )
+    def _Push( targetSelf, executor ):
+      return targetSelf.rule.accept( targetSelf.rule, executor )
     return _Push
   
   def Pull( self, target ):
-    def _Pull( targetSelf, state ):
-      return targetSelf.rule.accept( targetSelf.rule, state )
+    def _Pull( targetSelf, executor ):
+      return targetSelf.rule.accept( targetSelf.rule, executor )
     return _Pull'''
