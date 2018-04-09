@@ -1,6 +1,7 @@
 import re
 from copy import copy, deepcopy
 from generator.injector import Injector
+from generator.evaluator import Eager, Delayed
     
 class TerminalBase:
   def ignore( self, returned = [] ):
@@ -20,76 +21,35 @@ class ParserFailedException( Exception ):
   def __init__( self, string ):
     super().__init__(string)
 
-def make_parser( State ):
+def make_parser( Executor ):
   class Parser(TerminalBase):
     __slots__ = 'rule'
     def __init__( self, rule, compiler, recompile = False ):
       self.rule = Injector(compiler)( deepcopy( rule ), recompile )
     
-    def __call__( self, input ):
-      state = State( input )
-      result = self.rule.accept( self.rule, state )
+    def __call__( self, state ):
+      executor = Executor(state)
+      executor.load( executor.save() )  # do not modify the incoming state
+      result = self.rule.accept( self.rule, executor )
       if len(result) > 0:
         raise RuntimeError('Parser returned with fallthrough: ' + str(result) )
-      return state.Return(), state.input
+      return executor.state
   return Parser
 
-class StringState:
-  __slots__ = 'rule', 'stack', 'symtable', 'preprocess', '__input'
-  def __init__( self, input ):
-    self.stack = []
-    self.symtable = {}
-    self.__input = input    
-  
-  def __call__( self, result ):
-    for f in result:
-      f( self )
-    return []
-    
-  def Return( self ):
-    return self.stack
-    
-  def fork( self ):
-    frk = StringState.__new__(StringState)
-    frk.stack = self.stack[:]
-    frk.symtable = dict(self.symtable)
-    frk.__input = self.__input[:]
-    return frk
-  
-  def join( self, frk ):
-    self.stack = frk.stack
-    self.symtable = frk.symtable
-    self.__input = frk.__input
-    
-  @property
-  def input( self ):
-    return self.__input
-    
-  @input.setter
-  def input( self, line ):
-    self.__input = line.lstrip(' ')
-
-StrParser = make_parser(StringState)
+EagerParser = make_parser(Eager)
+DelayedParser = make_parser(Delayed)
   
 class Ignore(TerminalBase):
   def __init__( self, task, returned = [] ):
     self.task = make(task)
     self.returned = returned
-  def __call__( self, line ):
-    result, rest = self.task(line)
-    return self.returned, rest
+  def __call__( self, state ):
+    result = self.task(state)
+    return self.returned
 
 class Return(TerminalBase):
-  def __init__( self, returned ):
-    self.returned = returned
-  def __call__( self, line ):
-    return self.returned, line
-
-
-class ret(TerminalBase):
-  def __init__( self, *args ):
-    self.returned = list(args)
-    
+  def __init__( self, *returned ):
+    self.returned = list(returned)
   def __call__( self, *args ):
     return self.returned
   
@@ -98,9 +58,9 @@ class Wrapper(TerminalBase):
     self.wrapped = wrapped
     self.wrapper = wrapper
     
-  def __call__( self, line ):
-    result, rest = self.wrapped( line )
-    return self.wrapper( result ), rest
+  def __call__( self, state ):
+    result = self.wrapped( state )
+    return self.wrapper( result )
 
 class Pattern(TerminalBase):
   def __init__( self, lookup ):
@@ -109,10 +69,11 @@ class Pattern(TerminalBase):
   def __deepcopy__( self, memo ):
     return copy( self )
     
-  def __call__( self, line ):
+  def __call__( self, state ):
     for re,callback in self._lookup.items():
-      match = re.match( line )
+      match = re.match( state['input'] )
       if match is not None:
-        return callback( match ), match.string[match.end(0):]
+        state['input'] = match.string[match.end(0):].lstrip(' ')
+        return callback( match )
     
     raise ParserFailedException('Pattern exhausted with no matches')

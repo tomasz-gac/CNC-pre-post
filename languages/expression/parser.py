@@ -5,26 +5,19 @@ import  generator.terminal as t
 import  generator.rule     as r
 import  generator.compiler as c
 
-class Return:
-  def __init__( self, value ):
-    self.returned = value
-    
-  def __call__( self, *args ):
-    return self.returned
-
 expressionToken = t.Pattern({
-  '[+]' : t.ret( cmd.ADD ),
-  '[-]' : t.ret( cmd.SUB )
+  '[+]' : t.Return( cmd.ADD ),
+  '[-]' : t.Return( cmd.SUB )
 })
 
 termToken = t.Pattern({
-  '[*]' : t.ret( cmd.MUL ),
-  '[/]' : t.ret( cmd.DIV )
+  '[*]' : t.Return( cmd.MUL ),
+  '[/]' : t.Return( cmd.DIV )
 })
 
-powToken = t.Pattern({ '\\^' : t.ret( cmd.POW ) })
+powToken = t.Pattern({ '\\^' : t.Return( cmd.POW ) })
 
-assignToken = t.Pattern({ '[=]' : t.ret( cmd.LET )} )
+assignToken = t.Pattern({ '[=]' : t.Return( cmd.LET )} )
 number = t.Pattern({ 
   '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' : (lambda match : [ cmd.PUSH(float(match.groups()[0])) ]) 
 })
@@ -37,8 +30,8 @@ terminals = {
   'identifier'      : identifier,
   'GET'             : t.Return( [cmd.GET] ),
   '='               : assignToken,
-  '('               : t.Pattern({ '[(]' : t.ret() }),
-  ')'               : t.Pattern({ '[)]' : t.ret() }),
+  '('               : t.Pattern({ '[(]' : t.Return() }),
+  ')'               : t.Pattern({ '[)]' : t.Return() }),
   '+-'              : expressionToken,
   '*/'              : termToken,
   '^'               : powToken
@@ -46,6 +39,6 @@ terminals = {
 
 compiler = c.Reordering( terminals )
 
-Parse   = t.StrParser( grammar.expression, compiler )
-primary = t.StrParser( grammar.primary, compiler )
-number  = t.StrParser( r.make('number'), compiler )
+Parse   = t.EagerParser( grammar.expression, compiler )
+primary = t.EagerParser( grammar.primary, compiler )
+number  = t.EagerParser( r.make('number'), compiler )

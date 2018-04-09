@@ -13,7 +13,7 @@ class RuleCompilerBase:
       raise RuntimeError('Parser does not handle terminal '+str(target.handle)) 
     
     def _Terminal( targetSelf, executor ):
-      result, executor.input = targetSelf.terminal( executor.input )
+      result = targetSelf.terminal( executor.state )
       return result
     
     return _Terminal
@@ -35,22 +35,22 @@ class RuleCompilerBase:
     
   def Optional( self, target ):  
     def _Optional( targetSelf, executor ):
-      save = executor.fork()
+      save = executor.save()
       try:        
         return targetSelf.rule.accept( targetSelf.rule, executor )
       except ParserFailedException:
-        executor.join( save )
+        executor.load( save )
         return []
     return _Optional
   
   def Alternative( self, target ):
     def _Alternative( targetSelf, executor ):
       for rule in targetSelf.rules:
-        fork = executor.fork() # entry executor
+        save = executor.save() # entry executor
         try:
           return rule.accept( rule, executor )  # try visiting
         except ParserFailedException:
-          executor.join(fork)        
+          executor.load(save) 
       
       raise ParserFailedException('Parser alternative exhausted with no match') # all options exhausted with no match
     return _Alternative
@@ -72,10 +72,10 @@ class RuleCompilerBase:
       save = None
       try:
         while True:
-          save = executor.fork() #save executor from before visitation
+          save = executor.save() #save executor from before visitation
           sequence += targetSelf.rule.accept( targetSelf.rule, executor )
       except ParserFailedException:
-        executor.join( save )  # repeat until failure. Discard failed executor
+        executor.load( save )  # repeat until failure. Discard failed executor
         return sequence
     return _Repeat
     
@@ -109,25 +109,3 @@ class Reordering( RuleCompilerBase ):
       result = targetSelf.rule.accept( targetSelf.rule, executor )
       return executor( result )
     return _Push
-  
-  '''def Pull( self, target ):
-    def _Pull( targetSelf, executor ):
-      result = targetSelf.rule.accept( targetSelf.rule, executor )
-      if len(result) > 0:
-        raise RuntimeError("Parser returned with fallthrough:" + str(fallthrough) )
-      return executor.stack[targetSelf.output]
-    return _Pull'''
-  
-'''class Ordered( RuleCompilerBase ):
-  def __init__( self, terminals ):
-    super().__init__( terminals )
-    
-  def Push( self, target ):
-    def _Push( targetSelf, executor ):
-      return targetSelf.rule.accept( targetSelf.rule, executor )
-    return _Push
-  
-  def Pull( self, target ):
-    def _Pull( targetSelf, executor ):
-      return targetSelf.rule.accept( targetSelf.rule, executor )
-    return _Pull'''

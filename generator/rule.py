@@ -43,11 +43,8 @@ class Rule:
   def __invert__(self):
     return Optional( self )
   
-  def push( self, output = 'output' ):
-    return Push(self, output)
-    
-  def pull( self, output = 'output' ):
-    return Pull(self, output)
+  def push( self ):
+    return Push( self )
     
   def __iter__( self ):
     raise NotImplementedException()
@@ -96,38 +93,25 @@ class Handle(Unary):
   def __init__( self, rule = None ):
     super().__init__(rule)
   
-class Not(Rule):
-  def __init__( self, rule ):
-    super().__init__(rule)
-  
+class Not(Rule):  
   def __neg__( self ):
     return self.rule
     
 class Optional(Unary):
-  def __init__( self, rule ):
-    super().__init__(rule)
+  pass
 
-class Alternative(Nary):
-  def __init__( self, rules ):
-    super().__init__(rules)
-    
+class Alternative(Nary):    
   def __or__( self, other ):
       # Parantheses are not important
-    self.rules += make(other),
-    return self
+    return Alternative( self.rules + (make(other),) )
   
   def __ror__( self, other ):
       # Parantheses are not important
-    self.rules = (make(other),) + self.rules
-    return self
+    return Alternative( (make(other),) + self.rules )
 
-class Sequence(Nary):
-  def __init__( self, rules ):
-    super().__init__( rules )
-    
+class Sequence(Nary):    
   def __and__( self, other ):
       # makes sure that parantheses are preserved
-    print('__and__')
     if isinstance( other, Sequence ):
       return Sequence( (self, other) )
     elif isinstance( other, tuple ):
@@ -136,15 +120,7 @@ class Sequence(Nary):
       return Sequence( self.rules + (make(other),) )
   
 class Repeat(Unary):
-  def __init__( self, rule ):
-    super().__init__(rule)
+  pass
 
 class Push(Unary):
-  def __init__( self, rule, output ):
-    self.output = output
-    super().__init__(rule)
-    
-class Pull(Unary):
-  def __init__( self, rule, output ):
-    self.output = output
-    super().__init__(rule)
+  pass
