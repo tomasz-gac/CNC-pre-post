@@ -17,6 +17,6 @@ subexpression.name = 'subexpression'
 primary = ( 'number' | set_identifier | get_identifier | subexpression ).push()
 primary.name = 'primary'
 
-expression.rule = term & +( '+-' & expression )
-term.rule       = pow & +( '*/' & term )
+expression.rule = term & +( '+-' & term )
+term.rule       = pow & +( '*/' & pow )
 pow.rule        = primary & +( '^' & pow )
