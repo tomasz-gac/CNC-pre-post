@@ -1,37 +1,38 @@
 import  languages.expression.grammar  as grammar
 import  languages.expression.commands as cmd
 
-import  generator.terminal as t
-import  generator.rule     as r
+from generator.terminal import *
+import  generator.rule as r
 import  generator.compiler as c
+import  generator.evaluator as ev
 
-expressionToken = t.Pattern({
-  '[+]' : t.Return( cmd.ADD ),
-  '[-]' : t.Return( cmd.SUB )
+expressionToken = Switch({
+  '[+]' : Return( cmd.ADD ),
+  '[-]' : Return( cmd.SUB )
 })
 
-termToken = t.Pattern({
-  '[*]' : t.Return( cmd.MUL ),
-  '[/]' : t.Return( cmd.DIV )
+termToken = Switch({
+  '[*]' : Return( cmd.MUL ),
+  '[/]' : Return( cmd.DIV )
 })
 
-powToken = t.Pattern({ '\\^' : t.Return( cmd.POW ) })
+powToken = Switch({ '\\^' : Return( cmd.POW ) })
 
-assignToken = t.Pattern({ '[=]' : t.Return( cmd.LET )} )
-number = t.Pattern({ 
+assignToken = Switch({ '[=]' : Return( cmd.LET )} )
+number = Switch({ 
   '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' : (lambda match : [ cmd.PUSH(float(match.groups()[0])) ]) 
 })
-identifier = t.Pattern({ 
+identifier = Switch({ 
   '(([a-zA-Z_]+\\d*)+)' : (lambda match : [ cmd.PUSH(match.groups()[0]) ]) 
 })
 
 terminals = {
   'number'          : number,
   'identifier'      : identifier,
-  'GET'             : t.Return( [cmd.GET] ),
+  'GET'             : Return( [cmd.GET] ),
   '='               : assignToken,
-  '('               : t.Pattern({ '[(]' : t.Return() }),
-  ')'               : t.Pattern({ '[)]' : t.Return() }),
+  '('               : Switch({ '[(]' : Return() }),
+  ')'               : Switch({ '[)]' : Return() }),
   '+-'              : expressionToken,
   '*/'              : termToken,
   '^'               : powToken
@@ -39,6 +40,6 @@ terminals = {
 
 compiler = c.Reordering( terminals )
 
-Parse   = t.EagerParser( grammar.expression, compiler )
-primary = t.EagerParser( grammar.primary, compiler )
-number  = t.EagerParser( r.make('number'), compiler )
+Parse   = Parser( grammar.expression, ev.Eager, compiler )
+primary = Parser( grammar.primary, ev.Eager, compiler )
+number  = Parser( r.make('number'), ev.Eager, compiler )

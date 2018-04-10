@@ -1,10 +1,6 @@
 from generator.ReprVisitor import ReprVisitor
+from generator.injector import Injector
 import copy
-    
-def make( item ):
-  if isinstance( item, Rule ):
-    return item
-  return Terminal( item )
 
 class Rule:
   def __or__( self, rhs ):
@@ -88,7 +84,6 @@ class Terminal(Rule):
   def __len__( self ):
     return 0
 
-
 class Handle(Unary):
   def __init__( self, rule = None ):
     super().__init__(rule)
@@ -124,3 +119,7 @@ class Repeat(Unary):
 
 class Push(Unary):
   pass
+  
+def compile( rule, compiler, recompile = False ):
+  injector = Injector( compiler )
+  return injector( copy.deepcopy( rule ), recompile )

@@ -2,7 +2,9 @@ import re
 from copy import copy, deepcopy
 from generator.injector import Injector
 from generator.evaluator import Eager, Delayed
-    
+
+__all__ = [ 'ParserFailedException', 'Parser', 'Return', 'Switch' ]
+
 class TerminalBase:
   def ignore( self, returned = [] ):
     return Ignore( self, returned )
@@ -11,33 +13,23 @@ class TerminalBase:
     return Wrapper( self, wrapper )
     return Wrapper( self, wrapper )
     
-def make( t ):
-  if isinstance( t, TerminalBase ):
-    return t
-  if isinstance( t, dict ):
-    return Pattern( t )
-
 class ParserFailedException( Exception ):
   def __init__( self, string ):
     super().__init__(string)
 
-def make_parser( Executor ):
-  class Parser(TerminalBase):
-    __slots__ = 'rule'
-    def __init__( self, rule, compiler, recompile = False ):
-      self.rule = Injector(compiler)( deepcopy( rule ), recompile )
-    
-    def __call__( self, state ):
-      executor = Executor(state)
-      executor.load( executor.save() )  # do not modify the incoming state
-      result = self.rule.accept( self.rule, executor )
-      if len(result) > 0:
-        raise RuntimeError('Parser returned with fallthrough: ' + str(result) )
-      return executor.state
-  return Parser
-
-EagerParser = make_parser(Eager)
-DelayedParser = make_parser(Delayed)
+class Parser(TerminalBase):
+  __slots__ = 'rule', 'Evaluator'
+  def __init__( self, rule, Evaluator, compiler, recompile = False ):
+    self.rule = Injector(compiler)( deepcopy( rule ), recompile )
+    self.Evaluator = Evaluator
+  
+  def __call__( self, state ):
+    evaluator = self.Evaluator(state)
+    evaluator.state.load( evaluator.state.save() )  # do not modify the incoming state
+    result = self.rule.accept( self.rule, evaluator )
+    if len(result) > 0:
+      raise RuntimeError('Parser returned with fallthrough: ' + str(result) )
+    return evaluator.state
   
 class Ignore(TerminalBase):
   def __init__( self, task, returned = [] ):
@@ -62,7 +54,7 @@ class Wrapper(TerminalBase):
     result = self.wrapped( state )
     return self.wrapper( result )
 
-class Pattern(TerminalBase):
+class Switch(TerminalBase):
   def __init__( self, lookup ):
     self._lookup = { re.compile( pattern ) : callback for (pattern, callback ) in lookup.items() }
     
@@ -71,9 +63,9 @@ class Pattern(TerminalBase):
     
   def __call__( self, state ):
     for re,callback in self._lookup.items():
-      match = re.match( state['input'] )
+      match = re.match( state.input )
       if match is not None:
-        state['input'] = match.string[match.end(0):].lstrip(' ')
+        state.input = match.string[match.end(0):]
         return callback( match )
     
     raise ParserFailedException('Pattern exhausted with no matches')
