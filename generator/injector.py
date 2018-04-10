@@ -19,9 +19,13 @@ class Injector:
       if not hasattr( self.injection, name ):
         raise RuntimeError("Class " + type(self.injection).__name__ + " does not support injection for type " + name )
       self._visited.add(target)
-    
+      # get attribute named as target class name from injection
     method = getattr( self.injection, name )
-    setattr( target, method_name, method(target) )
+      # call the method and pass target as argument
+      # bind target to the result to create a bound method      
+    injected_method = method(target).__get__(target, type(target))
+      # set the bound method as target's method_name
+    setattr( target, method_name, injected_method )
 
     for child in target:
       self( child, reinject )

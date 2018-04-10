@@ -13,7 +13,7 @@ class Eager(Evaluator):
 
 class Delayed(Evaluator):
   def __call__( self, result ):
-    self.state.stack += result
+    self.state.stack.extend( result )
     return []  
 
 class Stack2args:

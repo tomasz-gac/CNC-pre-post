@@ -40,6 +40,6 @@ terminals = {
 
 compiler = c.Reordering( terminals )
 
-Parse   = Parser( grammar.expression, ev.Eager, compiler )
-primary = Parser( grammar.primary, ev.Eager, compiler )
-number  = Parser( r.make('number'), ev.Eager, compiler )
+Parse   = r.compile( grammar.expression, compiler )
+primary = r.compile( grammar.primary, compiler )
+number  = r.compile( r.Terminal('number'), compiler )

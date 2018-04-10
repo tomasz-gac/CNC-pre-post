@@ -8,25 +8,19 @@ class RuleCompilerBase:
   
   def Terminal( self, target ):
     try:
-      target.terminal = self._terminals[target.handle]
+      return self._terminals[target.handle].accept
     except KeyError:
-      raise RuntimeError('Parser does not handle terminal '+str(target.handle)) 
-    
-    def _Terminal( targetSelf, evaluator ):
-      result = targetSelf.terminal( evaluator.state )
-      return result
-    
-    return _Terminal
+      raise RuntimeError('Missing terminal during compilation: '+str(target.handle))
     
   def Handle( self, target ):
     def _Handle( targetSelf, evaluator ):
-      return targetSelf.rule.accept( targetSelf.rule, evaluator )
+      return targetSelf.rule.accept( evaluator )
     return _Handle
     
   def Not( self, target ):
     def _Not( targetSelf, evaluator ):
       try:
-        result = targetSelf.rule.accept( targetSelf.rule, evaluator )
+        result = targetSelf.rule.accept( evaluator )
       except ParserFailedException:
         return []
       
@@ -37,7 +31,7 @@ class RuleCompilerBase:
     def _Optional( targetSelf, evaluator ):
       save = evaluator.state.save()
       try:        
-        return targetSelf.rule.accept( targetSelf.rule, evaluator )
+        return targetSelf.rule.accept( evaluator )
       except ParserFailedException:
         evaluator.state.load( save )
         return []
@@ -48,7 +42,7 @@ class RuleCompilerBase:
       for rule in targetSelf.rules:
         save = evaluator.state.save() # entry evaluator
         try:
-          return rule.accept( rule, evaluator )  # try visiting
+          return rule.accept( evaluator )  # try visiting
         except ParserFailedException:
           evaluator.state.load(save) 
       
@@ -60,8 +54,7 @@ class RuleCompilerBase:
       sequence = [  ]
       for rule in targetSelf.rules:
           # Execute eagerly
-        result = rule.accept( rule, evaluator )
-        sequence += evaluator( result )
+        sequence.extend( evaluator( rule.accept( evaluator ) ) )
          
       return sequence
     return _Sequence
@@ -73,7 +66,7 @@ class RuleCompilerBase:
       try:
         while True:
           save = evaluator.state.save() #save evaluator from before visitation
-          sequence += targetSelf.rule.accept( targetSelf.rule, evaluator )
+          sequence.extend( targetSelf.rule.accept( evaluator ) )
       except ParserFailedException:
         evaluator.state.load( save )  # repeat until failure. Discard failed evaluator
         return sequence
@@ -82,7 +75,7 @@ class RuleCompilerBase:
   def Push( self, target ):
       # Do not execute
     def _Push( targetSelf, evaluator ):
-      result = targetSelf.rule.accept( targetSelf.rule, evaluator )
+      result = targetSelf.rule.accept( evaluator )
       return result
     return _Push
       
@@ -93,19 +86,16 @@ class Reordering( RuleCompilerBase ):
   def Sequence( self, target ):
       # Start executing after obtaining all of sequence
     def _Sequence( targetSelf, evaluator ):
-      outputs = []
+      sequence = []
       for rule in targetSelf.rules:
-        outputs.append( rule.accept( rule, evaluator ) )
+        sequence.extend( rule.accept( evaluator ) )
       
-      sequence = [ ]
-      for result in outputs:
-        sequence += evaluator( result )
-      return sequence
+      return evaluator( sequence )
     
     return _Sequence   
     
   def Push( self, target ):      
     def _Push( targetSelf, evaluator ):
-      result = targetSelf.rule.accept( targetSelf.rule, evaluator )
+      result = targetSelf.rule.accept( evaluator )
       return evaluator( result )
     return _Push

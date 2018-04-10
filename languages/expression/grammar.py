@@ -8,7 +8,7 @@ expression.name = 'expression'
 term.name = 'term'
 pow.name = 'pow'
 
-identifier         = r.make('identifier')
+identifier         = r.Terminal('identifier')
 get_identifier     = identifier & 'GET'
 set_identifier     = identifier.push() & '=' & expression
 subexpression      = "(" & expression & ")"

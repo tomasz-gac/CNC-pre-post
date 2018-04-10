@@ -2,6 +2,17 @@ from generator.ReprVisitor import ReprVisitor
 from generator.injector import Injector
 import copy
 
+def compile( rule, compiler, recompile = False ):
+  injector = Injector( compiler )
+  return injector( copy.deepcopy( rule ), recompile )
+  
+def make( rule ):
+  if isinstance( rule, Rule ):
+    return rule
+  elif isinstance( rule, str ):
+    return Terminal(rule)
+  raise TypeError
+
 class Rule:
   def __or__( self, rhs ):
     if isinstance( rhs, tuple ):
@@ -118,8 +129,4 @@ class Repeat(Unary):
   pass
 
 class Push(Unary):
-  pass
-  
-def compile( rule, compiler, recompile = False ):
-  injector = Injector( compiler )
-  return injector( copy.deepcopy( rule ), recompile )
+  pass 
