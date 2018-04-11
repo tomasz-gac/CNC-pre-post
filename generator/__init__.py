@@ -6,7 +6,6 @@ from generator.rule       import Alternative
 from generator.rule       import Sequence
 from generator.rule       import Repeat
 from generator.rule       import Terminal
-from generator.rule       import compile
 
 from generator.terminal   import Ignore
 from generator.terminal   import Wrapper

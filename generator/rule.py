@@ -1,11 +1,7 @@
 from generator.ReprVisitor import ReprVisitor
-from generator.injector import Injector
+from generator.ParserBuilder import ParserBuilder
 import copy
-
-def compile( rule, compiler, recompile = False ):
-  injector = Injector( compiler )
-  return injector( copy.deepcopy( rule ), recompile )
-  
+ 
 def make( rule ):
   if isinstance( rule, Rule ):
     return rule
@@ -61,6 +57,10 @@ class Rule:
   
   def __str__( self ):
    return self.__repr__() + (ReprVisitor().visit(self, True))
+   
+  def compile( self, compiler ):
+    builder = ParserBuilder( compiler )
+    return builder( self )
       
 class Unary(Rule):
   def __init__(self, rule):

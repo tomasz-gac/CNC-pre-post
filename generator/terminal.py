@@ -1,7 +1,5 @@
 import re
 from copy import copy, deepcopy
-from generator.injector import Injector
-from generator.evaluator import Eager, Delayed
 
 __all__ = [ 'ParserFailedException', 'Return', 'Switch' ]
 
@@ -15,13 +13,12 @@ class TerminalBase:
     
   def __rshift__( self, wrapper ):
     return Wrapper( self, wrapper )
-    return Wrapper( self, wrapper )
   
 class Ignore(TerminalBase):
   def __init__( self, task, returned = [] ):
     self.task = make(task)
     self.returned = returned
-  def accept( self, evaluator ):
+  def __call__( self, evaluator ):
     result = self.task( evaluator )
     return self.returned
 
@@ -30,16 +27,13 @@ class Return(TerminalBase):
     self.returned = list(returned)
   def __call__( self, *args ):
     return self.returned
-    
-  def accept( self, *args ):
-    return self.returned
   
 class Wrapper(TerminalBase):
   def __init__( self, wrapped, wrapper ):
     self.wrapped = wrapped
     self.wrapper = wrapper
     
-  def accept( self, evaluator ):
+  def __call__( self, evaluator ):
     result = self.wrapped( evaluator )
     return self.wrapper( result )
 
@@ -50,7 +44,7 @@ class Switch(TerminalBase):
   def __deepcopy__( self, memo ):
     return copy( self )
     
-  def accept( self, evaluator ):
+  def __call__( self, evaluator ):
     for re,callback in self._lookup:
       match = re.match( evaluator.state.input )
       if match is not None:

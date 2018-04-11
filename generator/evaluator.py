@@ -14,7 +14,7 @@ class Eager(Evaluator):
 class Delayed(Evaluator):
   def __call__( self, result ):
     self.state.stack.extend( result )
-    return []  
+    return []
 
 class Stack2args:
   def __init__(self, function , nargs ):
