@@ -16,7 +16,7 @@ from languages.heidenhain.commands import Direction     as dir
 from languages.heidenhain.commands import Coolant       as cool
 from languages.heidenhain.commands import Spindle       as spin
 
-from languages.expression.commands import Arithmetic    as art
+import languages.expression.commands as art
 
 import languages.expression.parser    as expr
 import languages.heidenhain.grammar   as hh
@@ -24,35 +24,30 @@ import languages.heidenhain.grammar   as hh
 from enum import Enum, unique
 from copy import deepcopy
 
-@unique
-class GOTOtokensCartesian(Enum):
-  linear    = "L "
-  circular  = "C " # whitespace does not match CC
+GOTOcartesian = t.Switch({ 
+  'L '  : [ mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ],
+  'C '  : [ mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ]
+}
 
-@unique
-class GOTOtokensPolar(Enum):
-  linear    = "LP"
-  circular  = "CP"
+GOTOpolar = t.Switch({ 
+  'LP'  : [ mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ],
+  'CP'  : [ mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ]
+}
 
-cmdLookup = t.make_lookup({
-  GOTOtokensCartesian.linear    : [ mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ],
-  GOTOtokensCartesian.circular  : [ mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ],
-  GOTOtokensPolar.linear        : [ mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ],
-  GOTOtokensPolar.circular      : [ mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ]
+ToolCall = t.Switch({
+  'DR\\s*[=]?'  : [ reg.TOOLDR,    cmd.SET ],
+  'DL\\s*[=]?'  : [ reg.TOOLDL,    cmd.SET ],
+  'S'           : [ reg.SPINSPEED,    cmd.SET ],
 })
 
-  
-@unique
-class ToolCallTokens(Enum):
-  DR = 'DR\\s*[=]?'
-  DL = 'DL\\s*[=]?'
-  S  = 'S'
-
-toolOptLookup = t.make_lookup({
-  ToolCallTokens.DR : [ reg.TOOLDR,    cmd.SET ],
-  ToolCallTokens.DL : [ reg.TOOLDL,    cmd.SET ],
-  ToolCallTokens.S  : [ reg.SPINSPEED, cmd.SET ]
-})
+def handleCoord( map ):
+  def _handleCoord( token ):
+    token = token[0]
+    symbol = map[token.type]
+    if token.groups[0] is 'I':
+      symbol = commands.incmap[symbol]
+    return [ symbol, cmd.SET ]
+  return _handleCoord
   
   
 @unique
@@ -78,16 +73,6 @@ coordmap = {
 CCcoordmap = { 
  CartCoordinateTokens.X : cen.X, CartCoordinateTokens.Y : cen.Y, CartCoordinateTokens.Z : cen.Z
 }
-
-
-def handleCoord( map ):
-  def _handleCoord( token ):
-    token = token[0]
-    symbol = map[token.type]
-    if token.groups[0] is 'I':
-      symbol = commands.incmap[symbol]
-    return [ symbol, cmd.SET ]
-  return _handleCoord
 
 @unique
 class Compensation(Enum):
