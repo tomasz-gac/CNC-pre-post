@@ -49,7 +49,7 @@ heidenhain = (
   comment
   )
 & ~comment
-).push().pull()
+).push()
 
 coordCartesian.name   = 'coordCartesian'
 coordPolar.name       = 'coordPolar'
