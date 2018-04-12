@@ -1,24 +1,23 @@
-import re
 from copy import copy, deepcopy
 
-__all__ = [ 'ParserFailedException', 'Return', 'Switch', 'If' ]
+__all__ = [ 'ParserFailedException', 'Wrapper', 'Return', 'Switch', 'Lookup', 'If', 'Push', 'pushTerminals' ]
 
 class ParserFailedException(Exception):
   pass
 
 class TerminalBase:
-  def ignore( self, returned = [] ):
-    return Ignore( self, returned )
+  def If( self, condition ):
+    return If( condition, self )
     
   def __rshift__( self, wrapper ):
     return Wrapper( self, wrapper )
   
 class Ignore(TerminalBase):
-  def __init__( self, task, returned = [] ):
-    self.task = make(task)
+  def __init__( self, ignored, returned = [] ):
+    self.ignored = ignored
     self.returned = returned
   def __call__( self, state ):
-    result = self.task( state )
+    self.ignored( state )
     return self.returned
 
 class Return(TerminalBase):
@@ -34,18 +33,18 @@ class Wrapper(TerminalBase):
     
   def __call__( self, state ):
     result = self.wrapped( state )
-    return self.wrapper( result )
+    return [ self.wrapper( result ) ]
 
 class Lookup(TerminalBase):
   def __init__( self, lookup ):
-    self._lookup = tuple( (re.compile( pattern ), returned) for (pattern, returned) in lookup.items() )
+    self._lookup = lookup
     
   def __deepcopy__( self, memo ):
     return copy( self )
     
   def __call__( self, state ):
-    for re, returned in self._lookup:
-      match = re.match( state.input )
+    for condition, returned in self._lookup:
+      match = condition.match( state.input )
       if match is not None:
         state.input = match.string[match.end(0):]
         return returned
@@ -54,14 +53,14 @@ class Lookup(TerminalBase):
     
 class Switch(TerminalBase):
   def __init__( self, lookup ):
-    self._lookup = tuple( (re.compile( pattern ),callback) for (pattern, callback ) in lookup.items() )
+    self._lookup = lookup
     
   def __deepcopy__( self, memo ):
     return copy( self )
     
   def __call__( self, state ):
-    for re,callback in self._lookup:
-      match = re.match( state.input )
+    for condition,callback in self._lookup:
+      match = condition.match( state.input )
       if match is not None:
         state.input = match.string[match.end(0):]
         return callback( match )
@@ -69,8 +68,8 @@ class Switch(TerminalBase):
     raise ParserFailedException('Switch exhausted with no matches')
     
 class If(TerminalBase):
-  def __init__( self, pattern, block ):
-    self.condition = re.compile( pattern )
+  def __init__( self, condition, block ):
+    self.condition = condition
     self.block = block
     
   def __deepcopy__( self, memo ):
@@ -83,3 +82,14 @@ class If(TerminalBase):
       return self.block( match )
     
     raise ParserFailedException('If terminal did not match')
+    
+class Push:
+  def __init__(self, N ):
+    self.value = N
+  def __call__( self, state ):
+    state.stack.append( self.value )
+  def __repr__(self):
+    return '<PUSH '+str(self.value)+'>'
+    
+def pushTerminals( terminals ):
+  return { key : Wrapper( value, Push ) for (key, value) in terminals.items() }

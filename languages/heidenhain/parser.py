@@ -1,7 +1,9 @@
-import generator.terminal as t
-import generator.rule     as r
-import generator.compiler as c
-import generator.evaluator as ev
+import re
+
+from generator.terminal import *
+from generator import State
+import generator.rule       as r
+import generator.compiler   as c
 
 import languages.heidenhain.commands as commands
 
@@ -25,28 +27,30 @@ import languages.heidenhain.grammar   as hh
 from enum import Enum, unique
 from copy import deepcopy
 
-GOTOcartesian = t.Lookup({ 
-  'L '  : ( mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ),
-  'C '  : ( mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT )
-})
+p = re.compile
 
-GOTOpolar = t.Lookup({ 
-  'LP'  : ( mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ),
-  'CP'  : ( mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT )
-})
+GOTOcartesian = Lookup({ 
+  p('L ')  : ( mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ),
+  p('C ')  : ( mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT )
+}.items())
 
-toolCallOptions = t.Lookup({
-  'DR\\s*[=]?'  : ( reg.TOOLDR,    cmd.SET ),
-  'DL\\s*[=]?'  : ( reg.TOOLDL,    cmd.SET ),
-  'S'           : ( reg.SPINSPEED, cmd.SET )
-})
+GOTOpolar = Lookup({ 
+  p('LP')  : ( mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ),
+  p('CP')  : ( mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT )
+}.items())
+
+toolCallOptions = Lookup({
+  p('DR\\s*[=]?')  : ( reg.TOOLDR,    cmd.SET ),
+  p('DL\\s*[=]?')  : ( reg.TOOLDL,    cmd.SET ),
+  p('S')           : ( reg.SPINSPEED, cmd.SET )
+}.items())
 
 def handleCoord( map ):
-  def _handleCoord( token ):
-    symbol = map[ token.groups()[1] ]
-    if token.groups()[0] is 'I':
+  def _handleCoord( match ):
+    symbol = map[ match.groups()[1] ]
+    if match.groups()[0] is 'I':
       symbol = commands.incmap[symbol]
-    return [ symbol, cmd.SET ]
+    return ( symbol, cmd.SET )
   return _handleCoord
   
 coordmap = { 
@@ -55,93 +59,85 @@ coordmap = {
   'PA' : pol.ANG, 'PR' : pol.RAD 
 }
 
-cartesianCoord = t.Switch({
-  "(I)?(X)" : handleCoord(coordmap),
-  "(I)?(Y)" : handleCoord(coordmap),
-  "(I)?(Z)" : handleCoord(coordmap),
-  "(I)?(A)" : handleCoord(coordmap),
-  "(I)?(B)" : handleCoord(coordmap),
-  "(I)?(C)" : handleCoord(coordmap)
-})
+cartesianCoord = Switch({
+  p(pattern) : handleCoord(coordmap) for pattern in
+  [ "(I)?(X)", "(I)?(Y)", "(I)?(Z)", 
+    "(I)?(A)", "(I)?(B)", "(I)?(C)"]
+}.items())
 
-polarCoord = t.Switch({
-  '(I)?(PA)' : handleCoord(coordmap),
-  '(I)?(PR)' : handleCoord(coordmap)
-})
+polarCoord = Switch({
+  p('(I)?(PA)') : handleCoord(coordmap),
+  p('(I)?(PR)') : handleCoord(coordmap)
+}.items())
 
-CCcoordmap = { 
- 'X' : cen.X, 'Y' : cen.Y, 'Z' : cen.Z
-}
+CCcoordmap = { 'X' : cen.X, 'Y' : cen.Y, 'Z' : cen.Z }
 
-CCcoord = t.Switch({
-  "(I)?(X)" : handleCoord(CCcoordmap),
-  "(I)?(Y)" : handleCoord(CCcoordmap),
-  "(I)?(Z)" : handleCoord(CCcoordmap)
-})
+CCcoord = Switch({
+  p(pattern) : handleCoord(CCcoordmap) for pattern in
+  [ "(I)?(X)", "(I)?(Y)", "(I)?(Z)" ]
+}.items())
   
-compensation = t.Lookup( { 
-  'R0' : ( comp.NONE,  reg.COMPENSATION, cmd.SET ),
-  'RL' : ( comp.LEFT,  reg.COMPENSATION, cmd.SET ),
-  'RR' : ( comp.RIGHT, reg.COMPENSATION, cmd.SET )
-} )
+compensation = Lookup( { 
+  p('R0') : ( comp.NONE,  reg.COMPENSATION, cmd.SET ),
+  p('RL') : ( comp.LEFT,  reg.COMPENSATION, cmd.SET ),
+  p('RR') : ( comp.RIGHT, reg.COMPENSATION, cmd.SET )
+}.items())
 
-direction = t.Lookup( { 
-  'DR[-]' : ( dir.CW,   reg.DIRECTION, cmd.SET ),
-  'DR[+]' : ( dir.CCW,  reg.DIRECTION, cmd.SET )
-} )
+direction = Lookup( { 
+  p('DR[-]') : ( dir.CW,   reg.DIRECTION, cmd.SET ),
+  p('DR[+]') : ( dir.CCW,  reg.DIRECTION, cmd.SET )
+}.items())
 
 def handleAux( result ):
   aux = int(result[0].groups[0])
   command = { 
-    0  : [ cmd.STOP ], 
-    1  : [ cmd.OPTSTOP ], 
-    3  : [ spin.CW,  reg.SPINDIR, cmd.SET ],
-    4  : [ spin.CCW, reg.SPINDIR, cmd.SET ],
-    5  : [ spin.OFF, reg.SPINDIR, cmd.SET ],
-    6  : [ cmd.TOOLCHANGE ], 
-    8  : [ cool.FLOOD, reg.COOLANT, cmd.SET ],
-    9  : [ cool.OFF,   reg.COOLANT, cmd.SET ],
-    30 : [ cmd.END ],
-    91 : [ reg.WCS, cmd.TMP, 0, reg.WCS, cmd.SET ]
+    0  : ( cmd.STOP ), 
+    1  : ( cmd.OPTSTOP ), 
+    3  : ( spin.CW,  reg.SPINDIR, cmd.SET ),
+    4  : ( spin.CCW, reg.SPINDIR, cmd.SET ),
+    5  : ( spin.OFF, reg.SPINDIR, cmd.SET ),
+    6  : ( cmd.TOOLCHANGE ), 
+    8  : ( cool.FLOOD, reg.COOLANT, cmd.SET ),
+    9  : ( cool.OFF,   reg.COOLANT, cmd.SET ),
+    30 : ( cmd.END ),
+    91 : ( reg.WCS, cmd.TMP, 0, reg.WCS, cmd.SET )
   }
   try:
     return command[aux]
   except KeyError:
     raise RuntimeError('Unknown auxillary function M'+str(aux) )
-    
-auxilary = t.If('M(\\d+)', handleAux)
-
 
 terminals = {
   'XYZABC'            : cartesianCoord,
   'PAPR'              : polarCoord,
   'CCXYZ'             : CCcoord,
-  'lineno'            : t.Wrapper( expr.number ,(lambda x : [ x[0], reg.LINENO, cmd.SET ]) ),
-  'F'                 : t.If('F', t.Return( reg.FEED, cmd.SET )),
-  'MAX'               : t.If('MAX', t.Return( -1 )),
+  'lineno'            : Wrapper( expr.number ,(lambda x : [ x[0], reg.LINENO, cmd.SET ]) ),
+  'F'                 : Return( reg.FEED, cmd.SET ).If(p('F')),
+  'MAX'               : Return( -1 ).If(p('MAX')),
   'compensation'      : compensation,
   'direction'         : direction,
   'L/C'               : GOTOcartesian,
   'LP/CP'             : GOTOpolar,
-  'MOVE'              : t.Return( cmd.INVARIANT ),
-  'UPDATE'            : t.Return( cmd.INVARIANT ),
-  'CC'                : t.If('CC', t.Return( cmd.INVARIANT )),
-  'auxilary'          : auxilary,
-  'begin_pgm'         : t.If('BEGIN PGM (.+) (MM|INCH)', t.Return()),
-  'end_pgm'           : t.If('END PGM (.+)', t.Return()),
-  'comment'           : t.If('[;][ ]*(.*)', t.Return()),
-  'block form start'  : t.If('BLK FORM 0\\.1 (X|Y|Z)', t.Return(cmd.DISCARD)),
-  'block form end'    : t.If('BLK FORM 0\\.2', t.Return(cmd.DISCARD)),
-  'fn_f'              : t.If('FN 0\\:', t.Return(cmd.INVARIANT)),
-  'tool call'         : t.If('TOOL CALL', t.Return( reg.TOOLNO, cmd.SET, cmd.INVARIANT, cmd.TOOLCHANGE )),
-  'tool axis'         : t.If('(X|Y|Z)', t.Return()),
+  'MOVE'              : Return( cmd.INVARIANT ),
+  'UPDATE'            : Return( cmd.INVARIANT ),
+  'CC'                : Return( cmd.INVARIANT ).If(p('CC')),
+  'auxilary'          : If(p('M(\\d+)'), handleAux),
+  'begin_pgm'         : Return().If(p('BEGIN PGM (.+) (MM|INCH)')),
+  'end_pgm'           : Return().If(p('END PGM (.+)')),
+  'comment'           : Return().If(p('[;][ ]*(.*)')),
+  'block form start'  : Return(cmd.DISCARD).If(p('BLK FORM 0\\.1 (X|Y|Z)')),
+  'block form end'    : Return(cmd.DISCARD).If(p('BLK FORM 0\\.2')),
+  'fn_f'              : Return(cmd.INVARIANT).If(p('FN 0\\:')),
+  'tool call'         : Return( reg.TOOLNO, cmd.SET, cmd.INVARIANT, cmd.TOOLCHANGE ).If(p('TOOL CALL')),
+  'tool axis'         : Return().If(p('(X|Y|Z)')),
   'tool options'      : toolCallOptions,
   'primary'           : expr.primary,
   'number'            : expr.number,
   'expression'        : expr.Parse
 }
 
-# Parse = t.StrParser( hh.heidenhain, c.Reordering( terminals ) )
+terminals = pushTerminals( terminals )
+
 Parse = hh.heidenhain.compile( c.Reordering( terminals ) )
 
       
@@ -149,12 +145,10 @@ def bench( n = 1000 ):
   import time
   start = time.time()
   q = None
-  e = ev.Delayed( q )
   r = None
   for i in range(n):
-    q = art.State( 'L X+50 Y-30 Z+150 R0 FMAX' )
-    e.state = q
-    r = Parse( e )
+    q = State( 'L X+50 Y-30 Z+150 R0 FMAX' )
+    r = Parse( q )
   print( time.time() - start )
   print(q.stack)
   print(r)

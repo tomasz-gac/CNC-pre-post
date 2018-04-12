@@ -11,8 +11,6 @@ from generator.terminal   import Ignore
 from generator.terminal   import Wrapper
 from generator.terminal   import Switch
 from generator.terminal   import Return
+from generator.terminal   import ParserFailedException
 
-from generator.evaluator  import Eager
-from generator.evaluator  import Delayed
-
-from generator.compiler   import ParserFailedException
+from generator.state      import State

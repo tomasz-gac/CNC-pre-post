@@ -1,41 +1,29 @@
+import  re
+
 import  languages.expression.grammar  as grammar
 import  languages.expression.commands as cmd
 
 from generator.terminal import *
-import  generator.rule as r
-import  generator.compiler as c
-import  generator.evaluator as ev
+import  generator.rule      as r
+import  generator.compiler  as c
 
-expressionToken = Switch({
-  '[+]' : Return( cmd.ADD ),
-  '[-]' : Return( cmd.SUB )
-})
+p = re.compile
 
-termToken = Switch({
-  '[*]' : Return( cmd.MUL ),
-  '[/]' : Return( cmd.DIV )
-})
-
-powToken = Switch({ '\\^' : Return( cmd.POW ) })
-
-assignToken = Switch({ '[=]' : Return( cmd.LET )} )
-number = Switch({ 
-  '([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))' : (lambda match : [ cmd.PUSH(float(match.groups()[0])) ]) 
-})
-identifier = Switch({ 
-  '(([a-zA-Z_]+\\d*)+)' : (lambda match : [ cmd.PUSH(match.groups()[0]) ]) 
-})
+number_pattern = p('([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))')
+identifier_pattern = p('(([a-zA-Z_]+\\d*)+)')
 
 terminals = {
-  'number'          : number,
-  'identifier'      : identifier,
-  'GET'             : Return( [cmd.GET] ),
-  '='               : assignToken,
-  '('               : Switch({ '[(]' : Return() }),
-  ')'               : Switch({ '[)]' : Return() }),
-  '+-'              : expressionToken,
-  '*/'              : termToken,
-  '^'               : powToken
+  'number'      : If(number_pattern,     lambda match : (Push(float(match.groups()[0])),) ),
+  'identifier'  : If(identifier_pattern, lambda match : (Push(match.groups()[0]),)),
+  'GET'         : Return(cmd.GET),
+  
+  '='           : Return(cmd.LET).If(p('[=]')),
+  '('           : Return().If(p('[(]')),
+  ')'           : Return().If(p('[)]')),
+  
+  '+-'          : Lookup( {p('[+]') : cmd.ADD, p('[-]') : cmd.SUB}.items() ),
+  '*/'          : Lookup( {p('[*]') : cmd.MUL, p('[/]') : cmd.DIV}.items() ),
+  '^'           : If(p('\\^'), Return(cmd.POW))
 }
 
 compiler = c.Reordering( terminals )
