@@ -13,12 +13,13 @@ class RuleCompilerBase:
       raise RuntimeError('Missing terminal during compilation: '+str(target.handle))
     
   def Handle( self, target, children ):
+      # Do nothing
     return children[0]
     
   def Not( self, target, children ):
-    def _Not( evaluator ):
+    def _Not( state ):
       try:
-        result = children[0]( evaluator )
+        result = children[0]( state )
       except ParserFailedException:
         return []
       
@@ -26,55 +27,52 @@ class RuleCompilerBase:
     return _Not
     
   def Optional( self, target, children ):  
-    def _Optional( evaluator ):
-      save = evaluator.state.save()
+    def _Optional( state ):
+      save = state.save()
       try:        
-        return children[0]( evaluator )
+        return children[0]( state )
       except ParserFailedException:
-        evaluator.state.load( save )
+        state.load( save )
         return []
     return _Optional
   
   def Alternative( self, target, children ):
-    def _Alternative( evaluator ):
+    def _Alternative( state ):
       for rule in children:
-        save = evaluator.state.save() # entry state
+        save = state.save() # entry state
         try:
-          return rule( evaluator )  # try visiting
+          return rule( state )  # try visiting
         except ParserFailedException:
-          evaluator.state.load(save) 
+          state.load(save) 
       
       raise ParserFailedException('Parser alternative exhausted with no match') # all options exhausted with no match
     return _Alternative
     
   def Sequence( self, target, children ):
-    def _Sequence( evaluator ):
-      sequence = [  ]
-      for rule in children:
-        sequence.extend( evaluator( rule( evaluator ) ) ) # Execute in order
-         
-      return sequence
+    def _Sequence( state ):
+      # sequence = [  ]
+      # for rule in children:
+      list( f(state) for f in rule( state ) for rule in children ) # call parser result on state for each element
+      
+      return []# sequence
     return _Sequence
     
   def Repeat( self, target, children ):
-    def _Repeat( evaluator ):
+    def _Repeat( state ):
       sequence = []
       save = None
       try:
         while True:
-          save = evaluator.state.save() #save evaluator from before visitation
-          sequence.extend( children[0]( evaluator ) )
+          save = state.save() #save state from before visitation
+          sequence.extend( children[0]( state ) )
       except ParserFailedException:
-        evaluator.state.load( save )  # repeat until failure. Discard failed evaluator
+        state.load( save )  # repeat until failure. Discard failed state
         return sequence
     return _Repeat
     
   def Push( self, target, children ):
-      # Do not execute
-    def _Push( evaluator ):
-      result = children[0]( evaluator )
-      return result
-    return _Push
+      # Do nothing
+    return children[0]
       
 class Reordering( RuleCompilerBase ):
   def __init__( self, terminals ):
@@ -82,17 +80,19 @@ class Reordering( RuleCompilerBase ):
     
   def Sequence( self, target, children ):
       # Start executing after obtaining all of sequence
-    def _Sequence( evaluator ):
+    def _Sequence( state ):
       sequence = []
       for rule in children:
-        sequence.extend( rule( evaluator ) )
+        sequence.extend( rule( state ) )
       
-      return evaluator( sequence )
+      lst = [ f(state) for f in sequence ]
+      return []
     
     return _Sequence   
     
   def Push( self, target, children ):      
-    def _Push( evaluator ):
-      result = children[0]( evaluator )
-      return evaluator( result )
+    def _Push( state ):
+      result = children[0]( state )
+      lst = [ f(state) for f in result ]
+      return []
     return _Push

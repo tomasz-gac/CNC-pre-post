@@ -1,11 +1,10 @@
 import re
 from copy import copy, deepcopy
 
-__all__ = [ 'ParserFailedException', 'Return', 'Switch' ]
+__all__ = [ 'ParserFailedException', 'Return', 'Switch', 'If' ]
 
 class ParserFailedException(Exception):
   pass
-
 
 class TerminalBase:
   def ignore( self, returned = [] ):
@@ -18,13 +17,13 @@ class Ignore(TerminalBase):
   def __init__( self, task, returned = [] ):
     self.task = make(task)
     self.returned = returned
-  def __call__( self, evaluator ):
-    result = self.task( evaluator )
+  def __call__( self, state ):
+    result = self.task( state )
     return self.returned
 
 class Return(TerminalBase):
   def __init__( self, *returned ):
-    self.returned = list(returned)
+    self.returned = returned
   def __call__( self, *args ):
     return self.returned
   
@@ -33,22 +32,54 @@ class Wrapper(TerminalBase):
     self.wrapped = wrapped
     self.wrapper = wrapper
     
-  def __call__( self, evaluator ):
-    result = self.wrapped( evaluator )
+  def __call__( self, state ):
+    result = self.wrapped( state )
     return self.wrapper( result )
 
-class Switch(TerminalBase):
+class Lookup(TerminalBase):
   def __init__( self, lookup ):
-    self._lookup = [ (re.compile( pattern ),callback) for (pattern, callback ) in lookup.items() ]
+    self._lookup = tuple( (re.compile( pattern ), returned) for (pattern, returned) in lookup.items() )
     
   def __deepcopy__( self, memo ):
     return copy( self )
     
-  def __call__( self, evaluator ):
-    for re,callback in self._lookup:
-      match = re.match( evaluator.state.input )
+  def __call__( self, state ):
+    for re, returned in self._lookup:
+      match = re.match( state.input )
       if match is not None:
-        evaluator.state.input = match.string[match.end(0):]
+        state.input = match.string[match.end(0):]
+        return returned
+    
+    raise ParserFailedException('Lookup exhausted with no matches')
+    
+class Switch(TerminalBase):
+  def __init__( self, lookup ):
+    self._lookup = tuple( (re.compile( pattern ),callback) for (pattern, callback ) in lookup.items() )
+    
+  def __deepcopy__( self, memo ):
+    return copy( self )
+    
+  def __call__( self, state ):
+    for re,callback in self._lookup:
+      match = re.match( state.input )
+      if match is not None:
+        state.input = match.string[match.end(0):]
         return callback( match )
     
     raise ParserFailedException('Switch exhausted with no matches')
+    
+class If(TerminalBase):
+  def __init__( self, pattern, block ):
+    self.condition = re.compile( pattern )
+    self.block = block
+    
+  def __deepcopy__( self, memo ):
+    return copy( self )
+    
+  def __call__( self, state ):
+    match = self.condition.match( state.input )
+    if match is not None:
+      state.input = match.string[match.end(0):]
+      return self.block( match )
+    
+    raise ParserFailedException('If terminal did not match')

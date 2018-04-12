@@ -25,20 +25,20 @@ import languages.heidenhain.grammar   as hh
 from enum import Enum, unique
 from copy import deepcopy
 
-GOTOcartesian = t.Switch({ 
-  'L '  : t.Return( mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ),
-  'C '  : t.Return( mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT )
+GOTOcartesian = t.Lookup({ 
+  'L '  : ( mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ),
+  'C '  : ( mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT )
 })
 
-GOTOpolar = t.Switch({ 
-  'LP'  : t.Return( mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ),
-  'CP'  : t.Return( mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT )
+GOTOpolar = t.Lookup({ 
+  'LP'  : ( mot.LINEAR,    reg.MOTIONMODE, cmd.SET, cmd.INVARIANT ),
+  'CP'  : ( mot.CIRCULAR,  reg.MOTIONMODE, cmd.SET, cmd.INVARIANT )
 })
 
-toolCallOptions = t.Switch({
-  'DR\\s*[=]?'  : t.Return( reg.TOOLDR,    cmd.SET ),
-  'DL\\s*[=]?'  : t.Return( reg.TOOLDL,    cmd.SET ),
-  'S'           : t.Return( reg.SPINSPEED, cmd.SET )
+toolCallOptions = t.Lookup({
+  'DR\\s*[=]?'  : ( reg.TOOLDR,    cmd.SET ),
+  'DL\\s*[=]?'  : ( reg.TOOLDL,    cmd.SET ),
+  'S'           : ( reg.SPINSPEED, cmd.SET )
 })
 
 def handleCoord( map ):
@@ -79,15 +79,15 @@ CCcoord = t.Switch({
   "(I)?(Z)" : handleCoord(CCcoordmap)
 })
   
-compensation = t.Switch( { 
-  'R0' : t.Return( comp.NONE,  reg.COMPENSATION, cmd.SET ),
-  'RL' : t.Return( comp.LEFT,  reg.COMPENSATION, cmd.SET ),
-  'RR' : t.Return( comp.RIGHT, reg.COMPENSATION, cmd.SET )
+compensation = t.Lookup( { 
+  'R0' : ( comp.NONE,  reg.COMPENSATION, cmd.SET ),
+  'RL' : ( comp.LEFT,  reg.COMPENSATION, cmd.SET ),
+  'RR' : ( comp.RIGHT, reg.COMPENSATION, cmd.SET )
 } )
 
-direction = t.Switch( { 
-  'DR[-]' : t.Return( dir.CW,   reg.DIRECTION, cmd.SET ),
-  'DR[+]' : t.Return( dir.CCW,  reg.DIRECTION, cmd.SET )
+direction = t.Lookup( { 
+  'DR[-]' : ( dir.CW,   reg.DIRECTION, cmd.SET ),
+  'DR[+]' : ( dir.CCW,  reg.DIRECTION, cmd.SET )
 } )
 
 def handleAux( result ):
@@ -109,7 +109,7 @@ def handleAux( result ):
   except KeyError:
     raise RuntimeError('Unknown auxillary function M'+str(aux) )
     
-auxilary = t.Switch({ 'M(\\d+)' : handleAux })  
+auxilary = t.If('M(\\d+)', handleAux)
 
 
 terminals = {
@@ -117,24 +117,24 @@ terminals = {
   'PAPR'              : polarCoord,
   'CCXYZ'             : CCcoord,
   'lineno'            : t.Wrapper( expr.number ,(lambda x : [ x[0], reg.LINENO, cmd.SET ]) ),
-  'F'                 : t.Switch({ 'F' : t.Return( reg.FEED, cmd.SET ) }),
-  'MAX'               : t.Switch({ 'MAX' : t.Return( -1 ) }),
+  'F'                 : t.If('F', t.Return( reg.FEED, cmd.SET )),
+  'MAX'               : t.If('MAX', t.Return( -1 )),
   'compensation'      : compensation,
   'direction'         : direction,
   'L/C'               : GOTOcartesian,
   'LP/CP'             : GOTOpolar,
   'MOVE'              : t.Return( cmd.INVARIANT ),
   'UPDATE'            : t.Return( cmd.INVARIANT ),
-  'CC'                : t.Switch({ 'CC' : t.Return( cmd.INVARIANT ) }),
+  'CC'                : t.If('CC', t.Return( cmd.INVARIANT )),
   'auxilary'          : auxilary,
-  'begin_pgm'         : t.Switch({ 'BEGIN PGM (.+) (MM|INCH)' : t.Return() }),
-  'end_pgm'           : t.Switch({ 'END PGM (.+)' : t.Return() }),
-  'comment'           : t.Switch({ '[;][ ]*(.*)' : t.Return() }),
-  'block form start'  : t.Switch({ 'BLK FORM 0\\.1 (X|Y|Z)'  : t.Return(cmd.DISCARD) }),
-  'block form end'    : t.Switch({ 'BLK FORM 0\\.2'  : t.Return(cmd.DISCARD) }),
-  'fn_f'              : t.Switch({ 'FN 0\\:'  : t.Return(cmd.INVARIANT) }),
-  'tool call'         : t.Switch({ 'TOOL CALL' : t.Return( reg.TOOLNO, cmd.SET, cmd.INVARIANT, cmd.TOOLCHANGE )}),
-  'tool axis'         : t.Switch({ '(X|Y|Z)' : t.Return() }),
+  'begin_pgm'         : t.If('BEGIN PGM (.+) (MM|INCH)', t.Return()),
+  'end_pgm'           : t.If('END PGM (.+)', t.Return()),
+  'comment'           : t.If('[;][ ]*(.*)', t.Return()),
+  'block form start'  : t.If('BLK FORM 0\\.1 (X|Y|Z)', t.Return(cmd.DISCARD)),
+  'block form end'    : t.If('BLK FORM 0\\.2', t.Return(cmd.DISCARD)),
+  'fn_f'              : t.If('FN 0\\:', t.Return(cmd.INVARIANT)),
+  'tool call'         : t.If('TOOL CALL', t.Return( reg.TOOLNO, cmd.SET, cmd.INVARIANT, cmd.TOOLCHANGE )),
+  'tool axis'         : t.If('(X|Y|Z)', t.Return()),
   'tool options'      : toolCallOptions,
   'primary'           : expr.primary,
   'number'            : expr.number,

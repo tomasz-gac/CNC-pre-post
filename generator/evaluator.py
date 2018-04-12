@@ -1,21 +1,5 @@
 from copy import copy
 
-class Evaluator:
-  __slots__ = 'state'
-  def __init__(self, state):
-    self.state = state
-
-class Eager(Evaluator):
-  def __call__( self, result ):
-    for f in result:
-      f( self.state )
-    return []  
-
-class Delayed(Evaluator):
-  def __call__( self, result ):
-    self.state.stack.extend( result )
-    return []
-
 class Stack2args:
   def __init__(self, function , nargs ):
     self.function = function
