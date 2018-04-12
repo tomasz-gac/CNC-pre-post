@@ -116,14 +116,15 @@ class Alternative(Nary):
     return Alternative( (make(other),) + self.rules )
 
 class Sequence(Nary):    
-  def __and__( self, other ):
+  '''def __and__( self, other ):
       # makes sure that parantheses are preserved
     if isinstance( other, Sequence ):
       return Sequence( (self, other) )
     elif isinstance( other, tuple ):
       return Sequence( self.rules + tuple( make(rule) for rule in other ) )
     else:
-      return Sequence( self.rules + (make(other),) )
+      return Sequence( self.rules + (make(other),) )'''
+  pass
   
 class Repeat(Unary):
   pass

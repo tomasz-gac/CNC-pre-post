@@ -1,6 +1,7 @@
 import generator.terminal as t
 import generator.rule     as r
 import generator.compiler as c
+import generator.evaluator as ev
 
 import languages.heidenhain.commands as commands
 
@@ -148,9 +149,13 @@ def bench( n = 1000 ):
   import time
   start = time.time()
   q = None
+  e = ev.Delayed( q )
+  r = None
   for i in range(n):
-    q = Parse( 'L X+50 Y-30 Z+150 R0 FMAX' )
+    q = art.State( 'L X+50 Y-30 Z+150 R0 FMAX' )
+    e.state = q
+    r = Parse( e )
   print( time.time() - start )
-  print(q[0])
-  print(q[1])
+  print(q.stack)
+  print(r)
   
