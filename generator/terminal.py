@@ -13,7 +13,7 @@ class TerminalBase:
     return Wrapper( self, wrapper )
   
 class Ignore(TerminalBase):
-  def __init__( self, ignored, returned = [] ):
+  def __init__( self, ignored, returned = () ):
     self.ignored = ignored
     self.returned = returned
   def __call__( self, state ):
@@ -33,7 +33,7 @@ class Wrapper(TerminalBase):
     
   def __call__( self, state ):
     result = self.wrapped( state )
-    return [ self.wrapper( result ) ]
+    return self.wrapper( result ) 
 
 class Lookup(TerminalBase):
   def __init__( self, lookup ):
@@ -90,6 +90,11 @@ class Push:
     state.stack.append( self.value )
   def __repr__(self):
     return '<PUSH '+str(self.value)+'>'
+
+def push( value ):
+  def _push( state ):
+    state.stack.append( value )
+  return (_push,)
     
 def pushTerminals( terminals ):
-  return { key : Wrapper( value, Push ) for (key, value) in terminals.items() }
+  return { key : Wrapper( value, push ) for (key, value) in terminals.items() }

@@ -21,7 +21,7 @@ class RuleCompilerBase:
       try:
         result = children[0]( state )
       except ParserFailedException:
-        return []
+        return ()
 
       raise ParserFailedException('Parser marched a Not statement')
     return _Not
@@ -33,7 +33,7 @@ class RuleCompilerBase:
         return children[0]( state )
       except ParserFailedException:
         state.load( save )
-        return []
+        return ()
     return _Optional
 
   def Alternative( self, target, children ):
@@ -58,7 +58,7 @@ class RuleCompilerBase:
           sequence.extend( children[0]( state ) )
       except ParserFailedException:
         state.load( save )  # repeat until failure. Discard failed state
-        return sequence
+        return tuple( sequence )
     return _Repeat
 
   def Sequence( self, target, children ):
@@ -68,7 +68,7 @@ class RuleCompilerBase:
         for rule in children
           for f in rule(state)
       ]
-      return []
+      return ()
 
     return _Sequence
 
@@ -80,14 +80,17 @@ class Reordering( RuleCompilerBase ):
   def Sequence( self, target, children ):
       # Start executing after obtaining all of the sequence
     def _Sequence( state ):
-      sequence = [ f for rule in children for f in rule(state) ]
+      sequence = [f 
+        for rule in children
+          for f in rule(state)      
+        ]
       ev = [ f(state) for f in sequence ]
-      return []
+      return ()
 
     return _Sequence
 
   def Push( self, target, children ):
     def _Push( state ):
-      lst = [ f(state) for f in children[0]( state ) ]
-      return []
+      t = [ f(state) for f in children[0]( state ) ]
+      return ()
     return _Push

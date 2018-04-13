@@ -1,3 +1,5 @@
+import weakref
+
 # Builder class that drives parser compilation
 # Recursively traverses grammar tree and fetches compile methods from compiler
 # for appropriate rules
@@ -33,7 +35,7 @@ class ParserBuilder:
     if self._visited[target] is None: # No children referencing this parser
       self._visited[target] = parser  # No recursion
     elif isinstance( self._visited[target], Recursion ):  # A child references this parser
-      self._visited[target].target = parser  # update the recursion target
+      self._visited[target].target = weakref.proxy(parser)  # update the recursion target
     
     return parser
     

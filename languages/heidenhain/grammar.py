@@ -12,14 +12,14 @@ direction    = r.make('direction').push()
 
 gotoTail = ~direction & ~compensation & ~feed
 
-goto = (  'L/C' & (~pointCartesian & gotoTail ) | 
-          'LP/CP' & ( ~pointPolar & ~coordCartesian & gotoTail ) )
-
-circleCenter = 'CC' & coordCC & coordCC
-
 auxilary = 'auxilary' & +r.make('auxilary')
 
-positioning = ( goto | circleCenter ) & ~auxilary
+goto = (  'L/C' & (~pointCartesian & gotoTail & ~auxilary) | 
+          'LP/CP' & ( ~pointPolar & ~coordCartesian & gotoTail & ~auxilary) )
+
+circleCenter = 'CC' & coordCC & coordCC & ~auxilary
+
+positioning = goto | circleCenter
 positioningShort = (
     ( pointCartesian | pointPolar & ~coordCartesian ) & gotoTail & ~auxilary & 'MOVE'
   ).push()

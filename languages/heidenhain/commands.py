@@ -1,16 +1,53 @@
 from enum import IntEnum, unique
 
-@unique
-class Commands(IntEnum):
-  SET         = 7  # A B SET -> B = A
-  INVARIANT   = 8  # UPDATE STATE GIVEN INVARIANT
-  DISCARD     = 10 # DISCARD STATE BUFFER
-  TMP         = 11 # SET REGISTER VALUE AS TEMPORARY AND RESTORE IT AFTER INVARIANT
-  STOP        = 12 # PROGRAM STOP
-  OPTSTOP     = 13 # PROGRAM OPTIONAL STOP
-  TOOLCHANGE  = 14 # CHANGE TOOL TO Registers.TOOLNO
-  END         = 15 # END PROGRAM
+class setval: # Setval(B, A) -> B = A
+  def __init__( self, attribute, value ):
+    self.attribute = attribute
+    self.value = value
+  def __call__( self, state ):
+    state.symtable[self.attribute] = self.value
+  def __repr__( self ):
+    return 'setval: '+self.attribute.__repr__()+' = '+self.value.__repr__()
 
+class Set:  # A Set(B) -> B = A
+  def __init__(self, attribute):
+    self.attribute = attribute
+    
+  def __call__( self, state ):
+    state.symtable[self.attribute] = state.stack[-1]
+    del state.stack[-1]
+    
+  def __repr__( self ):
+    return 'Set (' + self.attribute.__repr__() + ')'
+    
+def discard( state ): # DISCARD STATE BUFFER
+  del state.stack[:]
+
+def invariant( state ): # UPDATE STATE GIVEN INVARIANT
+  pass
+  
+class Temporary:  # SET REGISTER VALUE AS TEMPORARY AND RESTORE IT AFTER INVARIANT
+  def __init__(self, attribute ):
+    self.attribute = attribute
+    
+  def __call__( self, state ):
+    state.symtable['temporary'] = self.attribute
+  
+  def __repr__( self ):
+    return 'Temporary: '+self.attribute.__repr__()
+    
+def stop( state ):  # PROGRAM STOP
+  pass
+  
+def optionalStop( state ):  # PROGRAM OPTIONAL STOP
+  pass
+
+def toolchange( state ):  # CHANGE TOOL TO Registers.TOOLNO
+  pass
+  
+def end( state ): # END PROGRAM
+  pass
+  
 @unique
 class Registers(IntEnum):
   COMPENSATION = 0   # COMPENSATION TYPE
