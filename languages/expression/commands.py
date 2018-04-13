@@ -30,5 +30,5 @@ def GET( state, A ):
     
 @ev.stack2args(2)
 def LET( state, A, B ):
-  symtable = state.symtable[A] = B
+  state.symtable[A] = B
   return [ B ]

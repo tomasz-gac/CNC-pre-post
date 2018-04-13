@@ -88,8 +88,8 @@ direction = Lookup( {
   p('DR[+]') : ( dir.CCW,  reg.DIRECTION, cmd.SET )
 }.items())
 
-def handleAux( result ):
-  aux = int(result[0].groups[0])
+def handleAux( match ):
+  aux = int(match.groups()[0])
   command = { 
     0  : ( cmd.STOP ), 
     1  : ( cmd.OPTSTOP ), 

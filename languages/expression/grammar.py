@@ -10,7 +10,7 @@ pow.name = 'pow'
 
 identifier         = r.Terminal('identifier')
 get_identifier     = identifier & 'GET'
-set_identifier     = identifier.push() & '=' & expression
+set_identifier     = identifier.push() & ('=', expression)
 subexpression      = "(" & expression & ")"
 subexpression.name = 'subexpression'
 

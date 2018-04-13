@@ -21,8 +21,8 @@ terminals = {
   '('           : Return().If(p('[(]')),
   ')'           : Return().If(p('[)]')),
   
-  '+-'          : Lookup( {p('[+]') : cmd.ADD, p('[-]') : cmd.SUB}.items() ),
-  '*/'          : Lookup( {p('[*]') : cmd.MUL, p('[/]') : cmd.DIV}.items() ),
+  '+-'          : Lookup( {p('[+]') : (cmd.ADD,), p('[-]') : (cmd.SUB,)}.items() ),
+  '*/'          : Lookup( {p('[*]') : (cmd.MUL,), p('[/]') : (cmd.DIV,)}.items() ),
   '^'           : If(p('\\^'), Return(cmd.POW))
 }
 

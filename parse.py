@@ -3,6 +3,7 @@ import time
 import sys
 import generator as gen
 import languages.heidenhain.parser as hh
+from generator.state import State
 import math
 import pickle
 from os.path import basename, abspath, splitext
@@ -11,16 +12,19 @@ def parse( program, lineOffset ):
   results = []        #result list
   
   parser = hh.Parse
-  
+  symtable = {}
   for i, line in enumerate(program):
       #append the line number marker, start at 1 and use the worker thread offset
     # results.append(CNC.AST.LineNumber(i+lineOffset+1))
     try:
-      result, rest = parser( line.rstrip('\n') )
+      state = State( line.rstrip('\n') )
+      state.symtable.update( symtable )
+      rest = parser( state )
       if len(rest) > 0:
         raise RuntimeError( 'Parser failed at line ' + line + ' rest: "' + rest + '"' )
       else:
-        results.append( result )
+        results.append( state.stack )
+        symtable.update( state.symtable )
     except RuntimeError as err:
       print(str(err))
     except gen.ParserFailedException:
