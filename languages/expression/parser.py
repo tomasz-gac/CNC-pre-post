@@ -12,9 +12,25 @@ p = re.compile
 number_pattern = p('([+-]?((\\d+[.]\\d*)|([.]\\d+)|(\\d+)))')
 identifier_pattern = p('(([a-zA-Z_]+\\d*)+)')
 
+def number( state ):
+  match = number_pattern.match( state.input )
+  if match is not None:
+    state.input = match.string[match.end(0):]
+    return (Push(float(match.groups()[0])),)
+  
+  raise ParserFailedException('Number not matched')
+
+def identifier( state ):
+  match = identifier_pattern.match( state.input )
+  if match is not None:
+    state.input = match.string[match.end(0):]
+    return (Push(match.groups()[0]),)
+  
+  raise ParserFailedException('Identifier not matched')
+    
 terminals = {
-  'number'      : If(number_pattern,     lambda match : (Push(float(match.groups()[0])),) ),
-  'identifier'  : If(identifier_pattern, lambda match : (Push(match.groups()[0]),)),
+  'number'      : number,
+  'identifier'  : identifier,
   'GET'         : Return(cmd.GET),
   
   '='           : Return(cmd.LET).If(p('[=]')),

@@ -1,6 +1,6 @@
 from enum import IntEnum, unique
 
-class setval: # Setval(B, A) -> B = A
+class Setval: # Setval(B, A) -> B = A
   def __init__( self, attribute, value ):
     self.attribute = attribute
     self.value = value
@@ -19,13 +19,7 @@ class Set:  # A Set(B) -> B = A
     
   def __repr__( self ):
     return 'Set (' + self.attribute.__repr__() + ')'
-    
-def discard( state ): # DISCARD STATE BUFFER
-  del state.stack[:]
-
-def invariant( state ): # UPDATE STATE GIVEN INVARIANT
-  pass
-  
+      
 class Temporary:  # SET REGISTER VALUE AS TEMPORARY AND RESTORE IT AFTER INVARIANT
   def __init__(self, attribute ):
     self.attribute = attribute
@@ -47,6 +41,16 @@ def toolchange( state ):  # CHANGE TOOL TO Registers.TOOLNO
   
 def end( state ): # END PROGRAM
   pass
+
+def discard( state ): # DISCARD STATE BUFFER
+  del state.stack[:]
+
+def invariant( state ): # UPDATE STATE GIVEN INVARIANT
+  pass
+  # if len(state.input) > 0:
+  #   raise RuntimeError('Invariant called on partially parsed input')
+  # print( state.symtable )
+
   
 @unique
 class Registers(IntEnum):

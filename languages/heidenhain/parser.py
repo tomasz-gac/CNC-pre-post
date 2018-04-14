@@ -29,13 +29,13 @@ from copy import deepcopy
 p = re.compile
 
 GOTOcartesian = Lookup({ 
-  p('L ')  : ( cmd.setval(reg.MOTIONMODE, mot.LINEAR), cmd.invariant ),
-  p('C ')  : ( cmd.setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.invariant )
+  p('L ')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.invariant ),
+  p('C ')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.invariant )
 }.items())
 
 GOTOpolar = Lookup({ 
-  p('LP')  : ( cmd.setval(reg.MOTIONMODE, mot.LINEAR), cmd.invariant ),
-  p('CP')  : ( cmd.setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.invariant )
+  p('LP')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.invariant ),
+  p('CP')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.invariant )
 }.items())
 
 toolCallOptions = Lookup({
@@ -77,14 +77,14 @@ CCcoord = Switch({
 }.items())
   
 compensation = Lookup( { 
-  p('R0') : ( cmd.setval(reg.COMPENSATION, comp.NONE), ),
-  p('RL') : ( cmd.setval(reg.COMPENSATION, comp.LEFT), ),
-  p('RR') : ( cmd.setval(reg.COMPENSATION, comp.RIGHT), )
+  p('R0') : ( cmd.Setval(reg.COMPENSATION, comp.NONE), ),
+  p('RL') : ( cmd.Setval(reg.COMPENSATION, comp.LEFT), ),
+  p('RR') : ( cmd.Setval(reg.COMPENSATION, comp.RIGHT), )
 }.items())
 
 direction = Lookup( { 
-  p('DR[-]') : ( cmd.setval(reg.DIRECTION, dir.CW), ),
-  p('DR[+]') : ( cmd.setval(reg.DIRECTION, dir.CCW), )
+  p('DR[-]') : ( cmd.Setval(reg.DIRECTION, dir.CW), ),
+  p('DR[+]') : ( cmd.Setval(reg.DIRECTION, dir.CCW), )
 }.items())
 
 def handleAux( match ):
@@ -92,14 +92,14 @@ def handleAux( match ):
   command = { 
     0  : ( cmd.stop, ), 
     1  : ( cmd.optionalStop, ), 
-    3  : ( cmd.setval(reg.SPINDIR, spin.CW), ),
-    4  : ( cmd.setval(reg.SPINDIR, spin.CCW), ),
-    5  : ( cmd.setval(reg.SPINDIR, spin.OFF), ),
+    3  : ( cmd.Setval(reg.SPINDIR, spin.CW), ),
+    4  : ( cmd.Setval(reg.SPINDIR, spin.CCW), ),
+    5  : ( cmd.Setval(reg.SPINDIR, spin.OFF), ),
     6  : ( cmd.toolchange, ), 
-    8  : ( cmd.setval(reg.COOLANT, cool.FLOOD), ),
-    9  : ( cmd.setval(reg.COOLANT, cool.OFF), ),
+    8  : ( cmd.Setval(reg.COOLANT, cool.FLOOD), ),
+    9  : ( cmd.Setval(reg.COOLANT, cool.OFF), ),
     30 : ( cmd.end, ),
-    91 : ( cmd.Temporary(reg.WCS), cmd.setval(reg.WCS, 0) )
+    91 : ( cmd.Temporary(reg.WCS), cmd.Setval(reg.WCS, 0) )
   }
   try:
     return command[aux]
@@ -110,7 +110,7 @@ terminals = {
   'XYZABC'            : cartesianCoord,
   'PAPR'              : polarCoord,
   'CCXYZ'             : CCcoord,
-  'lineno'            : Wrapper( expr.number , lambda x : ( cmd.setval(reg.LINENO, x[0]), ) ),
+  'lineno'            : Wrapper( expr.number , lambda x : ( cmd.Setval(reg.LINENO, x[0]), ) ),
   'F'                 : Return( cmd.Set(reg.FEED) ).If(p('F')),
   'MAX'               : Return( Push(-1) ).If(p('MAX')),
   'compensation'      : compensation,
@@ -135,7 +135,7 @@ terminals = {
   'expression'        : expr.Parse
 }
 
-terminals = pushTerminals( terminals )
+# terminals = pushTerminals( terminals )
 
 Parse = hh.heidenhain.compile( c.Reordering( terminals ) )
 
