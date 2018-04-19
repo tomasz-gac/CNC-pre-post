@@ -44,6 +44,6 @@ terminals = {
 
 compiler = c.Reordering( terminals )
 
-Parse   = grammar.expression.compile( compiler )
-primary = grammar.primary.compile( compiler )
+Parse   = grammar.g.expression.compile( compiler )
+primary = grammar.g.primary.compile( compiler )
 number  = r.Terminal('number').compile( compiler )

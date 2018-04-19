@@ -31,11 +31,8 @@ class ReprVisitor:
     
   def getname( self, rule ):
     try:
-      name = type(rule).__name__ + ' (' + rule.handle + ')'
+      name = type(rule).__name__ + ' (' + rule.name + ')'
     except AttributeError:
-      try:
-        name = type(rule).__name__ + ' (' + rule.name + ')'
-      except AttributeError:
-        name = type(rule).__name__
+      name = type(rule).__name__
     return name
   

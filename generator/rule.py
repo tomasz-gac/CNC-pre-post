@@ -7,32 +7,38 @@ def make( rule ):
     return rule
   elif isinstance( rule, str ):
     return Terminal(rule)
+  elif isinstance( rule, tuple ):
+    return Sequence( make(arg) for arg in rule )
+  elif isinstance( rule, list ):
+    return Alternative( make(arg) for arg in rule )
+  elif rule is None:
+    return rule
   raise TypeError
 
 class Rule:
   def __or__( self, rhs ):
-    if isinstance( rhs, tuple ):
+    '''if isinstance( rhs, tuple ):
       return Alternative( (self,) + tuple( make(rule) for rule in rhs ) )
-    else:
-      return Alternative( (self, make(rhs)) )
+    else:'''
+    return Alternative( (self, make(rhs)) )
     
   def __ror__( self, lhs ):
-    if isinstance( lhs, tuple ):
+    '''if isinstance( lhs, tuple ):
       return Alternative( tuple( make(rule) for rule in lhs ) + (self,) )
-    else:
-      return Alternative( (make(lhs), self) )
+    else:'''
+    return Alternative( (make(lhs), self) )
     
   def __and__( self, rhs ):
-    if isinstance( rhs, tuple ):
+    '''if isinstance( rhs, tuple ):
       return Sequence( (self,) + tuple( make(rule) for rule in rhs ) )
-    else:
-      return Sequence( (self, make(rhs)) )
+    else:'''
+    return Sequence( (self, make(rhs)) )
     
   def __rand__( self, lhs ):
-    if isinstance( lhs, tuple ):
+    '''if isinstance( lhs, tuple ):
       return Sequence( tuple( make(rule) for rule in lhs ) + (self,) )
-    else:
-      return Sequence( (make(lhs), self) )
+    else:'''
+    return Sequence( (make(lhs), self) )
     
   def __rmul__( self, other ):
     return Sequence( tuple(self for _ in range(other)) )
@@ -63,9 +69,18 @@ class Rule:
     return builder( self )
       
 class Unary(Rule):
+  __slots__ = '_rule'
   def __init__(self, rule):
-    self.rule = rule
+    self._rule = make(rule)
     super().__init__()
+    
+  @property
+  def rule( self ):
+    return self._rule
+  
+  @rule.setter
+  def rule( self, value ):
+    self._rule = make(value)
       
   def __iter__( self ):    
     return iter( [ self.rule ] )
@@ -74,10 +89,19 @@ class Unary(Rule):
     return 1
   
 class Nary(Rule):
+  __slots__ = '_rules'
   def __init__(self, rules ):
-    self.rules = rules
+    self._rules = tuple( make(rule) for rule in rules )
     super().__init__()
     
+  @property
+  def rules( self ):
+    return self._rules
+  
+  @rules.setter
+  def rules( self, value ):
+    self._rules = make(value)
+  
   def __iter__( self ):    
     return iter( self.rules )
   
@@ -85,8 +109,8 @@ class Nary(Rule):
     return len(self.rules)
   
 class Terminal(Rule):
-  def __init__( self, handle ):
-    self.handle = handle
+  def __init__( self, name = None ):
+    self.name = name
     super().__init__()
     
   def __iter__( self ):

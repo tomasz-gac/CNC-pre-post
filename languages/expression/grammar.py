@@ -1,22 +1,18 @@
 import generator.rule as r
+from generator.grammar import Grammar
 
-expression  = r.Handle()
-term        = r.Handle()
-pow         = r.Handle()
+g = Grammar()
 
-expression.name = 'expression'
-term.name = 'term'
-pow.name = 'pow'
+g.expression  = r.Handle()
+g.term        = r.Handle()
+g.pow         = r.Handle()
 
-identifier         = r.Terminal('identifier')
-get_identifier     = identifier & 'GET'
-set_identifier     = identifier.push() & ('=', expression)
-subexpression      = "(" & expression & ")"
-subexpression.name = 'subexpression'
+g.get_identifier   = g.identifier, 'GET'
+g.set_identifier   = g.identifier.push(), '=', g.expression
+g.subexpression      = "(", g.expression, ")"
 
-primary = ( 'number' | set_identifier | get_identifier | subexpression ).push()
-primary.name = 'primary'
+g.primary = r.make([ g.number, g.set_identifier, g.get_identifier, g.subexpression ]).push()
 
-expression.rule = term & +( '+-' & term )
-term.rule       = pow & +( '*/' & pow )
-pow.rule        = primary & +( '^' & pow )
+g.expression.rule = g.term,     +( '+-' & g.term )
+g.term.rule       = g.pow,      +( '*/' & g.pow )
+g.pow.rule        = g.primary,  +( '^' & g.pow )
