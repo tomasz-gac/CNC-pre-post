@@ -1,29 +1,34 @@
 import generator.rule as r
+from generator.grammar import Grammar
 
-coordCartesian = 'XYZABC'  & r.make('primary').push()
-coordPolar     = 'PAPR'    & r.make('primary').push()
-coordCC        = 'CCXYZ'   & r.make('primary').push()
-pointCartesian = coordCartesian & +coordCartesian
-pointPolar     = coordPolar & +coordPolar
+g = Grammar()
 
-feed       = "F" & ( "MAX" | r.make('primary') ).push()
-compensation = r.make('compensation').push()
-direction    = r.make('direction').push()
+g.coordCartesian = g.XYZABC, g.primary.push()
+g.coordPolar     = g.PAPR,   g.primary.push()
+g.coordCC        = g.CCXYZ,  g.primary.push()
+g.pointCartesian = coordCartesian, +coordCartesian
+g.pointPolar     = coordPolar, +coordPolar
 
-gotoTail = ~direction & ~compensation & ~feed
+g.feed       = g.F, ( [ g.MAX, g.primary ] ).push()
 
-auxilary = 'auxilary' & +r.make('auxilary')
+g.gotoTail = ~g.direction, ~g.compensation, ~g.feed
 
-goto = (  'L/C' & (~pointCartesian & gotoTail & ~auxilary) | 
-          'LP/CP' & ( ~pointPolar & ~coordCartesian & gotoTail & ~auxilary) )
+g.aux = g.auxilary & +g.auxilary
 
-circleCenter = 'CC' & coordCC & coordCC & ~auxilary
+g.goto =  [ ( g.LC, (~g.pointCartesian, g.gotoTail, ~g.aux) ), 
+            ( g.LPCP, ( ~g.pointPolar, ~g.coordCartesian, g.gotoTail, ~g.aux) ) ]
 
-positioning = goto | circleCenter
-positioningShort = (
-    ( pointCartesian | pointPolar & ~coordCartesian ) & gotoTail & ~auxilary & 'MOVE'
+g.circleCenter = g.CC, g.coordCC, g.coordCC, ~g.aux
+
+g.positioning = [ g.goto, g.circleCenter ]
+g.positioningShort = (
+    ( [ g.pointCartesian, g.pointPolar ], ~g.coordCartesian ), g.gotoTail, ~g.aux & g.MOVE
   ).push()
 
+################# DO DOKONCZENIA PONIZEJ
+  
+  
+  
 comment       = r.make('comment')
 begin_pgm     = 'begin_pgm'
 end_pgm       = 'end_pgm'
