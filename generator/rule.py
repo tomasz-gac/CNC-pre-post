@@ -15,6 +15,12 @@ def make( rule ):
     return rule
   raise TypeError
 
+def seq( *args ):
+  return make( args )
+  
+def alt( *args ):
+  return make( list(args) )
+  
 class Rule:
   def __or__( self, rhs ):
     '''if isinstance( rhs, tuple ):

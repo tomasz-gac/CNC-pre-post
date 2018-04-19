@@ -21,7 +21,7 @@ from languages.heidenhain.commands import Spindle       as spin
 import languages.expression.commands as art
 
 import languages.expression.parser    as expr
-import languages.heidenhain.grammar   as hh
+from languages.heidenhain.grammar   import g as hh
 
 from enum import Enum, unique
 from copy import deepcopy
@@ -115,8 +115,8 @@ terminals = {
   'MAX'               : Return( Push(-1) ).If(p('MAX')),
   'compensation'      : compensation,
   'direction'         : direction,
-  'L/C'               : GOTOcartesian,
-  'LP/CP'             : GOTOpolar,
+  'LC'                : GOTOcartesian,
+  'LPCP'              : GOTOpolar,
   'MOVE'              : Return( cmd.invariant ),
   'UPDATE'            : Return( cmd.invariant ),
   'CC'                : Return( cmd.invariant ).If(p('CC')),
@@ -127,7 +127,7 @@ terminals = {
   'block form start'  : Return(cmd.discard).If(p('BLK FORM 0\\.1 (X|Y|Z)')),
   'block form end'    : Return(cmd.discard).If(p('BLK FORM 0\\.2')),
   'fn_f'              : Return(cmd.invariant).If(p('FN 0\\:')),
-  'tool call'         : Return(cmd.Set(reg.TOOLNO), cmd.invariant, cmd.toolchange ).If(p('TOOL CALL')),
+  'toolCall'          : Return(cmd.Set(reg.TOOLNO), cmd.invariant, cmd.toolchange ).If(p('TOOL CALL')),
   'tool axis'         : Return().If(p('(X|Y|Z)')),
   'tool options'      : toolCallOptions,
   'primary'           : expr.primary,

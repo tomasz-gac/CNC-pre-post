@@ -10,7 +10,7 @@ class RuleCompilerBase:
     try:
       return self._terminals[target.name]
     except KeyError:
-      raise RuntimeError('Missing terminal during compilation: '+str(target.handle))
+      raise RuntimeError('Missing terminal during compilation: '+str(target.name))
 
   def Handle( self, target, children ):
       # Do nothing
