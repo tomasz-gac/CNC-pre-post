@@ -15,27 +15,27 @@ g.gotoTail = ~g.direction, ~g.compensation, ~g.feed
 
 g.aux = g.auxilary & +g.auxilary
 
-g.goto =  [ 
+g.goto =  r.alt(
             ( g.LC, (~g.pointCartesian, g.gotoTail, ~g.aux) ), 
             ( g.LPCP, ( ~g.pointPolar, ~g.coordCartesian, g.gotoTail, ~g.aux) ) 
-          ]
+          )
 
 g.circleCenter = g.CC, g.coordCC, g.coordCC, ~g.aux
 
-g.positioning = [ g.goto, g.circleCenter ]
+g.positioning = r.alt( g.goto, g.circleCenter )
 g.positioningShort = r.seq(
     ( [ g.pointCartesian, g.pointPolar ], ~g.coordCartesian ), g.gotoTail, ~g.aux, g.MOVE
   ).push()
   
   
-g.BLKformStart  = 'block form start' & g.pointCartesian
-g.BLKformEnd    = 'block form end' & g.pointCartesian
+g.BLKformStart  = 'blockFormStart' & g.pointCartesian
+g.BLKformEnd    = 'blockFormEnd' & g.pointCartesian
 g.fn_f          = 'fn_f' & g.expression.push()
 
 toolCall = 'tool call', (g.primary, ('tool axis', +r.seq( 'tool options', g.primary.push())))
 
 g.heidenhain = r.seq(
- ~g.lineno.push(), [
+ ~g.lineno.push(), r.alt(
   g.positioning,
   g.fn_f,
   g.toolCall,
@@ -46,6 +46,6 @@ g.heidenhain = r.seq(
   (g.aux, g.UPDATE),
   g.positioningShort,
   g.comment
-  ]
+  )
 , ~g.comment
 ).push()
