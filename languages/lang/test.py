@@ -2,17 +2,15 @@ import languages.lang.grammar as g
 import languages.lang.parser as p
 import generator.state as s
 
-state = s.State("a = 'test'")
-p.Parse( state )
-print(state.input)
-print(state.stack)
+def parse( input ):
+  state = s.State( input )
+  p.Parse( state )
+  return state
 
-state = s.State("a = 'test', 'best'")
-p.Parse( state )
-print(state.input)
-print(state.stack)
-
-state = s.State("a = 'test', 'best' | 'detest'")
-p.Parse( state )
-print(state.input)
-print(state.stack)
+test = (  parse("a = 'test'"), 
+          parse("a = 'test', 'best'"), 
+          parse("a = 'test', 'best' | 'detest'"),
+          parse("a = a"),
+          parse("a = +a , 'das'"),
+          parse("a = +( 'das', 'das' | 'ssd' ), a"),
+          )
