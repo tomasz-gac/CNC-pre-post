@@ -8,9 +8,10 @@ def parse( input ):
   return state
 
 test = (  parse("a = 'test'"), 
-          parse("a = 'test', 'best'"), 
-          parse("a = 'test', 'best' | 'detest'"),
+          parse("a = 'test' 'best'"), 
+          parse("a = 'test' 'best' / 'detest'"),
           parse("a = a"),
-          parse("a = +a , 'das'"),
-          parse("a = +( 'das', 'das' | 'ssd' ), a"),
+          parse("a = *a 'das'"),
+          parse("a = *( ?'das' 'das' / 'ssd' ) a"),
+          parse("a = 'dsa' / 'dds' / 'asd'")
           )
