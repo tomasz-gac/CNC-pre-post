@@ -1,66 +1,8 @@
 from generator.ReprVisitor import ReprVisitor
 from generator.ParserBuilder import ParserBuilder
 import copy
- 
-def make( rule ):
-  if isinstance( rule, Rule ):
-    return rule
-  elif isinstance( rule, str ):
-    return Terminal(rule)
-  elif isinstance( rule, tuple ):
-    return Sequence( make(arg) for arg in rule )
-  elif isinstance( rule, list ):
-    return Alternative( make(arg) for arg in rule )
-  elif rule is None:
-    return rule
-  raise TypeError
-
-def seq( *args ):
-  return make( args )
-  
-def alt( *args ):
-  return make( list(args) )
-  
-class Rule:
-  def __or__( self, rhs ):
-    '''if isinstance( rhs, tuple ):
-      return Alternative( (self,) + tuple( make(rule) for rule in rhs ) )
-    else:'''
-    return Alternative( (self, make(rhs)) )
-    
-  def __ror__( self, lhs ):
-    '''if isinstance( lhs, tuple ):
-      return Alternative( tuple( make(rule) for rule in lhs ) + (self,) )
-    else:'''
-    return Alternative( (make(lhs), self) )
-    
-  def __and__( self, rhs ):
-    '''if isinstance( rhs, tuple ):
-      return Sequence( (self,) + tuple( make(rule) for rule in rhs ) )
-    else:'''
-    return Sequence( (self, make(rhs)) )
-    
-  def __rand__( self, lhs ):
-    '''if isinstance( lhs, tuple ):
-      return Sequence( tuple( make(rule) for rule in lhs ) + (self,) )
-    else:'''
-    return Sequence( (make(lhs), self) )
-    
-  def __rmul__( self, other ):
-    return Sequence( tuple(self for _ in range(other)) )
-    
-  def __pos__( self ):
-    return Repeat( self )
-  
-  def __neg__( self ):
-    return Not( self )
-  
-  def __invert__(self):
-    return Optional( self )
-  
-  def push( self ):
-    return Push( self )
-    
+   
+class Rule:    
   def __iter__( self ):
     raise NotImplementedException()
     
@@ -77,7 +19,7 @@ class Rule:
 class Unary(Rule):
   __slots__ = '_rule'
   def __init__(self, rule):
-    self._rule = make(rule)
+    self._rule = rule
     super().__init__()
     
   @property
@@ -86,7 +28,7 @@ class Unary(Rule):
   
   @rule.setter
   def rule( self, value ):
-    self._rule = make(value)
+    self._rule = value
       
   def __iter__( self ):    
     return iter( [ self.rule ] )
@@ -96,8 +38,8 @@ class Unary(Rule):
   
 class Nary(Rule):
   __slots__ = '_rules'
-  def __init__(self, rules ):
-    self._rules = tuple( make(rule) for rule in rules )
+  def __init__(self, *rules ):
+    self._rules = rules
     super().__init__()
     
   @property
@@ -106,7 +48,7 @@ class Nary(Rule):
   
   @rules.setter
   def rules( self, value ):
-    self._rules = make(value)
+    self._rules = value
   
   def __iter__( self ):    
     return iter( self.rules )
@@ -137,23 +79,9 @@ class Optional(Unary):
   pass
 
 class Alternative(Nary):    
-  def __or__( self, other ):
-      # Parantheses are not important
-    return Alternative( self.rules + (make(other),) )
-  
-  def __ror__( self, other ):
-      # Parantheses are not important
-    return Alternative( (make(other),) + self.rules )
+  pass
 
 class Sequence(Nary):    
-  '''def __and__( self, other ):
-      # makes sure that parantheses are preserved
-    if isinstance( other, Sequence ):
-      return Sequence( (self, other) )
-    elif isinstance( other, tuple ):
-      return Sequence( self.rules + tuple( make(rule) for rule in other ) )
-    else:
-      return Sequence( self.rules + (make(other),) )'''
   pass
   
 class Repeat(Unary):

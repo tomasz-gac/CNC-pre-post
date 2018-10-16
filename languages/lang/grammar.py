@@ -14,22 +14,22 @@ unaryOp = r.Terminal('unaryOp')
 rule = r.Handle()
 rule.name = 'rule'
 
-alternative = r.Sequence( (rule, r.Repeat(r.Sequence( (alt_sep, r.Push(rule)) ))) )
-alternative.name = 'alternative'
-sequence    = r.Sequence( (alternative, r.Repeat(r.Sequence( (seq_sep, r.Push(alternative)) ))) )
+sequence    = r.Sequence( rule, r.Repeat(r.Sequence( seq_sep, r.Push(rule) )) )
 sequence.name = 'sequence'
+alternative = r.Sequence( sequence, r.Repeat(r.Sequence( alt_sep, r.Push(sequence) )) )
+alternative.name = 'alternative'
 
-get_identifier = r.Sequence( (identifier, lookup ) )
+get_identifier = r.Sequence( identifier, lookup )
 get_identifier.name = 'get_identifier'
 
-primary = r.Push(r.Alternative( ( 
-  r.Sequence( (lparan, r.Push(sequence), rparan) ), 
-  r.Alternative( ( terminal, get_identifier ) ) 
-)))
+primary = r.Push(r.Alternative( 
+  r.Sequence( lparan, r.Push(alternative), rparan ), 
+  r.Alternative( terminal, get_identifier ) 
+))
 
 primary.name = 'primary'
 
-rule.rule = r.Push( r.Sequence((r.Optional( unaryOp ), primary )) )
+rule.rule = r.Push( r.Sequence( r.Optional(unaryOp), primary ) )
 
-grammar = r.Sequence( ( r.Push( identifier ), assign, r.Push(sequence) ) )
+grammar = r.Sequence( r.Push( identifier ), assign, r.Push(alternative) )
 grammar.name = 'grammar'

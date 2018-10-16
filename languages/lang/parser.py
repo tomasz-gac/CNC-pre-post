@@ -17,15 +17,18 @@ def call( f, nargs ):
   def _call( state ):
     args = state.stack[-nargs:]
     del state.stack[-(nargs):]
-    state.stack.append(f( args ))
+    state.stack.append(f( *args ))
   return _call
 
 def lookup( state ):
   try:
     state.stack[-1] = state.symtable[state.stack[-1]]
   except KeyError:  # Possible left-recursion
-    state.symtable[ state.stack[-1] ] = r.Handle()
-    state.stack[-1] = state.symtable[state.stack[-1]]
+    node = r.Handle()
+    name = state.stack[-1]
+    node.name = name
+    state.symtable[ name ] = node
+    state.stack[-1] = node
 
 def terminal( match ):
   def make_terminal( state ):
@@ -47,12 +50,13 @@ def assign( state ):
     else:
       raise RuntimeError('Symbol '+lhs+' already defined')
   else:
-    state.symtable[ lhs ] = rhs    
+    state.symtable[ lhs ] = rhs
+    state.symtable[ lhs ].name = lhs
     
 unaryOp = Lookup({ 
-  p('[+]') : (call(r.Repeat, 1),),
+  p('[*]') : (call(r.Repeat, 1),),
   p('[!]') : (call(r.Not, 1),),
-  p('[~]') : (call(r.Optional, 1),),
+  p('[?]') : (call(r.Optional, 1),),
   p('\\^') : (call(r.Push, 1),)
 }.items() )
 
@@ -64,8 +68,8 @@ terminals = {
   'assign'      : Return(assign).If(p('[=]')),
   'lparan'      : Return().If(p('[(]')),
   'rparan'      : Return().If(p('[)]')),
-  'seq_sep'     : Return(call( r.Sequence, 2 )).If(p('[,]')),
-  'alt_sep'     : Return(call( r.Alternative, 2 )).If(p('[|]')),
+  'seq_sep'     : Return(call( r.Sequence, 2 )),
+  'alt_sep'     : Return(call( r.Alternative, 2 )).If(p('[/]')),
   'unaryOp'     : unaryOp
 }
 # terminals = pushTerminals(terminals)
