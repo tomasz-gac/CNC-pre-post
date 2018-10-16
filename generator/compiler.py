@@ -1,7 +1,7 @@
 from generator.terminal import ParserFailedException
 
 class RuleCompilerBase:
-  __slots__ = 'transforms', '_terminals'
+  __slots__ = '_terminals'
   def __init__( self, terminals ):
     self._terminals = terminals
     super().__init__()

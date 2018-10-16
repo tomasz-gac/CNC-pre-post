@@ -42,5 +42,5 @@ class ParserBuilder:
 class Recursion:
   __slots__ = 'target'
   
-  def __call__( self, executor ):
-    return self.target( executor )
+  def __call__( self, state ):
+    return self.target( state )
