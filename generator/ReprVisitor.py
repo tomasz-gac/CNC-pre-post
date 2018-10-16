@@ -22,6 +22,8 @@ class ReprVisitor:
     return result
   
   def get_repr( self, rule ):
+    if rule is None:
+      return 'None'
     s = self.getname(rule)
       # also works for terminals
       # zip of lists with different lengths terminates at len(shorter list)
