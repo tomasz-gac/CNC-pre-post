@@ -12,7 +12,8 @@ p = re.compile
 
 identifier_pattern = p('(([a-zA-Z_]+\\d*)+)')
 terminal_pattern = p('\'(([a-zA-Z_]+\\d*)+)\'')
-
+  
+  #function that calls f( last nargs from stack )
 def call( f, nargs ):
   def _call( state ):
     args = state.stack[-nargs:]
@@ -23,8 +24,10 @@ def call( f, nargs ):
 def lookup( state ):
   try:
     state.stack[-1] = state.symtable[state.stack[-1]]
-  except KeyError:  # Possible left-recursion
-    node = r.Handle()
+  except KeyError:
+      # identifier used for the first time without initiailzation
+      # it has to be allowed if we want to have recursive rules
+    node = r.Handle()       # identity rule with empty .rule member
     name = state.stack[-1]
     node.name = name
     state.symtable[ name ] = node
@@ -45,6 +48,7 @@ def assign( state ):
   del state.stack[-2:]
   if lhs in state.symtable:
     lhs = state.symtable[lhs]
+      # lhs has already been used, but is uninitialized
     if isinstance( lhs, r.Handle ) and lhs.rule is None:
       lhs.rule = rhs
     else:
