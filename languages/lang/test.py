@@ -1,25 +1,30 @@
 import languages.lang.grammar as g
 import languages.lang.parser as p
 import generator.state as s
+import generator.rule as r
 
 def parse( input ):
-  state = s.State( input )
-  p.Parse( state )
-  return state
-  
-def parseMultiline( input ):
   state = s.State('')
   for line in input.splitlines():
     state.input = line
     p.Parse( state )
+  
+    #check for undefined variables
+  for name, value in state.symtable.items():
+    if isinstance( value, r.Handle ):
+      if value.rule is None:
+        raise RuntimeError( 'Uninitialized variable "'+name+'"' )
   return state
     
 
-test = (  parse("a = 'test'"), 
-          parse("a = 'test' 'best'"), 
-          parse("a = 'test' 'best' / 'detest'"),
-          parse("a = a"),
-          parse("a = *a 'das'"),
-          parse("a = *( ?'das' 'das' / 'ssd' ) a"),
-          parse("a = 'dsa' / 'dds' / 'asd'")
-          )
+test = """a = 'test'
+b = 'test' 'best'
+c = 'test' 'best' / 'detest'
+d = d
+e = *e 'das'
+f = *( ?'das' 'das' / 'ssd' ) f
+g = 'dsa' / 'dds' / 'asd'
+"""
+
+r = parse( test )
+globals().update(r.symtable)

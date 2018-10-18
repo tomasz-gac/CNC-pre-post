@@ -44,18 +44,18 @@ def identifier( match ):
   return id_push,
   
 def assign( state ):
-  lhs, rhs = state.stack[-2:]
+  name, rhs = state.stack[-2:]
   del state.stack[-2:]
-  if lhs in state.symtable:
-    lhs = state.symtable[lhs]
+  if name in state.symtable:
+    lhs = state.symtable[name]
       # lhs has already been used, but is uninitialized
     if isinstance( lhs, r.Handle ) and lhs.rule is None:
       lhs.rule = rhs
     else:
-      raise RuntimeError('Symbol '+lhs+' already defined')
+      raise RuntimeError('Symbol "'+ name +'" already defined')
   else:
-    state.symtable[ lhs ] = rhs
-    state.symtable[ lhs ].name = lhs
+    state.symtable[ name ] = rhs
+    state.symtable[ name ].name = name
     
 unaryOp = Lookup({ 
   p('[*]') : (call(r.Repeat, 1),),

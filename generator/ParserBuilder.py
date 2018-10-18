@@ -8,7 +8,8 @@ class ParserBuilder:
   def __init__( self, compiler ):
     self.compiler  = compiler
       # rule -> parser mapping
-      # None siginifies a recursive call to parent parser
+      # None siginifies a parser is currently being built
+      # Recursion signifies that a child is recursively referencing this parser
     self._visited   = {}
     
   def __call__( self, target ):
@@ -17,8 +18,10 @@ class ParserBuilder:
       # Test whether target has already been visited
     if target in self._visited:
       if self._visited[target] is None:
-          # Parser has already been visited, but has not yet been built
-          # Create a delayed redirection to be initialized after parent parser has been built
+          # Parser has already been visited, but has not yet been built.
+          # In order to build the parser, first we need to have its children built.
+          # 'None' means that a child refers back to its parent at some point and the graph is cyclic
+          # To break the cycle - create a delayed redirection to be initialized after parent parser has been built
         self._visited[target] = Recursion()
       return self._visited[target]
     else:

@@ -22,8 +22,8 @@ class RuleCompilerBase:
         result = children[0]( state )
       except ParserFailedException:
         return ()
-
       raise ParserFailedException('Parser marched a Not statement')
+      
     return _Not
 
   def Optional( self, target, children ):
