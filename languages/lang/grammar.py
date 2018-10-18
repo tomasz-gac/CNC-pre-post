@@ -8,6 +8,7 @@ seq_sep     = r.Terminal('seq_sep')
 alt_sep     = r.Terminal('alt_sep')
 lparan      = r.Terminal('lparan')
 rparan      = r.Terminal('rparan')
+handle      = r.Terminal('handle')
 
 unaryOp = r.Terminal('unaryOp')
 
@@ -24,7 +25,8 @@ get_identifier.name = 'get_identifier'
 
 primary = r.Push(r.Alternative( 
   r.Sequence( lparan, r.Push(alternative), rparan ), 
-  r.Alternative( terminal, get_identifier ) 
+  terminal, 
+  get_identifier
 ))
 
 primary.name = 'primary'

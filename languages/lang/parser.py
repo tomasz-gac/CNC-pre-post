@@ -3,7 +3,6 @@ import re
 import languages.lang.grammar as grammar
 
 from generator.terminal import *
-import generator.evaluator as ev
 
 import generator.rule     as r
 import generator.compiler as c
@@ -25,6 +24,9 @@ def lookup( state ):
   try:
     state.stack[-1] = state.symtable[state.stack[-1]]
   except KeyError:
+    name = state.stack[-1]
+    # raise RuntimeError('Undefined symbol "'+ name +'"')
+  
       # identifier used for the first time without initiailzation
       # it has to be allowed if we want to have recursive rules
     node = r.Handle()       # identity rule with empty .rule member
@@ -64,6 +66,14 @@ unaryOp = Lookup({
   p('\\^') : (call(r.Push, 1),)
 }.items() )
 
+def make_symbol( state ):
+  name = state.stack[-1]
+  if name in state.symtable:
+    raise RuntimeError('Symbol "' + name + '" already defined')
+  del state.stack[-1]
+  state.symtable[name] = r.Handle()
+  state.symtable[name].name = name
+
 terminals = {
   'terminal'    : If(terminal_pattern, terminal ),
   'identifier'  : If(identifier_pattern, identifier ),
@@ -75,6 +85,7 @@ terminals = {
   'seq_sep'     : Return(call( r.Sequence, 2 )),
   'alt_sep'     : Return(call( r.Alternative, 2 )).If(p('[/]')),
   'unaryOp'     : unaryOp
+  # 'handle'      : Return(make_symbol).If(p('symbol'))
 }
 # terminals = pushTerminals(terminals)
 
