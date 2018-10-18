@@ -6,6 +6,8 @@ import generator.rule as r
 def parse( input, parser = p.Parse ):
   state = s.State('')
   for line in input.splitlines():
+    if len(line) == 0:
+      continue
     state.input = line
     p.Parse( state )
     if len(state.input) > 0:
@@ -17,20 +19,21 @@ def parse( input, parser = p.Parse ):
       if value.rule is None:
         raise RuntimeError( 'Uninitialized variable "'+name+'"' )
   return state
-    
 
-test = """sequence = rule *( 'seq_sep' ^rule )
-alternative = sequence *( 'alt_sep' ^sequence )
-get_identifier = 'identifier' 'lookup'
-primary = ^( 'lparan' ^alternative 'rparan' / 'terminal' / get_identifier )
-rule = ^( ?'unaryOp' primary )
-grammar = ^'identifier' 'assign' ^alternative
+
+test = """
+  sequence = rule *( 'seq_sep' ^rule )
+  alternative = sequence *( 'alt_sep' ^sequence )
+  get_identifier = 'identifier' 'lookup'
+  primary = ^( 'lparan' ^alternative 'rparan' / 'terminal' / get_identifier )
+  rule = ^( ?'unaryOp' primary )
+  grammar = ^'identifier' 'assign' ^alternative
 """
 
 first = parse( test )
+g1 = first.symtable['grammar']
 
-Parse = grammar.compile( p.compiler )
+Parse = g1.compile( p.compiler )
 
 second = parse( test, Parse )
-g1 = first.symtable['grammar']
-g2 = second.symtable['grammar']
+g2 = second.symtable['grammar'] 

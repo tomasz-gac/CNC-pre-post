@@ -20,6 +20,28 @@ def call( f, nargs ):
     state.stack.append(f( *args ))
   return _call
 
+  # function will prevent nesting of n-ary rules: sequence(sequence(1,2),3) -> sequence(1,2,3)
+  # by appending values from stack to the top-level rule's children
+  # if the top-level rule's type matches to 'Class' 
+  # and that the appended rule is not recursively called
+def nest_nonrecursive( Class ):
+  def _append( state ):
+    lhs, rhs = state.stack[-2], state.stack[-1]
+    if isinstance( lhs, Class ):
+        # append if the rule has not been defined as a symbol
+        # if it has not, then it cannot be called recursively
+      if lhs not in state.symtable.values():
+        rules = lhs.rules
+        lhs.rules = (*rules, rhs)
+        del state.stack[-1]
+        return
+    # otherwise - wrap args into Class
+    args = state.stack[-2:]
+    del state.stack[-2:]
+    state.stack.append(Class( *args ))
+  return _append
+        
+  
 def lookup( state ):
   try:
     state.stack[-1] = state.symtable[state.stack[-1]]
@@ -82,8 +104,8 @@ terminals = {
   'assign'      : Return(assign).If(p('[=]')),
   'lparan'      : Return().If(p('[(]')),
   'rparan'      : Return().If(p('[)]')),
-  'seq_sep'     : Return(call( r.Sequence, 2 )),
-  'alt_sep'     : Return(call( r.Alternative, 2 )).If(p('[/]')),
+  'seq_sep'     : Return(nest_nonrecursive( r.Sequence )),
+  'alt_sep'     : Return(nest_nonrecursive( r.Alternative )).If(p('[/]')),
   'unaryOp'     : unaryOp
   # 'handle'      : Return(make_symbol).If(p('symbol'))
 }
