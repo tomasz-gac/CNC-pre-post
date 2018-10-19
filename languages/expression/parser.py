@@ -9,7 +9,7 @@ import  generator.compiler  as c
 
 import generator.lang.parser as p
 
-with open( expression.lang ) as file:
+with open( 'languages/expression/expression.lang' ) as file:
   lang = p.parseStr( file.read() )
   globals().update( lang.symtable )
 

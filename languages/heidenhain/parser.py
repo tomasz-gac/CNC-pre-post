@@ -21,7 +21,11 @@ from languages.heidenhain.commands import Spindle       as spin
 import languages.expression.commands as art
 
 import languages.expression.parser    as expr
-from languages.heidenhain.grammar   import g as hh
+import generator.lang.parser as p
+
+with open( 'languages/heidenhain/heidenhain.lang' ) as file:
+  lang = p.parseStr( file.read() )
+  globals().update( lang.symtable )
 
 from enum import Enum, unique
 from copy import deepcopy
@@ -127,9 +131,9 @@ terminals = {
   'blockFormStart'    : Return(cmd.discard).If(p('BLK FORM 0\\.1 (X|Y|Z)')),
   'blockFormEnd'      : Return(cmd.discard).If(p('BLK FORM 0\\.2')),
   'fn_f'              : Return(cmd.invariant).If(p('FN 0\\:')),
-  'toolCall'          : Return(cmd.Set(reg.TOOLNO), cmd.invariant, cmd.toolchange ).If(p('TOOL CALL')),
-  'tool axis'         : Return().If(p('(X|Y|Z)')),
-  'tool options'      : toolCallOptions,
+  'tool_call'          : Return(cmd.Set(reg.TOOLNO), cmd.invariant, cmd.toolchange ).If(p('TOOL CALL')),
+  'tool_axis'         : Return().If(p('(X|Y|Z)')),
+  'tool_options'      : toolCallOptions,
   'primary'           : expr.primary,
   'number'            : expr.number,
   'expression'        : expr.Parse
@@ -137,7 +141,7 @@ terminals = {
 
 # terminals = pushTerminals( terminals )
 
-Parse = hh.heidenhain.compile( c.Reordering( terminals ) )
+Parse = heidenhain.compile( c.Reordering( terminals ) )
 
       
 def bench( n = 1000 ):
@@ -149,6 +153,6 @@ def bench( n = 1000 ):
     q = State( 'L X+50 Y-30 Z+150 R0 FMAX' )
     r = Parse( q )
   print( time.time() - start )
-  print(q.stack)
+  print(q.symtable)
   print(r)
   

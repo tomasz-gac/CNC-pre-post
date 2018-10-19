@@ -32,7 +32,7 @@ g.BLKformStart  = 'blockFormStart' & g.pointCartesian
 g.BLKformEnd    = 'blockFormEnd' & g.pointCartesian
 g.fn_f          = 'fn_f' & g.expression.push()
 
-toolCall = 'tool call', (g.primary, ('tool axis', +r.seq( 'tool options', g.primary.push())))
+toolCall = 'tool_call', (g.primary, ('tool axis', +r.seq( 'tool options', g.primary.push())))
 
 g.heidenhain = r.seq(
  ~g.lineno.push(), r.alt(

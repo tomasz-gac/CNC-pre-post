@@ -114,11 +114,17 @@ Parse = grammar.grammar.compile(compiler)
 
 def parseStr( input, parser = Parse ):
   state = s.State('')
-  for line in input.splitlines():
+  for number, line in enumerate( input.splitlines() ):
     if len(line) == 0:
       continue
     state.input = line
-    parser( state )
+    try:
+      parser( state )
+    except ParserFailedException:
+      print('----- ERROR -----')
+      print( str(number) +': "'+line+'"')
+      print( 'input : "'+state.input+'"')
+      raise
     if len(state.input) > 0:
       raise RuntimeError('Partial parse: "'+state.input+'"')
   
