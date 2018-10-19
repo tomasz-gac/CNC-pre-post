@@ -1,0 +1,9 @@
+get_identifier = 'identifier' 'GET'
+set_identifier = ^'identifier' 'assign' expression
+subexpression  = 'lpar' expression 'rpar'
+
+primary = ^('number' / set_identifier / get_identifier / subexpression)
+
+expression  = term    *( 'plusminus' term )
+term        = pow     *( 'muldiv' pow )
+pow         = primary *( 'power' pow )

@@ -1,11 +1,12 @@
 import re
 
-import languages.lang.grammar as grammar
+import generator.lang.grammar as grammar
 
 from generator.terminal import *
 
 import generator.rule     as r
 import generator.compiler as c
+import generator.state    as s
 
 p = re.compile
 
@@ -23,7 +24,7 @@ def call( f, nargs ):
   # function will prevent nesting of n-ary rules: sequence(sequence(1,2),3) -> sequence(1,2,3)
   # by appending values from stack to the top-level rule's children
   # if the top-level rule's type matches to 'Class' 
-  # and that the appended rule is not recursively called
+  # and the appended rule is not recursively called
 def nest_nonrecursive( Class ):
   def _append( state ):
     lhs, rhs = state.stack[-2], state.stack[-1]
@@ -46,11 +47,9 @@ def lookup( state ):
   try:
     state.stack[-1] = state.symtable[state.stack[-1]]
   except KeyError:
-    name = state.stack[-1]
-    # raise RuntimeError('Undefined symbol "'+ name +'"')
-  
       # identifier used for the first time without initiailzation
       # it has to be allowed if we want to have recursive rules
+    name = state.stack[-1]  
     node = r.Handle()       # identity rule with empty .rule member
     name = state.stack[-1]
     node.name = name
@@ -107,9 +106,25 @@ terminals = {
   'seq_sep'     : Return(nest_nonrecursive( r.Sequence )),
   'alt_sep'     : Return(nest_nonrecursive( r.Alternative )).If(p('[/]')),
   'unaryOp'     : unaryOp
-  # 'handle'      : Return(make_symbol).If(p('symbol'))
 }
 # terminals = pushTerminals(terminals)
 
 compiler = c.Reordering(terminals)
 Parse = grammar.grammar.compile(compiler)
+
+def parseStr( input, parser = Parse ):
+  state = s.State('')
+  for line in input.splitlines():
+    if len(line) == 0:
+      continue
+    state.input = line
+    parser( state )
+    if len(state.input) > 0:
+      raise RuntimeError('Partial parse: "'+state.input+'"')
+  
+    #check for undefined variables
+  for name, value in state.symtable.items():
+    if isinstance( value, r.Handle ):
+      if value.rule is None:
+        raise RuntimeError( 'Uninitialized variable "'+name+'"' )
+  return state

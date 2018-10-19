@@ -14,3 +14,5 @@ from generator.terminal   import Return
 from generator.terminal   import ParserFailedException
 
 from generator.state      import State
+
+from generator.lang.parser import parseStr

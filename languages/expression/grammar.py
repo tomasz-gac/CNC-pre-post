@@ -8,11 +8,11 @@ g.term        = r.Handle()
 g.pow         = r.Handle()
 
 g.get_identifier   = g.identifier, 'GET'
-g.set_identifier   = g.identifier.push(), '=', g.expression
-g.subexpression      = "(", g.expression, ")"
+g.set_identifier   = g.identifier.push(), 'assign', g.expression
+g.subexpression      = "lpar", g.expression, "rpar"
 
 g.primary = r.make([ g.number, g.set_identifier, g.get_identifier, g.subexpression ]).push()
 
-g.expression.rule = g.term,     +( '+-' & g.term )
-g.term.rule       = g.pow,      +( '*/' & g.pow )
-g.pow.rule        = g.primary,  +( '^' & g.pow )
+g.expression.rule = g.term,     +( 'plusminus' & g.term )
+g.term.rule       = g.pow,      +( 'muldiv' & g.pow )
+g.pow.rule        = g.primary,  +( 'power' & g.pow )

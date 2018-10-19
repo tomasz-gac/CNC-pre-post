@@ -1,0 +1,26 @@
+coordCartesian  = 'XYZABC' ^'primary'
+coordPolar      = 'PAPR' ^'primary'
+coordCC         = 'CCXYZ' ^'primary'
+pointCartesian  = coordCartesian *coordCartesian
+pointPolar      = coordPolar *coordPolar
+
+feed = 'F' ^('MAX' / 'primary' )
+
+gotoTail = ?direction ~compensation ~feed
+
+aux = 'auxilary' *'auxilary'
+
+goto = 'LC' ^(?pointCartesian gotoTail ?aux ) / 'LPCP' ^(?pointPolar ?coordCartesian gotoTail ?aux)
+
+circleCenter = 'CC' coordCC coordCC ?aux
+
+positioning = goto / circleCenter
+positioningShort = ^( ( pointCartesian / pointPolar ) ?coordCartesian gotoTail ?aux 'MOVE')
+
+BLKformStart = 'blockFormStart' pointCartesian
+BLKformEnd = 'BLKformEnd' pointCartesian
+fn_f = 'fn_f' ^'expression'
+
+toolCall = 'tool call' 'primary' 'tool axis' *('tool options' ^'primary')
+
+heidenhain = ^(?^'lineno' ( positioning / fn_f / toolCall / begin_pgm / end_pgm / BLKformStart / BLKformEnd / ( aux 'UPDATE' ) positioningShort, 'comment' ))

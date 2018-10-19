@@ -1,11 +1,17 @@
 import  re
 
-import  languages.expression.grammar  as grammar
+# import  languages.expression.grammar  as grammar
 import  languages.expression.commands as cmd
 
 from generator.terminal import *
 import  generator.rule      as r
 import  generator.compiler  as c
+
+import generator.lang.parser as p
+
+with open( expression.lang ) as file:
+  lang = p.parseStr( file.read() )
+  globals().update( lang.symtable )
 
 p = re.compile
 
@@ -33,17 +39,17 @@ terminals = {
   'identifier'  : identifier,
   'GET'         : Return(cmd.GET),
   
-  '='           : Return(cmd.LET).If(p('[=]')),
-  '('           : Return().If(p('[(]')),
-  ')'           : Return().If(p('[)]')),
+  'assign'      : Return(cmd.LET).If(p('[=]')),
+  'lpar'        : Return().If(p('[(]')),
+  'rpar'        : Return().If(p('[)]')),
   
-  '+-'          : Lookup( {p('[+]') : (cmd.ADD,), p('[-]') : (cmd.SUB,)}.items() ),
-  '*/'          : Lookup( {p('[*]') : (cmd.MUL,), p('[/]') : (cmd.DIV,)}.items() ),
-  '^'           : If(p('\\^'), Return(cmd.POW))
+  'plusminus'   : Lookup( {p('[+]') : (cmd.ADD,), p('[-]') : (cmd.SUB,)}.items() ),
+  'muldiv'      : Lookup( {p('[*]') : (cmd.MUL,), p('[/]') : (cmd.DIV,)}.items() ),
+  'power'       : If(p('\\^'), Return(cmd.POW))
 }
 
 compiler = c.Reordering( terminals )
 
-Parse   = grammar.g.expression.compile( compiler )
-primary = grammar.g.primary.compile( compiler )
+Parse   = expression.compile( compiler )
+primary = primary.compile( compiler )
 number  = r.Terminal('number').compile( compiler )
