@@ -1,0 +1,8 @@
+sequence = rule *('seq_sep' ^rule)
+alternative = sequence *('alt_sep' ^sequence)
+
+get_identifier = 'identifier' 'lookup'
+primary = ^( 'lparan' ^alternative 'rparan' / 'terminal' / get_identifier )
+
+rule = ^( 'unaryOp' rule / primary )
+grammar = ^'identifier' 'assign' ^alternative

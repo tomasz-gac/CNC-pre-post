@@ -31,7 +31,7 @@ primary = r.Push(r.Alternative(
 
 primary.name = 'primary'
 
-rule.rule = r.Push( r.Sequence( r.Optional(unaryOp), primary ) )
+rule.rule = r.Push( r.Alternative( r.Sequence( unaryOp, rule ), primary ) )
 
 grammar = r.Sequence( r.Push( identifier ), assign, r.Push(alternative) )
 grammar.name = 'grammar'
