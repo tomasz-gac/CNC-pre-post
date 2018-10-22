@@ -27,9 +27,6 @@ with open( 'languages/heidenhain/heidenhain.lang' ) as file:
   lang = p.parseStr( file.read() )
   globals().update( lang.symtable )
 
-from enum import Enum, unique
-from copy import deepcopy
-
 p = re.compile
 
 GOTOcartesian = Lookup({ 
