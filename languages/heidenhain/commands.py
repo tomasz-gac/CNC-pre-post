@@ -50,7 +50,6 @@ def invariant( state ): # UPDATE STATE GIVEN INVARIANT
   # if len(state.input) > 0:
   #   raise RuntimeError('Invariant called on partially parsed input')
   # print( state.symtable )
-
   
 @unique
 class Registers(IntEnum):
@@ -67,6 +66,7 @@ class Registers(IntEnum):
   TOOLDR       = 10  # TOOL DELTA RADIUS
   COOLANT      = 11  # COOLANT TYPE
   WCS          = 12  # WORLD COORDINATE SYSTEM NUMBER
+  POLARPLANE   = 13  # POLAR MOTION PLANE
 
   
 @unique
@@ -109,15 +109,17 @@ class Center(IntEnum): # CIRCLE CENTER X Y Z
   YINC  = 33
   ZINC  = 34
   
- 
+absolute    = [ Cartesian.X, Cartesian.Y, Cartesian.Z, Polar.ANG, Polar.RAD, Angular.A, Angular.B, Angular.C ]
+incremental = [ Cartesian.XINC, Cartesian.YINC, Cartesian.ZINC, Polar.ANGINC, Polar.RADINC, Angular.AINC, Angular.BINC, Angular.CINC ] 
 
-incmap = { 
+abs2inc = { 
   Cartesian.X : Cartesian.XINC, Cartesian.Y : Cartesian.YINC, Cartesian.Z : Cartesian.ZINC, 
   Polar.ANG : Polar.ANGINC, Polar.RAD : Polar.RADINC,
   Angular.A : Angular.AINC, Angular.B : Angular.BINC, Angular.C : Angular.CINC, 
   Center.X : Center.XINC, Center.Y : Center.YINC, Center.Z : Center.ZINC
 }
-  
+
+inc2abs = { value : key for key, value in incmap.items() }
  
 @unique
 class Units(IntEnum):
@@ -152,3 +154,9 @@ class Spindle(IntEnum):
   OFF = 0
   CW  = 1
   CCW = 2
+  
+@unique
+class Plane(IntEnum):
+  XY = 0
+  ZX = 1
+  YZ = 2

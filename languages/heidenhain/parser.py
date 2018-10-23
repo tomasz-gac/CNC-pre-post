@@ -49,7 +49,7 @@ def handleCoord( map ):
   def _handleCoord( match ):
     symbol = map[ match.groups()[1] ]
     if match.groups()[0] is 'I':
-      symbol = commands.incmap[symbol]
+      symbol = commands.abs2inc[symbol]
     return ( cmd.Set(symbol), )
   return _handleCoord
   
