@@ -109,8 +109,15 @@ class Center(IntEnum): # CIRCLE CENTER X Y Z
   YINC  = 33
   ZINC  = 34
   
-absolute    = [ Cartesian.X, Cartesian.Y, Cartesian.Z, Polar.ANG, Polar.RAD, Angular.A, Angular.B, Angular.C ]
-incremental = [ Cartesian.XINC, Cartesian.YINC, Cartesian.ZINC, Polar.ANGINC, Polar.RADINC, Angular.AINC, Angular.BINC, Angular.CINC ] 
+absolute    = [ Cartesian.X, Cartesian.Y, Cartesian.Z, 
+                Polar.ANG, Polar.RAD, 
+                Angular.A, Angular.B, Angular.C, 
+                Center.X, Center.Y, Center.Z ]
+
+incremental = [ Cartesian.XINC, Cartesian.YINC, Cartesian.ZINC, 
+                Polar.ANGINC, Polar.RADINC, 
+                Angular.AINC, Angular.BINC, Angular.CINC, 
+                Center.INCX, Center.INCY, Center.INCZ ]
 
 abs2inc = { 
   Cartesian.X : Cartesian.XINC, Cartesian.Y : Cartesian.YINC, Cartesian.Z : Cartesian.ZINC, 

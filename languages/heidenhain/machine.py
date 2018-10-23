@@ -188,7 +188,7 @@ class HH:
       print("Warning : highly inaccurate radius in circular motion declaration")
     self._doMoveCartesian(state)'''
   def _doMoveCartesian( self, state ):
-    for symbol, inc in cmd.incmap.items():
+    for symbol, inc in cmd.abs2inc.items():
       if symbol in state.symtable and inc in state.symtable:
         raise RuntimeError('Duplicate movement target coordinate specified as both absolute and incremental')
     
@@ -202,4 +202,4 @@ class HH:
         state.symtable[ abs ] = self.state.symtable[ abs ] + state.symtable[ coord ]
       else:
         raise RuntimeError('Logic error: Coordinate is neither absolute, not incremental')
-  
+   
