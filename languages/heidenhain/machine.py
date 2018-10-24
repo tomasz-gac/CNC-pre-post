@@ -2,6 +2,7 @@ import copy
 import math
 
 import languages.heidenhain.commands as cmd
+import babel.state as s
 
 def angNorm( a ):
   return (a+2*math.pi) % (2 * math.pi)
@@ -15,19 +16,15 @@ def movePolar( start1, start2, center1, center2, A, AINC, R, RINC ):
   target1 = center1 + targetR*math.cos(targetA)
   target2 = center2 + targetR*math.sin(targetA)
   return target1, target2
-def getPolarPoints( X, Y, Z, CCX, CCY, CCZ ):
+def getPolarPoints( plane, X, Y, Z, CCX, CCY, CCZ ):
     # returns axis coordinates and circle center coordinates depending on
     # circular motion plane to pass to movePolar
-  if ( (CCX is None) + (CCY is None) + (CCZ is None) ) > 1:
-    raise RuntimeError('Circle center is not fully defined')
-  elif CCX is None:  #YZ plane
+  if   plane is cmd.Plane.YZ:  #YZ plane
     return Y, Z, CCY, CCZ
-  elif CCY is None:  #ZX plane
+  elif plane is cmd.Plane.ZX:  #ZX plane
     return Z, X, CCZ, CCX
-  elif CCZ is None:  #XY plane
-    return X, Y, CCX, CCY    
-  else:
-    raise RuntimeError('Circle center is over-defined')
+  elif plane is cmd.Plane.XY:  #XY plane
+    return X, Y, CCX, CCY
     
 class State:
   def __init__( self ):
@@ -145,61 +142,91 @@ class Machine:
     command.evaluate( self.symtable )
     
 class HH:
+  def __init__( self ):
+    self.state = s.State('')
+    self.state.symtable[cmd.Registers.POLARPLANE ] = cmd.Plane.XY
+    self.state.symtable[cmd.Cartesian.X] = 0
+    self.state.symtable[cmd.Cartesian.Y] = 0
+    self.state.symtable[cmd.Cartesian.Z] = 0
+    self.state.symtable[cmd.Center.X] = 0
+    self.state.symtable[cmd.Center.Y] = 0
+    self.state.symtable[cmd.Center.Z] = 0
+    
   def GOTO( self, state ):
     cartesian = any( coord in state.symtable.keys() for coord in cmd.Cartesian )
     polar     = any( coord in state.symtable.keys() for coord in cmd.Polar )
-    if polar and cartesian:
-      raise RuntimeError('Linear motion coordinates have to be either cartesian or polar')
-      
-    if(   state.symtable[cmd.Registers.MOTIONMODE == cmd.Motion.LINEAR ):  
-      if polar:
-        self._doMovePolar( state )    # TODO
-      else:
-        self._doMoveCartesian( state )
-    if(   state.symtable[cmd.Registers.MOTIONMODE == cmd.Motion.CIRCULAR ):
-      if polar:
-        self._doMovePolar( state )      # TODO
-      else:
-        self._GOTOcircularCartesian( state, cartesian, polar )
     
-  def _GOTOcircularCartesian(self, state ):
-    pass
-    '''CCX, CCY, CCZ = self._getCircleCenter()   # TODO
-    
-    values = { symbol : value for symbol, value in state.symtable.items() if symbol in cmd.Cartesian }
-    target1 = target2 = None
-    if CCX is None:  #YZ plane    
-      target1 = values.get(cmd.Cartesian.Y, self.state.Y)
-      target2 = values.get(cmd.Cartesian.Z, self.state.Z)
-    elif CCY is None:  #ZX plane
-      target1 = values.get(cmd.Cartesian.Z, self.state.Z)
-      target2 = values.get(cmd.Cartesian.X, self.state.X)
-    elif CCZ is None:  #XY plane
-      target1 = values.get(cmd.Cartesian.X, self.state.X)
-      target2 = values.get(cmd.Cartesian.Y, self.state.Y)
-    else:
-      raise RuntimeError('Circle center is over-defined')
-    
-    start1, start2, center1, center2 = getPolarPoints( self.state.X, self.state.Y, self.state.Z, CCX, CCY, CCZ )
-    
-    rStart  = (start1-center1)**2 + (start2-center2)**2
-    rTarget  = (target1-center1)**2 + (target2-center2)**2
-    if (rStart**0.5-rTarget**0.5) > 0.01:
-      print("Warning : highly inaccurate radius in circular motion declaration")
-    self._doMoveCartesian(state)'''
-  def _doMoveCartesian( self, state ):
     for symbol, inc in cmd.abs2inc.items():
       if symbol in state.symtable and inc in state.symtable:
         raise RuntimeError('Duplicate movement target coordinate specified as both absolute and incremental')
     
-    coordinates = { key : value for key, value in state.symtable if key in cmd.Cartesian or key in cmd.Polar or key in cmd.Angular }
+    if polar and cartesian:
+      raise RuntimeError('Linear motion coordinates have to be either cartesian or polar')
+      
+    if(   state.symtable[cmd.Registers.MOTIONMODE] == cmd.Motion.LINEAR ):  
+      if polar:
+        self._doMovePolar( state )
+      else:
+        self._doMoveCartesian( state )
+    if(   state.symtable[cmd.Registers.MOTIONMODE] == cmd.Motion.CIRCULAR ):
+      if polar:
+        self._doMovePolar( state )
+      else:
+        self._GOTOcircularCartesian( state, cartesian, polar )
+    
+  def _doMoveCartesian( self, state ):    
+    coordinates = { key : value for key, value in state.symtable.items() if key in cmd.Cartesian }
     for coord in coordinates:
       if coord in cmd.absolute:
         inc = cmd.abs2inc[ coord ]
-        state.symtable[ inc ] = state.symtable[ coord ] - self.state.symtable[ coord ]
+        # state.symtable[ inc ] = state.symtable[ coord ] - self.state.symtable[ coord ]
       elif coord in cmd.incremental:
         abs = cmd.inc2abs[ coord ]
         state.symtable[ abs ] = self.state.symtable[ abs ] + state.symtable[ coord ]
       else:
         raise RuntimeError('Logic error: Coordinate is neither absolute, not incremental')
-   
+    
+    state.symtable = { key : value for key, value in state.symtable.items() if key not in cmd.incremental }
+  
+  def _doMovePolar( self, state ):
+    X = self.state.symtable[cmd.Cartesian.X]
+    Y = self.state.symtable[cmd.Cartesian.Y]
+    Z = self.state.symtable[cmd.Cartesian.Z]
+    CCX = self.state.symtable[cmd.Center.X]
+    CCY = self.state.symtable[cmd.Center.Y]
+    CCZ = self.state.symtable[cmd.Center.Z]
+    plane = self.state.symtable[cmd.Registers.POLARPLANE ]
+    start1, start2, center1, center2 = getPolarPoints( plane, X, Y, Z, CCX, CCY, CCZ )
+    
+    A = state.symtable.get(cmd.Polar.ANG)
+    AINC = False
+    if A is None: # A is incremental, or not present      
+        # if no ANGINC - assume 0 increment
+      A = state.symtable.get(cmd.Polar.ANGINC, 0)
+      AINC = True
+    
+    R = state.symtable.get(cmd.Polar.RAD)
+    RINC = False
+    if R is None:
+      R = state.symtable.get(cmd.Polar.RADINC, 0)
+      RINC = True
+    
+    state.symtable = { key : value for key, value in state.symtable.items() if key not in cmd.Polar }
+    
+    #calculate target coordinates by polar movement
+    target1, target2 = movePolar( 
+      start1, start2, center1, center2
+    , A, AINC, R, RINC
+    )
+    if plane is cmd.Plane.YZ:    #YZ plane
+      state.symtable[ cmd.Cartesian.Y ] = target1
+      state.symtable[ cmd.Cartesian.Z ] = target2
+      self._doMoveCartesian( state )
+    elif plane is cmd.Plane.ZX:  #ZX plane
+      state.symtable[ cmd.Cartesian.Z ] = target1
+      state.symtable[ cmd.Cartesian.X ] = target2
+      self._doMoveCartesian( state )
+    elif plane is cmd.Plane.XY:  #XY plane
+      state.symtable[ cmd.Cartesian.X ] = target1
+      state.symtable[ cmd.Cartesian.Y ] = target2
+      self._doMoveCartesian( state )

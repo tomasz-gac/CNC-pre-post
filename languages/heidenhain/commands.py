@@ -72,42 +72,42 @@ class Registers(IntEnum):
 @unique
 class Cartesian(IntEnum):
   # ABSOLUTE
-  X = 13
-  Y = 14
-  Z = 15
+  X = 14
+  Y = 15
+  Z = 16
   # INCREMENTAL
-  XINC   = 16
-  YINC   = 17
-  ZINC   = 18
+  XINC   = 17
+  YINC   = 18
+  ZINC   = 19
   
 @unique
 class Polar(IntEnum):
   # ABSOLUTE
-  ANG = 19
-  RAD = 20
+  ANG = 20
+  RAD = 21
   # INCREMENTAL
-  ANGINC = 21
-  RADINC = 22
+  ANGINC = 22
+  RADINC = 23
   
 @unique
 class Angular(IntEnum):
   # ABSOLUTE
-  A = 23
-  B = 24
-  C = 25
+  A = 24
+  B = 25
+  C = 26
   # INCREMENTAL
-  AINC   = 26
-  BINC   = 27
-  CINC   = 28
+  AINC   = 27
+  BINC   = 28
+  CINC   = 29
 
 @unique
 class Center(IntEnum): # CIRCLE CENTER X Y Z
-  X = 29
-  Y = 30
-  Z = 31
-  XINC  = 32
-  YINC  = 33
-  ZINC  = 34
+  X = 30
+  Y = 31
+  Z = 32
+  XINC  = 33
+  YINC  = 34
+  ZINC  = 35
   
 absolute    = [ Cartesian.X, Cartesian.Y, Cartesian.Z, 
                 Polar.ANG, Polar.RAD, 
