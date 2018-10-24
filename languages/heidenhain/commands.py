@@ -117,7 +117,7 @@ absolute    = [ Cartesian.X, Cartesian.Y, Cartesian.Z,
 incremental = [ Cartesian.XINC, Cartesian.YINC, Cartesian.ZINC, 
                 Polar.ANGINC, Polar.RADINC, 
                 Angular.AINC, Angular.BINC, Angular.CINC, 
-                Center.INCX, Center.INCY, Center.INCZ ]
+                Center.XINC, Center.YINC, Center.ZINC ]
 
 abs2inc = { 
   Cartesian.X : Cartesian.XINC, Cartesian.Y : Cartesian.YINC, Cartesian.Z : Cartesian.ZINC, 
@@ -126,7 +126,7 @@ abs2inc = {
   Center.X : Center.XINC, Center.Y : Center.YINC, Center.Z : Center.ZINC
 }
 
-inc2abs = { value : key for key, value in incmap.items() }
+inc2abs = { value : key for key, value in abs2inc.items() }
  
 @unique
 class Units(IntEnum):

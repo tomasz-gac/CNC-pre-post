@@ -1,4 +1,4 @@
-from generator.terminal import ParserFailedException
+from babel.terminal import ParserFailedException
 
 class RuleCompilerBase:
   __slots__ = '_terminals'

@@ -3,11 +3,11 @@ import  re
 # import  languages.expression.grammar  as grammar
 import  languages.expression.commands as cmd
 
-from generator.terminal import *
-import  generator.rule      as r
-import  generator.compiler  as c
+from babel.terminal import *
+import  babel.rule      as r
+import  babel.compiler  as c
 
-import generator.lang.parser as p
+import babel.lang.parser as p
 
 with open( 'languages/expression/expression.lang' ) as file:
   lang = p.parseStr( file.read() )

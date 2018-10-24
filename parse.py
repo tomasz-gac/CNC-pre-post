@@ -1,9 +1,9 @@
 # from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 import sys
-import generator as gen
+import babel
 import languages.heidenhain.parser as hh
-from generator.state import State
+from babel.state import State
 import math
 import pickle
 from os.path import basename, abspath, splitext
@@ -27,7 +27,7 @@ def parse( program, lineOffset ):
         symtable.update( state.symtable )
     except RuntimeError as err:
       print(str(err))
-    except gen.ParserFailedException:
+    except babel.ParserFailedException:
       print('Parser failed at line ' + line)
   return results
 

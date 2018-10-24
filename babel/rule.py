@@ -1,5 +1,5 @@
-from generator.ReprVisitor import ReprVisitor
-from generator.ParserBuilder import ParserBuilder
+from babel.ReprVisitor import ReprVisitor
+from babel.ParserBuilder import ParserBuilder
 import copy
    
 class Rule:    

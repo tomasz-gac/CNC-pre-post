@@ -1,9 +1,9 @@
 import re
 
-from generator.terminal import *
-from generator import State
-import generator.rule       as r
-import generator.compiler   as c
+from babel.terminal import *
+from babel import State
+import babel.rule       as r
+import babel.compiler   as c
 
 import languages.heidenhain.commands as cmd
 
@@ -21,7 +21,7 @@ from languages.heidenhain.commands import Spindle       as spin
 import languages.expression.commands as art
 
 import languages.expression.parser    as expr
-import generator.lang.parser as p
+import babel.lang.parser as p
 
 with open( 'languages/heidenhain/heidenhain.lang' ) as file:
   lang = p.parseStr( file.read() )

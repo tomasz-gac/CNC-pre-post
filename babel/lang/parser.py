@@ -1,12 +1,12 @@
 import re
 
-import generator.lang.grammar as grammar
+import babel.lang.grammar as grammar
 
-from generator.terminal import *
+from babel.terminal import *
 
-import generator.rule     as r
-import generator.compiler as c
-import generator.state    as s
+import babel.rule     as r
+import babel.compiler as c
+import babel.state    as s
 
 p = re.compile
 

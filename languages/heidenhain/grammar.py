@@ -1,5 +1,5 @@
-import generator.rule as r
-from generator.grammar import Grammar
+import babel.rule as r
+from babel.grammar import Grammar
 
 g = Grammar()
 

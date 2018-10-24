@@ -1,4 +1,4 @@
-import generator.rule as r
+import babel.rule as r
 
 terminal    = r.Terminal('terminal')
 identifier  = r.Terminal('identifier')
