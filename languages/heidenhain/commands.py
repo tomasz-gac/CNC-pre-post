@@ -1,55 +1,4 @@
 from enum import IntEnum, unique
-
-class Setval: # Setval(B, A) -> B = A
-  def __init__( self, attribute, value ):
-    self.attribute = attribute
-    self.value = value
-  def __call__( self, state ):
-    state.symtable[self.attribute] = self.value
-  def __repr__( self ):
-    return 'setval: '+self.attribute.__repr__()+' = '+self.value.__repr__()
-
-class Set:  # A Set(B) -> B = A
-  def __init__(self, attribute):
-    self.attribute = attribute
-    
-  def __call__( self, state ):
-    state.symtable[self.attribute] = state.stack[-1]
-    del state.stack[-1]
-    
-  def __repr__( self ):
-    return 'Set (' + self.attribute.__repr__() + ')'
-      
-class Temporary:  # SET REGISTER VALUE AS TEMPORARY AND RESTORE IT AFTER INVARIANT
-  def __init__(self, attribute ):
-    self.attribute = attribute
-    
-  def __call__( self, state ):
-    state.symtable['temporary'] = self.attribute
-  
-  def __repr__( self ):
-    return 'Temporary: '+self.attribute.__repr__()
-    
-def stop( state ):  # PROGRAM STOP
-  pass
-  
-def optionalStop( state ):  # PROGRAM OPTIONAL STOP
-  pass
-
-def toolchange( state ):  # CHANGE TOOL TO Registers.TOOLNO
-  pass
-  
-def end( state ): # END PROGRAM
-  pass
-
-def discard( state ): # DISCARD STATE BUFFER
-  del state.stack[:]
-
-def invariant( state ): # UPDATE STATE GIVEN INVARIANT
-  pass
-  # if len(state.input) > 0:
-  #   raise RuntimeError('Invariant called on partially parsed input')
-  # print( state.symtable )
   
 @unique
 class Registers(IntEnum):
@@ -167,3 +116,52 @@ class Plane(IntEnum):
   XY = 0
   ZX = 1
   YZ = 2
+
+        
+class Setval: # Setval(B, A) -> B = A
+  def __init__( self, attribute, value ):
+    self.attribute = attribute
+    self.value = value
+  def __call__( self, state ):
+    state.symtable[self.attribute] = self.value
+  def __repr__( self ):
+    return 'setval: '+self.attribute.__repr__()+' = '+self.value.__repr__()
+
+class Set:  # A Set(B) -> B = A
+  def __init__(self, attribute):
+    self.attribute = attribute
+    
+  def __call__( self, state ):
+    state.symtable[self.attribute] = state.stack[-1]
+    del state.stack[-1]
+    
+  def __repr__( self ):
+    return 'Set (' + self.attribute.__repr__() + ')'
+      
+class Temporary:  # SET REGISTER VALUE AS TEMPORARY AND RESTORE IT AFTER INVARIANT
+  def __init__(self, attribute ):
+    self.attribute = attribute
+    
+  def __call__( self, state ):
+    state.symtable['temporary'] = self.attribute
+  
+  def __repr__( self ):
+    return 'Temporary: '+self.attribute.__repr__()
+    
+def stop( state ):  # PROGRAM STOP
+  pass
+  
+def optionalStop( state ):  # PROGRAM OPTIONAL STOP
+  pass
+
+def toolchange( state ):  # CHANGE TOOL TO Registers.TOOLNO
+  pass
+  
+def end( state ): # END PROGRAM
+  pass
+
+def discard( state ): # DISCARD STATE BUFFER
+  del state.stack[:]
+
+def invariant( state ):
+  pass

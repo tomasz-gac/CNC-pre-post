@@ -13,78 +13,63 @@ from languages.heidenhain.commands import Compensation  as comp
 from languages.heidenhain.commands import Direction     as dir
 from languages.heidenhain.commands import Coolant       as cool
 from languages.heidenhain.commands import Spindle       as spin
+from languages.heidenhain.commands import Plane         as plane
 
 # from languages.expression.evaluator import ArithmeticEvaluator
 
 import copy
 import math
 
-def machine_state():
-  state = { key : 0 for key in list(reg) }
-  state.update( { key : 0 for key in list(cart) } )
-  state.update( { key : 0 for key in list(pol) } )
-  state.update( { key : 0 for key in list(ang) } )
-  state.update( { key : 0 for key in list(cen) } )
-  state[reg.COMPENSATION] = comp.NONE
-  state[reg.DIRECTION]    = dir.CW
-  state[reg.UNITS]        = commands.Units.MM
-  state[reg.MOTIONMODE]   = mot.LINEAR
-  state[reg.WCS]          = 54
-  return state
+class MachineState:
+  __slots__ = 'registers', 'cartesian', 'polar', 'angular', 'center'
+  def __init__( self, state=None ):
+    if state is None:
+      self.registers = { key : 0 for key in list(reg) }
+      self.cartesian = { key : 0 for key in list(cart)}
+      self.polar     = { key : 0 for key in list(pol) }
+      self.angular   = { key : 0 for key in list(ang) }
+      self.center    = { key : 0 for key in list(cen) }
+      self.registers[reg.COMPENSATION] = comp.NONE
+      self.registers[reg.DIRECTION]    = dir.CW
+      self.registers[reg.UNITS]        = commands.Units.MM
+      self.registers[reg.MOTIONMODE]   = mot.LINEAR
+      self.registers[reg.WCS]          = 54
+      self.registers[reg.POLARPLANE]   = plane.XY
+      self.registers[reg.COOLANT]      = cool.OFF
+    else:
+      self.registers = {}
+      self.cartesian = {}
+      self.polar     = {}
+      self.angular   = {}
+      self.center    = {}
+      vars = { 
+        reg : self.registers, 
+        cart : self.cartesian,  
+        pol  : self.polar,
+        ang  : self.angular,
+        cen : self.center
+      }
+      for key, item in state.items():
+        vars[type(key)][key] = item
 
-# @ev.Handler( cmd )
-class CommandEvaluator:
-  def __init__( self, symtable ):
-    self.symtable   = symtable
-    self.data       = {  }
-    self.state      = machine_state()
-    self.prevState  = machine_state()
-    self.tmp        = {}
+class Machine:
+  def __init__( self ):
+    self.state = MachineState()
+   
+  def accept( self, state ):
+    if len(state.polar) > 0:
+      self._doMovePolar(state)
+    if len(state.cartesian)+len(state.angular) > 0:
+      self._doMoveCartesian(state)    
     
-  def _restoreTMP( self ):
-    self.state.update( self.tmp )
-    self.tmp = {}
-  
-  @ev.stack2args(2)
-  def SET( self, A, B ):
-    try:
-      table = self.data[type(B)][B] = A
-    except KeyError:
-      self.data[type(B)] = { B : A }
-  
-  def INVARIANT( self, stack ):
-    self.prevState = self.state.copy()
-  
-  def UPDATE( self, stack ):
-    self.prevState = self.state.copy()
-    self.state.update( { key : value for (key, value) in self.data.items() if key in reg } )
-    self.data = { 
-      key : value for (key, value) in self.data.items() if key not in reg 
-    }
-  
-  def DISCARD( self, stack ):
-    self.data.clear()
-    
-  @ev.stack2args(1)
-  def TMP( self, register ):
-    self.tmp[ register ] = self.state[register]
-    return []
-  
-  def STOP( self, stack ):
+  def _doMoveCartesian( self, state ):
     pass
   
-  def OPTSTOP( self, stack ):
-    pass
   
-  def TOOLCHANGE( self, stack ):
-    pass
-    
-  def END( self, stack ):
-    pass
-
 
 def angNorm( a ):
   return (a+2*math.pi) % (2 * math.pi)
+
 def movePolar( start1, start2, center1, center2, A, AINC, R, RINC ):
   r1, r2 = (start1 - center1), (start2 - center2)
   targetA = A*math.pi/180
@@ -189,6 +174,7 @@ def _getCircleCenter(self):
   if len(updated) < 2:
     raise RuntimeError('CircleCenter : expected 2 coordinates to form a plane')
   return CCX, CCY, CCZ  
+
 def accept( self, command ):
   if( type(command) not in self._dispatch ):
     method = getattr( self, type(command).__name__ )
@@ -197,17 +183,4 @@ def accept( self, command ):
     else:
       raise RuntimeError( "AST machine does not support command of type " + type(command).__name__) 
     
-  return self._dispatch[ type(command) ](command)  
-    
-    
-# def make_machine():
-#   symtable = {}
-#   return ev.Evaluator([ 
-#     ArithmeticEvaluator( symtable ), 
-#     CommandEvaluator( symtable ) 
-#   ])
-    
-# Evaluator = make_machine()
-
-
-
+  return self._dispatch[ type(command) ](command)
