@@ -128,7 +128,7 @@ terminals = {
   'blockFormStart'    : Return(cmd.discard).If(p('BLK FORM 0\\.1 (X|Y|Z)')),
   'blockFormEnd'      : Return(cmd.discard).If(p('BLK FORM 0\\.2')),
   'fn_f'              : Return(cmd.invariant).If(p('FN 0\\:')),
-  'tool_call'          : Return(cmd.Set(reg.TOOLNO), cmd.invariant, cmd.toolchange ).If(p('TOOL CALL')),
+  'tool_call'         : Return(cmd.Set(reg.TOOLNO), cmd.invariant, cmd.toolchange ).If(p('TOOL CALL')),
   'tool_axis'         : Return().If(p('(X|Y|Z)')),
   'tool_options'      : toolCallOptions,
   'primary'           : expr.primary,

@@ -2,7 +2,7 @@ import babel.evaluator as ev
 
 import languages.heidenhain.commands as commands
 
-from languages.heidenhain.commands import Commands      as cmd
+# from languages.heidenhain.commands import Commands      as cmd
 from languages.heidenhain.commands import Registers     as reg
 from languages.heidenhain.commands import Cartesian     as cart
 from languages.heidenhain.commands import Polar         as pol
@@ -14,7 +14,7 @@ from languages.heidenhain.commands import Direction     as dir
 from languages.heidenhain.commands import Coolant       as cool
 from languages.heidenhain.commands import Spindle       as spin
 
-from languages.expression.evaluator import ArithmeticEvaluator
+# from languages.expression.evaluator import ArithmeticEvaluator
 
 import copy
 import math
@@ -32,7 +32,7 @@ def machine_state():
   state[reg.WCS]          = 54
   return state
 
-@ev.Handler( cmd )
+# @ev.Handler( cmd )
 class CommandEvaluator:
   def __init__( self, symtable ):
     self.symtable   = symtable
@@ -200,14 +200,14 @@ def accept( self, command ):
   return self._dispatch[ type(command) ](command)  
     
     
-def make_machine():
-  symtable = {}
-  return ev.Evaluator([ 
-    ArithmeticEvaluator( symtable ), 
-    CommandEvaluator( symtable ) 
-  ])
+# def make_machine():
+#   symtable = {}
+#   return ev.Evaluator([ 
+#     ArithmeticEvaluator( symtable ), 
+#     CommandEvaluator( symtable ) 
+#   ])
     
-Evaluator = make_machine()
+# Evaluator = make_machine()
 
 
 
