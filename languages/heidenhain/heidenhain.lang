@@ -1,5 +1,5 @@
 coordCartesian  = 'XYZABC' ^'primary'
-coordPolar      = 'PAPR' ^'primary'
+coordPolar      = 'PAPRL' ^'primary'
 coordCC         = 'CCXYZ' ^'primary'
 pointCartesian  = coordCartesian *coordCartesian
 pointPolar      = coordPolar *coordPolar
@@ -10,7 +10,7 @@ gotoTail = ?'direction' ?'compensation' ?feed
 
 aux = 'auxilary' *'auxilary'
 
-goto = 'LC' ^(?pointCartesian gotoTail ?aux ) / 'LPCP' ^(?pointPolar ?coordCartesian gotoTail ?aux)
+goto = 'LC' ^(?pointCartesian gotoTail ?aux ) / 'LPCP' ^(?pointPolar gotoTail ?aux)
 
 circleCenter = 'CC' ^(coordCC coordCC ?aux)
 

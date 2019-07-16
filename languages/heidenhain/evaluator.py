@@ -1,6 +1,6 @@
 import babel.evaluator as ev
 
-import languages.heidenhain.commands as commands
+import languages.heidenhain.commands as cmd
 
 # from languages.heidenhain.commands import Commands      as cmd
 from languages.heidenhain.commands import Registers     as reg
@@ -24,33 +24,22 @@ class MachineState:
   __slots__ = 'registers', 'cartesian', 'polar', 'angular', 'center'
   def __init__( self, state=None ):
     if state is None:
-      self.registers = { key : 0 for key in list(reg) }
-      self.cartesian = { key : 0 for key in list(cart)}
-      self.polar     = { key : 0 for key in list(pol) }
-      self.angular   = { key : 0 for key in list(ang) }
-      self.center    = { key : 0 for key in list(cen) }
-      self.registers[reg.COMPENSATION] = comp.NONE
-      self.registers[reg.DIRECTION]    = dir.CW
-      self.registers[reg.UNITS]        = commands.Units.MM
-      self.registers[reg.MOTIONMODE]   = mot.LINEAR
-      self.registers[reg.WCS]          = 54
-      self.registers[reg.POLARPLANE]   = plane.XY
-      self.registers[reg.COOLANT]      = cool.OFF
-    else:
-      self.registers = {}
-      self.cartesian = {}
-      self.polar     = {}
-      self.angular   = {}
-      self.center    = {}
-      vars = { 
-        reg : self.registers, 
-        cart : self.cartesian,  
-        pol  : self.polar,
-        ang  : self.angular,
-        cen : self.center
-      }
-      for key, item in state.items():
-        vars[type(key)][key] = item
+      state = cmd.StateDict()
+    
+    self.registers = {}
+    self.cartesian = {}
+    self.polar     = {}
+    self.angular   = {}
+    self.center    = {}
+    vars = { 
+      reg : self.registers, 
+      cart : self.cartesian,  
+      pol  : self.polar,
+      ang  : self.angular,
+      cen : self.center
+    }
+    for key, item in state.items():
+      vars[type(key)][key] = item
 
 class Machine:
   def __init__( self ):

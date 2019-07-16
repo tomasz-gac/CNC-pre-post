@@ -30,13 +30,13 @@ with open( 'languages/heidenhain/heidenhain.lang' ) as file:
 p = re.compile
 
 GOTOcartesian = Lookup({ 
-  p('L ')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.invariant ),
-  p('C ')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.invariant )
+  p('L ')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(cmd.Cartesian), cmd.invariant ),
+  p('C ')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(cmd.Cartesian), cmd.invariant )
 }.items())
 
 GOTOpolar = Lookup({ 
-  p('LP')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.invariant ),
-  p('CP')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.invariant )
+  p('LP')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(cmd.Polar), cmd.invariant ),
+  p('CP')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(cmd.Polar), cmd.invariant )
 }.items())
 
 toolCallOptions = Lookup({
@@ -53,21 +53,26 @@ def handleCoord( map ):
     return ( cmd.Set(symbol), )
   return _handleCoord
   
-coordmap = { 
+cartesianCoordMap = { 
   'X' : cart.X, 'Y' : cart.Y, 'Z' : cart.Z, 
-  'A' : ang.A, 'B' : ang.B, 'C' : ang.C, 
-  'PA' : pol.ANG, 'PR' : pol.RAD 
+  'A' : ang.A, 'B' : ang.B, 'C' : ang.C
 }
 
 cartesianCoord = Switch({
-  p(pattern) : handleCoord(coordmap) for pattern in
+  p(pattern) : handleCoord(cartesianCoordMap) for pattern in
   [ "(I)?(X)", "(I)?(Y)", "(I)?(Z)", 
     "(I)?(A)", "(I)?(B)", "(I)?(C)"]
 }.items())
 
+polarCoordMap = { 
+  'PA' : pol.ANG, 'PR' : pol.RAD,
+  'X'  : pol.LEN, 'Y'  : pol.LEN, 'Z' : pol.LEN
+}
+
 polarCoord = Switch({
-  p('(I)?(PA)') : handleCoord(coordmap),
-  p('(I)?(PR)') : handleCoord(coordmap)
+  p('(I)?(PA)')    : handleCoord(polarCoordMap),
+  p('(I)?(PR)')    : handleCoord(polarCoordMap),
+  p('(I)?(X|Y|Z)') : handleCoord(polarCoordMap),
 }.items())
 
 CCcoordmap = { 'X' : cen.X, 'Y' : cen.Y, 'Z' : cen.Z }
@@ -109,7 +114,7 @@ def handleAux( match ):
 
 terminals = {
   'XYZABC'            : cartesianCoord,
-  'PAPR'              : polarCoord,
+  'PAPRL'             : polarCoord,
   'CCXYZ'             : CCcoord,
   'lineno'            : Wrapper( expr.number , lambda x : ( cmd.Setval(reg.LINENO, x[0]), ) ),
   'F'                 : Return( cmd.Set(reg.FEED) ).If(p('F')),

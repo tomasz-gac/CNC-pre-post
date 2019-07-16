@@ -34,43 +34,45 @@ class Polar(IntEnum):
   # ABSOLUTE
   ANG = 20
   RAD = 21
+  LEN = 23
   # INCREMENTAL
-  ANGINC = 22
-  RADINC = 23
+  ANGINC = 24
+  RADINC = 25
+  LENINC = 26
   
 @unique
 class Angular(IntEnum):
   # ABSOLUTE
-  A = 24
-  B = 25
-  C = 26
+  A = 27
+  B = 28
+  C = 29
   # INCREMENTAL
-  AINC   = 27
-  BINC   = 28
-  CINC   = 29
+  AINC   = 30
+  BINC   = 31
+  CINC   = 32
 
 @unique
 class Center(IntEnum): # CIRCLE CENTER X Y Z
-  X = 30
-  Y = 31
-  Z = 32
-  XINC  = 33
-  YINC  = 34
-  ZINC  = 35
+  X = 33
+  Y = 34
+  Z = 35
+  XINC  = 36
+  YINC  = 37
+  ZINC  = 38
   
 absolute    = [ Cartesian.X, Cartesian.Y, Cartesian.Z, 
-                Polar.ANG, Polar.RAD, 
+                Polar.ANG, Polar.RAD, Polar.LEN,
                 Angular.A, Angular.B, Angular.C, 
                 Center.X, Center.Y, Center.Z ]
 
 incremental = [ Cartesian.XINC, Cartesian.YINC, Cartesian.ZINC, 
-                Polar.ANGINC, Polar.RADINC, 
+                Polar.ANGINC, Polar.RADINC, Polar.LENINC,
                 Angular.AINC, Angular.BINC, Angular.CINC, 
                 Center.XINC, Center.YINC, Center.ZINC ]
 
 abs2inc = { 
   Cartesian.X : Cartesian.XINC, Cartesian.Y : Cartesian.YINC, Cartesian.Z : Cartesian.ZINC, 
-  Polar.ANG : Polar.ANGINC, Polar.RAD : Polar.RADINC,
+  Polar.ANG : Polar.ANGINC, Polar.RAD : Polar.RADINC, Polar.LEN : Polar.LENINC,
   Angular.A : Angular.AINC, Angular.B : Angular.BINC, Angular.C : Angular.CINC, 
   Center.X : Center.XINC, Center.Y : Center.YINC, Center.Z : Center.ZINC
 }
@@ -117,6 +119,41 @@ class Plane(IntEnum):
   ZX = 1
   YZ = 2
 
+def StateDict():
+  result = { key : 0 for key in list(Registers) }
+  result.update( { key : 0 for key in list(Cartesian)} )
+  result.update( { key : 0 for key in list(Polar) } )
+  result.update( { key : 0 for key in list(Angular) } )
+  result.update( { key : 0 for key in list(Center) } )
+  result[Registers.COMPENSATION] = Compensation.NONE
+  result[Registers.DIRECTION]    = Direction.CW
+  result[Registers.UNITS]        = Units.MM
+  result[Registers.MOTIONMODE]   = Motion.LINEAR
+  result[Registers.WCS]          = 54
+  result[Registers.POLARPLANE]   = Plane.XY
+  result[Registers.COOLANT]      = Coolant.OFF
+  return result
+
+class MachineState:
+  __slots__ = 'registers', 'cartesian', 'polar', 'angular', 'center'
+  def __init__( self, state=None ):
+    if state is None:
+      state = cmd.StateDict()
+    
+    self.registers = {}
+    self.cartesian = {}
+    self.polar     = {}
+    self.angular   = {}
+    self.center    = {}
+    vars = { 
+      Registers : self.registers,
+      Cartesian : self.cartesian,  
+      Polar     : self.polar,
+      Angular   : self.angular,
+      Center    : self.center
+    }
+    for key, item in state.items():
+      vars[type(key)][key] = item
         
 class Setval: # Setval(B, A) -> B = A
   def __init__( self, attribute, value ):
@@ -165,3 +202,26 @@ def discard( state ): # DISCARD STATE BUFFER
 
 def invariant( state ):
   pass
+  
+  
+# GOTO command requires 3 target coordinates
+# This function handles the missing coordinates if the the user provided fewer
+# It supplies the missing coordinates depending on the specified 'kind'
+# by defaulting the incremental counterparts to zero
+class SetGOTODefaults:
+  def __init__( self, kind = Cartesian ):
+    self.kind = kind
+  def __call__( self, state ):
+      # find all absolute coordinates that match 'self.kind'
+      # that are missing from state.symtable
+      # and set their incremental counterparts to 0
+    constants = { abs2inc[abs] : 0
+      for abs in absolute
+        if abs not in state.symtable and
+           abs in self.kind
+      }
+      # In case the user specified incremental coordinates,
+      # update constants with symtable to override conflicts
+    constants.update( state.symtable )
+    state.symtable = constants
+    
