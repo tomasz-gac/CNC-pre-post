@@ -1,59 +1,52 @@
 import sympy as sy
 import languages.heidenhain.commands as cmd
 
-symbols = sy.symbols('x y z ix iy iz r a ir ia')
-x,y,z, ix,iy,iz, r,a, ir,ia = symbols
-sym2coord = {
-   x : cmd.Cartesian.X,
-   y : cmd.Cartesian.Y,
-   z : cmd.Cartesian.Z,
-   
-   ix : cmd.Cartesian.XINC,
-   iy : cmd.Cartesian.YINC,
-   iz : cmd.Cartesian.ZINC,
-   
-   r : cmd.Polar.RAD,
-   a : cmd.Polar.ANG,
-   
-   ir : cmd.Polar.RADINC,
-   ia : cmd.Polar.ANGINC
-}
+# machine state coordinates that are used in state invariant
+stateCoordinates = set(cmd.Cartesian).union({
+   cmd.Polar.RAD,    cmd.Polar.ANG,
+   cmd.Polar.RADINC, cmd.Polar.ANGINC
+})
+# machine state symbols that correspond to coordinates
+stateSymbols = sy.symbols('x:'+str(len(stateCoordinates)))
+# symbol -> coordinate and coordinate -> symbol mappings
+coord2sym = dict( zip( stateCoordinates, stateSymbols ) )
+sym2coord = { value:key for key,value in coord2sym.items() }
 
-coord2sym = { value:key for key,value in sym2coord.items() }    
-
+# cartesian mappings for polar calculation
 planeCoordDict = {  
-    cmd.Plane.XY : (x,y),
-    cmd.Plane.YZ : (y,z),
-    cmd.Plane.ZX : (z,x)
+    cmd.Plane.XY : (cmd.Cartesian.X,cmd.Cartesian.Y),
+    cmd.Plane.YZ : (cmd.Cartesian.Y,cmd.Cartesian.Z),
+    cmd.Plane.ZX : (cmd.Cartesian.Z,cmd.Cartesian.X)
   }
-  
+planeNormDict = { 
+    cmd.Plane.XY : cmd.Cartesian.Z,
+    cmd.Plane.YZ : cmd.Cartesian.X,
+    cmd.Plane.ZX : cmd.Cartesian.Y
+  }
+# circle center mappings for polar calculation
 planeCenterDict = {  
     cmd.Plane.XY : (cmd.Center.X,cmd.Center.Y),
     cmd.Plane.YZ : (cmd.Center.Y,cmd.Center.Z),
     cmd.Plane.ZX : (cmd.Center.Z,cmd.Center.X)
   }
 
-planeLenDict = {
-    cmd.Plane.XY : cmd.Cartesian.Z,
-    cmd.Plane.YZ : cmd.Cartesian.X,
-    cmd.Plane.ZX : cmd.Cartesian.Y
-  }
   
+  # Function calculates the new machine state depending on
+  # the previous state and state update by maintaining an invariant
+  # between a set of state variables specified in stateCoordinates
 def invariant( update, state ):
-    # Obtain the plane in which the polar motion occurs
-  plane = None
-  try:
-    plane = update[cmd.Registers.POLARPLANE]
-  except KeyError:
-    plane = state[cmd.Registers.POLARPLANE]
-    
-  x1, x2   = planeCoordDict[plane]  # get symbols for polar coordinate substitution
-  cx1, cx2 = planeCenterDict[plane] # get circle center symbols
-  cx1, cx2 = state[cx1], state[cx2] # retrieve circle center values from state
+  result = dict(state)  # Copy the state
+    # Apply the state update, invariant is not maintained at this point
+  result.update(update) 
+  
+    # Obtain the plane that defines the polar motion
+  plane = result[cmd.Registers.POLARPLANE]
+  x1, x2   = planeCoordDict[plane]   # get cartesian coordinates for substitution
+  cx1, cx2 = planeCenterDict[plane]  # get circle center coordinates
   
   # Substitute polar plane offset LEN
   # as cartesian coordinate value depending on selected plane
-  lenCoord = planeLenDict[plane]
+  lenCoord = planeNormDict[plane]
   try:
     lenValue = update[cmd.Polar.LEN] # absolute LEN case
   except KeyError:
@@ -63,39 +56,63 @@ def invariant( update, state ):
     except KeyError:
       lenValue = None
   
-  # value is known if belongs to the invariant (is specified in coord2sym) and update contains its value
-  knowns   = { coord2sym[coord] : value for coord, value in update.items() if coord in coord2sym }
+  # value is known if belongs to the invariant (is specified in stateCoordinates) and update contains its value
+  knowns   = { coord : update[coord] for coord in stateCoordinates.intersection(update.keys()) }
+  
   # LEN or LENINC occurs in update, substitute the value in knowns
   if lenValue is not None:
-    knowns[ coord2sym[lenCoord] ] = lenValue
-  # value is unknown if it belongs to the invariant and is not a known
-  unknowns = [ unknown for unknown in sym2coord if unknown not in knowns ]
-  # previous state is used as init value for numerical solving
-  init     = [ state[sym2coord[symbol]] for symbol in unknowns ]
-  
-  # symbol -> value mapping for injection of known values
-  symDict = { key:key for key in symbols }
-  symDict.update( knowns )
+    knowns[ lenCoord ] = lenValue
+  # coordinate -> value mapping for known value injection
+  # if value is unknown, it defaults to sympy symbol for computation
+  symbols = dict( coord2sym )
+  symbols.update( knowns )
   
   # build the state invariant equations
   invariant = [
-    sy.Eq( symDict[x] - state[cmd.Cartesian.X] - symDict[ix], 0 ), # X = X0 - IX
-    sy.Eq( symDict[y] - state[cmd.Cartesian.Y] - symDict[iy], 0 ), # Y = Y0 - IY
-    sy.Eq( symDict[z] - state[cmd.Cartesian.Z] - symDict[iz], 0 ), # Z = Z0 - IZ
+    sy.Eq( symbols[cmd.Cartesian.X] - state[cmd.Cartesian.X] - symbols[cmd.Cartesian.XINC], 0 ),
+    sy.Eq( symbols[cmd.Cartesian.Y] - state[cmd.Cartesian.Y] - symbols[cmd.Cartesian.YINC], 0 ),
+    sy.Eq( symbols[cmd.Cartesian.Z] - state[cmd.Cartesian.Z] - symbols[cmd.Cartesian.ZINC], 0 ),
     
-    sy.Eq( symDict[r] - state[cmd.Polar.RAD] - symDict[ir], 0 ),   # R = R0 - IR
-    sy.Eq( symDict[a] - state[cmd.Polar.ANG] - symDict[ia], 0 ),   # A = A0 - IA
+    sy.Eq( symbols[cmd.Polar.RAD] - state[cmd.Polar.RAD] - symbols[cmd.Polar.RADINC], 0 ),
+    sy.Eq( symbols[cmd.Polar.ANG] - state[cmd.Polar.ANG] - symbols[cmd.Polar.ANGINC], 0 ),
     
       # Polar and cartesian associations depending on the selected plane
-    sy.Eq( cx1 + symDict[r]*sy.cos(symDict[a]) - x1 ),
-    sy.Eq( cx2 + symDict[r]*sy.sin(symDict[a]) - x2 )
+      # Polar center coordinates taken from result to accomodate for update
+    sy.Eq( result[cx1] + symbols[cmd.Polar.RAD]*sy.cos(symbols[cmd.Polar.ANG]) - symbols[x1] ),
+    sy.Eq( result[cx2] + symbols[cmd.Polar.RAD]*sy.sin(symbols[cmd.Polar.ANG]) - symbols[x2] )
   ]
+  # print(invariant)
+  
+  # value is unknown if it belongs to the invariant and is not a known
+  unknownCoords  = stateCoordinates.difference( knowns )
+  unknownSymbols = [ coord2sym[unknown] for unknown in unknownCoords ]
+  # previous state is used as init value for numerical solving
+  init           = [ state[unknown]     for unknown in unknownCoords ]
+  
+  requiredKnownCount = len(stateCoordinates) - len(invariant)
+  if len(knowns) < requiredKnownCount:
+    raise RuntimeError('Invalid state update, expected '+str(requiredKnownCount)+' known values, got '+str(len(knowns))+'.')
   
     # Solve the equations numerially, put the result in a list
     # Solution order matches the order of the unknowns
-  solutions = sy.nsolve( invariant, unknowns, init ).T.tolist()[0]
-  result = dict(state)  # Copy the state
-  result.update(update) # Apply the state update
+  solutions = sy.nsolve( invariant, unknownSymbols, init, prec=5 ).T.tolist()[0]
     # Associate unknowns with solutions and update the result
-  result.update( { sym2coord[unknown] : solution for unknown, solution in zip( unknowns, result ) } )
+  result.update( zip( unknownCoords, solutions ) )
   return result
+  
+from babel import State  
+from languages.heidenhain.parser import Parse
+  
+def bench( n = 1000 ):
+  import time
+  start = time.time()
+  q = None
+  r = None
+  s0 = cmd.StateDict()
+  for i in range(n):
+    q = State( 'L X+50 Y-30 Z+150 R0 FMAX' )
+    r = Parse( q )
+    s = invariant( q.symtable, s0 )
+  print( time.time() - start )
+  print(q.symtable)
+  print(r)
