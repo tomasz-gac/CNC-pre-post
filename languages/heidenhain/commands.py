@@ -121,10 +121,10 @@ class Plane(IntEnum):
 
 def StateDict():
   result = { key : 0 for key in list(Registers) }
-  result.update( { key : 0 for key in list(Cartesian)} )
-  result.update( { key : 0 for key in list(Polar) } )
-  result.update( { key : 0 for key in list(Angular) } )
-  result.update( { key : 0 for key in list(Center) } )
+  result.update( { key : 0.0001 for key in list(Cartesian)} )
+  result.update( { key : 0.0001 for key in list(Polar) } )
+  result.update( { key : 0.0001 for key in list(Angular) } )
+  result.update( { key : 0.0001 for key in list(Center) } )
   result[Registers.COMPENSATION] = Compensation.NONE
   result[Registers.DIRECTION]    = Direction.CW
   result[Registers.UNITS]        = Units.MM

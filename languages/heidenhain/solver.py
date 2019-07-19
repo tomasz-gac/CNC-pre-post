@@ -2,10 +2,7 @@ import sympy as sy
 import languages.heidenhain.commands as cmd
 
 # machine state coordinates that are used in state invariant
-stateCoordinates = set(cmd.Cartesian).union({
-   cmd.Polar.RAD,    cmd.Polar.ANG,
-   cmd.Polar.RADINC, cmd.Polar.ANGINC
-})
+stateCoordinates = set(cmd.Cartesian).union(set(cmd.Polar))
 # machine state symbols that correspond to coordinates
 stateSymbols = sy.symbols('x:'+str(len(stateCoordinates)))
 # symbol -> coordinate and coordinate -> symbol mappings
@@ -29,7 +26,6 @@ planeCenterDict = {
     cmd.Plane.YZ : (cmd.Center.Y,cmd.Center.Z),
     cmd.Plane.ZX : (cmd.Center.Z,cmd.Center.X)
   }
-
   
   # Function calculates the new machine state depending on
   # the previous state and state update by maintaining an invariant
@@ -42,26 +38,11 @@ def invariant( update, state ):
     # Obtain the plane that defines the polar motion
   plane = result[cmd.Registers.POLARPLANE]
   x1, x2   = planeCoordDict[plane]   # get cartesian coordinates for substitution
+  x3       = planeNormDict[plane]    # get cartesian LEN offset coordinate
   cx1, cx2 = planeCenterDict[plane]  # get circle center coordinates
-  
-  # Substitute polar plane offset LEN
-  # as cartesian coordinate value depending on selected plane
-  lenCoord = planeNormDict[plane]
-  try:
-    lenValue = update[cmd.Polar.LEN] # absolute LEN case
-  except KeyError:
-    lenCoord = cmd.abs2inc[ lenCoord ] 
-    try:
-      lenValue = update[cmd.Polar.LENINC] # incremental LEN case
-    except KeyError:
-      lenValue = None
   
   # value is known if belongs to the invariant (is specified in stateCoordinates) and update contains its value
   knowns   = { coord : update[coord] for coord in stateCoordinates.intersection(update.keys()) }
-  
-  # LEN or LENINC occurs in update, substitute the value in knowns
-  if lenValue is not None:
-    knowns[ lenCoord ] = lenValue
   # coordinate -> value mapping for known value injection
   # if value is unknown, it defaults to sympy symbol for computation
   symbols = dict( coord2sym )
@@ -75,13 +56,20 @@ def invariant( update, state ):
     
     sy.Eq( symbols[cmd.Polar.RAD] - state[cmd.Polar.RAD] - symbols[cmd.Polar.RADINC], 0 ),
     sy.Eq( symbols[cmd.Polar.ANG] - state[cmd.Polar.ANG] - symbols[cmd.Polar.ANGINC], 0 ),
+    sy.Eq( symbols[cmd.Polar.LEN] - state[cmd.Polar.LEN] - symbols[cmd.Polar.LENINC], 0 ),
     
       # Polar and cartesian associations depending on the selected plane
       # Polar center coordinates taken from result to accomodate for update
-    sy.Eq( result[cx1] + symbols[cmd.Polar.RAD]*sy.cos(symbols[cmd.Polar.ANG]) - symbols[x1] ),
-    sy.Eq( result[cx2] + symbols[cmd.Polar.RAD]*sy.sin(symbols[cmd.Polar.ANG]) - symbols[x2] )
+    sy.Eq( result[cx1] + symbols[cmd.Polar.RAD]*sy.cos(symbols[cmd.Polar.ANG]) - symbols[x1], 0 ),
+    sy.Eq( result[cx2] + symbols[cmd.Polar.RAD]*sy.sin(symbols[cmd.Polar.ANG]) - symbols[x2], 0 ),
+    sy.Eq( symbols[cmd.Polar.LEN] - symbols[x3], 0 )
   ]
   # print(invariant)
+  
+  # f = lambdify(fargs, f.T, modules)
+  # J = lambdify(fargs, J, modules)
+    # solve the system numerically
+  # x = findroot(f, x0, J=J, **kwargs)
   
   # value is unknown if it belongs to the invariant and is not a known
   unknownCoords  = stateCoordinates.difference( knowns )
@@ -89,13 +77,13 @@ def invariant( update, state ):
   # previous state is used as init value for numerical solving
   init           = [ state[unknown]     for unknown in unknownCoords ]
   
-  requiredKnownCount = len(stateCoordinates) - len(invariant)
+  requiredKnownCount = len(stateCoordinates) - len(inv)
   if len(knowns) < requiredKnownCount:
     raise RuntimeError('Invalid state update, expected '+str(requiredKnownCount)+' known values, got '+str(len(knowns))+'.')
   
     # Solve the equations numerially, put the result in a list
     # Solution order matches the order of the unknowns
-  solutions = sy.nsolve( invariant, unknownSymbols, init, prec=5 ).T.tolist()[0]
+  solutions = sy.nsolve( inv, unknownSymbols, init ).T.tolist()[0]
     # Associate unknowns with solutions and update the result
   result.update( zip( unknownCoords, solutions ) )
   return result
