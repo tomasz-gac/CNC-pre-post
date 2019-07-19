@@ -1,4 +1,4 @@
-from enum import IntEnum, unique
+from enum import Enum, IntEnum, unique
   
 @unique
 class Registers(IntEnum):
@@ -17,67 +17,52 @@ class Registers(IntEnum):
   WCS          = 12  # WORLD COORDINATE SYSTEM NUMBER
   POLARPLANE   = 13  # POLAR MOTION PLANE
 
+def makeIncremental( Coord ):
+  result = Enum( Coord.__name__+'Inc', [ key.name for key in list(Coord) ] )
+  Coord.incremental = result
+  result.absolute   = Coord
+  return result
+  
+def isAbsolute( coord ):
+  return hasattr( coord, 'incremental' )
+  
+def isIncremental( coord ):
+  return hasattr( coord, 'absolute' )
+  
+def abs2inc( value ):
+  return value.__objclass__.incremental[value.name]
+  
+def inc2abs( value ):
+  return value.__objclass__.absolute[value.name]
   
 @unique
-class Cartesian(IntEnum):
-  # ABSOLUTE
-  X = 14
-  Y = 15
-  Z = 16
-  # INCREMENTAL
-  XINC   = 17
-  YINC   = 18
-  ZINC   = 19
+class Cartesian(Enum):
+  X = 0
+  Y = 1
+  Z = 2
   
 @unique
-class Polar(IntEnum):
-  # ABSOLUTE
-  ANG = 20
-  RAD = 21
-  LEN = 23
-  # INCREMENTAL
-  ANGINC = 24
-  RADINC = 25
-  LENINC = 26
+class Polar(Enum):
+  ANG = 0
+  RAD = 1
+  LEN = 2
   
 @unique
-class Angular(IntEnum):
-  # ABSOLUTE
-  A = 27
-  B = 28
-  C = 29
-  # INCREMENTAL
-  AINC   = 30
-  BINC   = 31
-  CINC   = 32
+class Angular(Enum):
+  A = 0
+  B = 1
+  C = 2
 
 @unique
-class Center(IntEnum): # CIRCLE CENTER X Y Z
-  X = 33
-  Y = 34
-  Z = 35
-  XINC  = 36
-  YINC  = 37
-  ZINC  = 38
-  
-absolute    = [ Cartesian.X, Cartesian.Y, Cartesian.Z, 
-                Polar.ANG, Polar.RAD, Polar.LEN,
-                Angular.A, Angular.B, Angular.C, 
-                Center.X, Center.Y, Center.Z ]
+class Center(Enum): # CIRCLE CENTER X Y Z
+  X = 0
+  Y = 1
+  Z = 2
 
-incremental = [ Cartesian.XINC, Cartesian.YINC, Cartesian.ZINC, 
-                Polar.ANGINC, Polar.RADINC, Polar.LENINC,
-                Angular.AINC, Angular.BINC, Angular.CINC, 
-                Center.XINC, Center.YINC, Center.ZINC ]
-
-abs2inc = { 
-  Cartesian.X : Cartesian.XINC, Cartesian.Y : Cartesian.YINC, Cartesian.Z : Cartesian.ZINC, 
-  Polar.ANG : Polar.ANGINC, Polar.RAD : Polar.RADINC, Polar.LEN : Polar.LENINC,
-  Angular.A : Angular.AINC, Angular.B : Angular.BINC, Angular.C : Angular.CINC, 
-  Center.X : Center.XINC, Center.Y : Center.YINC, Center.Z : Center.ZINC
-}
-
-inc2abs = { value : key for key, value in abs2inc.items() }
+CartesianInc = makeIncremental( Cartesian )  
+PolarInc     = makeIncremental( Polar )
+AngularInc   = makeIncremental( Angular )
+CenterInc    = makeIncremental( Center )
  
 @unique
 class Units(IntEnum):
@@ -121,10 +106,14 @@ class Plane(IntEnum):
 
 def StateDict():
   result = { key : 0 for key in list(Registers) }
-  result.update( { key : 0.0001 for key in list(Cartesian)} )
-  result.update( { key : 0.0001 for key in list(Polar) } )
-  result.update( { key : 0.0001 for key in list(Angular) } )
-  result.update( { key : 0.0001 for key in list(Center) } )
+  result.update( { key : 0 for key in list(Cartesian)} )
+  result.update( { key : 0 for key in list(CartesianInc)} )
+  result.update( { key : 0 for key in list(Polar) } )
+  result.update( { key : 0 for key in list(PolarInc) } )
+  result.update( { key : 0 for key in list(Angular) } )
+  result.update( { key : 0 for key in list(AngularInc) } )
+  result.update( { key : 0 for key in list(Center) } )
+  result.update( { key : 0 for key in list(CenterInc) } )
   result[Registers.COMPENSATION] = Compensation.NONE
   result[Registers.DIRECTION]    = Direction.CW
   result[Registers.UNITS]        = Units.MM
@@ -209,19 +198,16 @@ def invariant( state ):
 # It supplies the missing coordinates depending on the specified 'kind'
 # by defaulting the incremental counterparts to zero
 class SetGOTODefaults:
-  def __init__( self, kind = Cartesian ):
-    self.kind = kind
+  def __init__( self, coordinates ):
+    if isIncremental(coordinates):
+      raise RuntimeError('Expected absolute coordinate enum, got: '+str(coordinates))
+    self.coordinates = coordinates
   def __call__( self, state ):
-      # find all absolute coordinates that match 'self.kind'
-      # that are missing from state.symtable
-      # and set their incremental counterparts to 0
-    constants = { abs2inc[abs] : 0
-      for abs in absolute
-        if abs not in state.symtable and
-           abs in self.kind
-      }
-      # In case the user specified incremental coordinates,
+      # For each coordinate in 'self.coordinates'
+      # that is  missing from state.symtable
+      # set its incremental counterpart to 0
+    constants = { abs2inc(abs) : 0 for abs in self.coordinates if abs not in state.symtable }
+      # In case the user already specified incremental coordinates in symtable,
       # update constants with symtable to override conflicts
     constants.update( state.symtable )
     state.symtable = constants
-    
