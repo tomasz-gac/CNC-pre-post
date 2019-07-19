@@ -2,17 +2,19 @@ import languages.heidenhain.commands as cmd
 import math
 
 class Invariant:
-  def __init__( self, kind, invariants, eps = 0.0001 ):
+  def __init__( self, invariants, test = lambda x, y : True, kind = None ):
+    if kind is None:
+      kind = type(self)
     self.kind = kind
     self.invariants = invariants
-    self.eps = eps
+    self.test = test
 
   def __call__( self, update, *args ):
     processed = {}
     queue  = dict(update)
     while True:
       try:
-        # Get source kind and value from queue
+        # Get source and value from queue
         source, value = queue.popitem()
       except KeyError:
         break # No more elements to process        
@@ -22,27 +24,29 @@ class Invariant:
       except KeyError:
         # No invariant associated with source, ignore it
         continue
-      target, result = f( value, *args )
-      # Check if result is contained in queue and processed and
-      # see if the value is consistent within the given tolerance
-      queueConsistent     = abs(queue.get(target,result)     - result) < self.eps
-      processedConsistent = abs(processed.get(target,result) - result) < self.eps
-      # Check if the target is new
-      newTarget = target not in queue and target not in processed
       
-      if not queueConsistent or not processedConsistent:
-        # If the target is already present, raise an error if its value is inconsistent
-        # It may have been added by transform function, this ensures that its inverse works properly
-        raise RuntimeError('Inconsistent value for '+str(source)+'->'+str(target)+': '+str(value)+' != '+str(result))
-      if newTarget:
-        # If target is new, add it to the queue for invariant processing
-        queue[target] = result
-      
+      results = f( value, *args )
+      for target, result in results.items():
+        # Check if result is contained in queue and processed and
+        # see if the value is consistent using the test function
+        queueConsistent     = self.test( queue.get(target,result),     result )
+        processedConsistent = self.test( processed.get(target,result), result )
+        # Check if the target is new
+        newTarget = target not in queue and target not in processed
+        
+        if not queueConsistent or not processedConsistent:
+          # If the target is already present, raise an error if its value is inconsistent
+          # It may have been added by transform function, this ensures that its inverse works properly
+          raise RuntimeError('Inconsistent value for '+str(source)+'->'+str(target)+': '+str(value))
+        if newTarget:
+          # If target is new, add it to the queue for invariant processing
+          queue[target] = result
+        
       # source has been processed consistently
       # it's okay to overwrite in case when source == target
+      processed.update( results )
       processed[source] = value
-      processed[target] = result
-    return self.kind, processed
+    return { self.kind : processed }
 
     
     
@@ -53,7 +57,7 @@ class Abs2Inc:
     self.source = source
     
   def __call__( self, value, state ):
-    return cmd.abs2inc(self.source), value - state[self.source]
+    return { cmd.abs2inc(self.source) : value - state[self.source] }
 
 class Inc2Abs:
   def __init__( self, source ):
@@ -62,15 +66,22 @@ class Inc2Abs:
     self.source = source
     
   def __call__( self, value, state ):
-    return cmd.inc2abs(self.source), value + state[self.source]
-        
-def toIncInvariant( absolute ):
-  invariants = { key : Abs2Inc(key) for key in list(absolute) }
-  return invariants
+    return { cmd.inc2abs(self.source) : value + state[self.source] }
+
+class AbsIncInvariant(Invariant):
+  def __init__( self, classes ):  
+    invariants = {}
+    for e in classes:
+      if cmd.isAbsolute( e ):
+        invariants.update( { key : Abs2Inc(key) for key in list(e) } )
+        invariants.update( { key : Inc2Abs(key) for key in list(e.incremental) } )
+      else:
+        invariants.update( { key : Inc2Abs(key) for key in list(e) } )
+        invariants.update( { key : Abs2Inc(key) for key in list(e.absolute) } )
+      
+    super().__init__( invariants, test=lambda x, y : abs( x - y ) < 0.0001 )
   
-def toAbsInvariant( incremental ):
-  invariants = { key : Inc2Abs(key) for key in list(incremental) }
-  return invariants
+
         
 # cartesian mappings for polar calculation
 planeCoordDict = {  
