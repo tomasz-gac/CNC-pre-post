@@ -1,43 +1,60 @@
-import languages.heidenhain.commands as cmd
+from enum import Enum
 import math
 
-class Invariant:
-  def __init__( self, invariants, test = lambda x, y : True, kind = None ):
-    if kind is None:
-      kind = type(self)
-    self.kind = kind
-    self.invariants = invariants
-    self.test = test
-
-  def __call__( self, update, *args ):
+class Invariant(Enum):
+  '''def __init__( self, enum=None, transform = lambda tag, x, *args: x ): #, test = lambda x, y : True ):
+    self.enum       = enum
+    if self.enum is None:
+      self.structure  = {}
+      self.invariants = {}
+    else:
+      self.structure  = { kind.value.enum : kind for kind in self.enum if kind.value.enum is not None }
+      self.invariants = { kind : kind.value.transform for kind in self.enum }
+    self.transform  = transform
+    # self.test       = test'''
+    
+  def __new__(cls, transform):
+    value = len(cls.__members__) + 1
+    obj = object.__new__(cls)
+    obj._value_ = value
+    print(cls, transform)
+    return obj
+    
+  def __call__( self, tag, update, *args ):
     processed = {}
     queue  = dict(update)
+    
     while True:
       try:
         # Get source and value from queue
         source, value = queue.popitem()
       except KeyError:
         break # No more elements to process        
-      try:
+      if not callable(source):
+          # source encodes no transformation, ignore it
+        continue
+      '''try:
         # process the source : value using the invariants dict
         f = self.invariants[source]
       except KeyError:
         # No invariant associated with source, ignore it
-        continue
+        continue'''
+      # append for consistency checks in case source == target
+      processed[source] = value
       
-      results = f( value, *args )
+      results = source( value, *args )
       for target, result in results.items():
         # Check if result is contained in queue and processed and
         # see if the value is consistent using the test function
-        queueConsistent     = self.test( queue.get(target,result),     result )
-        processedConsistent = self.test( processed.get(target,result), result )
+        queueConsistent     = queue.get(target,result)     == result # self.test( queue.get(target,result),     result )
+        processedConsistent = processed.get(target,result) == result # self.test( processed.get(target,result), result )
         # Check if the target is new
         newTarget = target not in queue and target not in processed
         
         if not queueConsistent or not processedConsistent:
           # If the target is already present, raise an error if its value is inconsistent
           # It may have been added by transform function, this ensures that its inverse works properly
-          raise RuntimeError('Inconsistent value for '+str(source)+'->'+str(target)+': '+str(value))
+          raise RuntimeError('Inconsistent value for '+str(source)+':'+str(value)+'->'+str(target)+':'+str(result))
         if newTarget:
           # If target is new, add it to the queue for invariant processing
           queue[target] = result
@@ -45,30 +62,31 @@ class Invariant:
       # source has been processed consistently
       # it's okay to overwrite in case when source == target
       processed.update( results )
-      processed[source] = value
-    return { self.kind : processed }
-
     
+    return processed
     
-class Abs2Inc:
-  def __init__( self, source ):
-    if cmd.isIncremental(source):
-      raise RuntimeError('Expected absolute source, got '+str(source))
-    self.source = source
+  '''def gather( self, processed ):
+    collected = dict(processed)
+    for enum in self.structure:
+      collected.update( enum.gather(collected) )
     
-  def __call__( self, value, state ):
-    return { cmd.abs2inc(self.source) : value - state[self.source] }
-
-class Inc2Abs:
-  def __init__( self, source ):
-    if cmd.isAbsolute(source):
-      raise RuntimeError('Expected incremental source, got '+str(source))
-    self.source = source
-    
-  def __call__( self, value, state ):
-    return { cmd.inc2abs(self.source) : value + state[self.source] }
-
-class AbsIncInvariant(Invariant):
+    # gather processed elements according to self.structure
+    for key, value in processed.items():
+      # enum value -> enum class
+      if type(key) in self.structure:
+        tag = self.structure[type(key)]
+        try:
+          # append the element to the tag
+          collected[tag][key] = value
+        except KeyError:
+          collected[tag] = { key : value }
+    # Remove all incomplete gathered groups
+    for enum, tag in self.structure.items():
+      if tag in collected and len(enum) != len(collected[tag]):
+        collected.pop(tag)
+    return collected'''
+       
+'''class AbsIncInvariant(Invariant):
   def __init__( self, classes ):  
     invariants = {}
     for e in classes:
@@ -80,11 +98,35 @@ class AbsIncInvariant(Invariant):
         invariants.update( { key : Abs2Inc(key) for key in list(e.absolute) } )
       
     super().__init__( invariants, test=lambda x, y : abs( x - y ) < 0.0001 )
+    
+  def __call__( self, update, *args ):
+    result = super().__call__( update, *args )
+    return { AbsIncInvariant : result }
   
-
+def coordCollector( update, *args ):
+    collected = {}
+    for key, value in update.items():
+      enum = key.__objclass__
+      if enum in collected.keys():
+        collected[enum][key] = value
+      else:
+        collected[enum] = { key : value }
+    return { enum : values for enum,values in collected.items() if len(values) == len(enum) }
+    
+class RebuildState(Invariant):
+  def __init__(self):
+    invariants = { 
+      None            : AbsIncInvariant([cmd.Cartesian, cmd.Polar, cmd.Angular, cmd.Center]),
+      AbsIncInvariant : coordCollector
+    }
+    super().__init__( invariants )
+    
+  def __call__( self, update, *args ):
+    result = super().__call__( update, *args )
+    return { RebuildState : result }'''
         
 # cartesian mappings for polar calculation
-planeCoordDict = {  
+'''planeCoordDict = {  
     cmd.Plane.XY : (cmd.Cartesian.X,cmd.Cartesian.Y,cmd.Cartesian.Z),
     cmd.Plane.YZ : (cmd.Cartesian.Y,cmd.Cartesian.Z,cmd.Cartesian.X),
     cmd.Plane.ZX : (cmd.Cartesian.Z,cmd.Cartesian.X,cmd.Cartesian.Y)
@@ -133,7 +175,7 @@ def Polar2Cartesian( update, state ):
     
     incFromAbs( x1, update, state )
     incFromAbs( x2, update, state )
-    incFromAbs( x3, update, state )
+    incFromAbs( x3, update, state )'''
     
     
     

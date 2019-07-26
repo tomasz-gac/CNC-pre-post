@@ -1,4 +1,5 @@
 from enum import Enum, IntEnum, unique
+from languages.heidenhain.type import Morph
   
 @unique
 class Registers(IntEnum):
@@ -16,12 +17,6 @@ class Registers(IntEnum):
   COOLANT      = 11  # COOLANT TYPE
   WCS          = 12  # WORLD COORDINATE SYSTEM NUMBER
   POLARPLANE   = 13  # POLAR MOTION PLANE
-
-def makeIncremental( Coord ):
-  result = Enum( Coord.__name__+'Inc', [ key.name for key in list(Coord) ] )
-  Coord.incremental = result
-  result.absolute   = Coord
-  return result
   
 def isAbsolute( coord ):
   return hasattr( coord, 'incremental' )
@@ -30,39 +25,83 @@ def isIncremental( coord ):
   return hasattr( coord, 'absolute' )
   
 def abs2inc( value ):
-  return value.__objclass__.incremental[value.name]
+  return value.type.incremental[value.name]
   
 def inc2abs( value ):
-  return value.__objclass__.absolute[value.name]
+  return value.type.absolute[value.name]
   
-@unique
-class Cartesian(Enum):
-  X = 0
-  Y = 1
-  Z = 2
-  
-@unique
-class Polar(Enum):
-  ANG = 0
-  RAD = 1
-  LEN = 2
-  
-@unique
-class Angular(Enum):
-  A = 0
-  B = 1
-  C = 2
+def Abs2Inc( source, value, state ):
+    return { abs2inc(source) : value - state[source] }
 
-@unique
-class Center(Enum): # CIRCLE CENTER X Y Z
-  X = 0
-  Y = 1
-  Z = 2
+def Inc2Abs( source, value, state ):
+    return { inc2abs(source) : value + state[source] }
 
-CartesianInc = makeIncremental( Cartesian )  
-PolarInc     = makeIncremental( Polar )
-AngularInc   = makeIncremental( Angular )
-CenterInc    = makeIncremental( Center )
+'''class Abs2Inc(Morph):
+  def __call__( self, source, value, state ):
+    return { abs2inc(source) : value - state[source] }
+
+class Inc2Abs(Morph):
+  def __call__( self, source, value, state ):
+    return { inc2abs(source) : value + state[source] }'''
+    
+def makeIncremental( absolute, incremental ):
+  absolute.incremental = incremental
+  incremental.absolute = absolute
+  # return result
+
+    
+class Cartesian(Morph):
+  X = Abs2Inc
+  Y = Abs2Inc
+  Z = Abs2Inc
+    
+  
+class Polar(Morph):
+  ANG = Abs2Inc
+  RAD = Abs2Inc
+  LEN = Abs2Inc
+    
+class Angular(Morph):
+  A = Abs2Inc
+  B = Abs2Inc
+  C = Abs2Inc
+
+class Center(Morph): # CIRCLE CENTER X Y Z
+  X = Abs2Inc
+  Y = Abs2Inc
+  Z = Abs2Inc
+
+class CartesianInc(Morph):
+  X = Inc2Abs
+  Y = Inc2Abs
+  Z = Inc2Abs
+
+class PolarInc(Morph):
+  ANG = Inc2Abs
+  RAD = Inc2Abs
+  LEN = Inc2Abs
+
+class AngularInc(Morph):
+  A = Inc2Abs
+  B = Inc2Abs
+  C = Inc2Abs
+
+class CenterInc(Morph):
+  X = Inc2Abs
+  Y = Inc2Abs
+  Z = Inc2Abs
+
+makeIncremental( Cartesian, CartesianInc )  
+makeIncremental( Polar, PolarInc )
+makeIncremental( Angular, AngularInc )
+makeIncremental( Center, CenterInc )
+
+class Cart(Morph):
+  absolute    = Cartesian
+  incremental = CartesianInc
+
+
+
  
 @unique
 class Units(IntEnum):
