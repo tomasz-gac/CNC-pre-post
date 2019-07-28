@@ -79,20 +79,6 @@ class Morph(metaclass=MorphMeta):
     for member in list(type(self)):
       setattr( self, member.name, data[member] )
   
-  def decompose( self ):
-    result = {  member : getattr( value, member.name )
-                  for value in values.values() if isinstance( value, Morph )
-                    for member in list(type(value)) }
-    result.update( value.decompose() for value in result.values() if isinstance(value, Morph) )
-    return result
-    
-  def consistent( self, data ):
-    if all( data.get(member, self) == getattr(self, member.value) for member in type(self) ):
-      data = { key:value for key,value in data.items() if key not in type(self) }
-      return all( member.consistent( data ) for member in type(self) if isinstance( member.type, Morph ) )
-    else:
-      return False
-  
   ''' Builds cls instance from data dict using *args
       returns None in case of failure, uses morph and dismember to extend the amount of data
       mutates data by adding intermediate morphism results
@@ -172,7 +158,7 @@ def decompose( values, data = None ):
     consistence( values, data )    
     # perform recursion - pass the values for further dismemberment
     # update the newly created values and return them
-    values.update( decompose( data, values ) )
+    values.update( decompose( values, data ) )
     return values
         
 ''' Runs the morphisms of the data until no new results are available
@@ -181,11 +167,13 @@ def decompose( values, data = None ):
     Morphisms have to be deterministic, their arguments are f( assigned member, *args )
     Mutates data by adding new results obtained in the process
 '''
-def morph( values, *args ):
-  values.update( decompose( values ) )
-  all_items = dict(values)
-  new_items = {}
-  # process the values, morph the values contents
+def morph( values, *args, data = None ):
+  if data is None:
+    values.update( decompose( values ) )
+    data = dict(values)
+  else:
+    values.update( decompose( values, data ) )
+  # morph the values contents
   while len(values) > 0:
     # Get source and value from values
     source, value = values.popitem()
@@ -200,20 +188,17 @@ def morph( values, *args ):
     if callable( value ):
       # call the morphism
       results = value( source, *args )
-      # recursively decompose the results and check consistency with all_items
+      # recursively decompose the results and check consistency with data
       # throws RuntimeError on consistency failure
-      results.update( decompose( results, all_items ) )
+      results.update( decompose( results, data ) )
       # update the values with newly created items
-      new = { target : result for target,result in results.items() if target not in all_items }
-      new_items.update( new )
-      values.update( new )
-      # source has been processed consistently, update the all_items dict
-      all_items.update( results )
+      values.update( { target : result for target,result in results.items() if target not in data } )
+      # source has been processed consistently, update the data dict
+      data.update( results )
     else:
       continue # source does not encode transformation, so skip it
   # push the processed results back to values
-  values.update( all_items )
-  return new
+  values.update( data )
   
 def morphism( type, f ):
   class Morphing(type):
