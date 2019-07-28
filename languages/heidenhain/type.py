@@ -16,7 +16,7 @@ class Member:
     raise AttributeError('Cannot delete Member values')
     
   def __repr__( self ):
-    return '<Member %r.%s of type %r>' % (self.cls, self.name, self.type)
+    return '%s.%s:%s' % (self.cls.__name__, self.name, self.type.__name__)
 
 class MorphMeta(type):  
   def __prepare__(metacls, cls):
@@ -27,7 +27,7 @@ class MorphMeta(type):
     cls_instance._member_names_ = classdict._member_names
     cls_instance._member_map_  = {}
     try:
-      annotations = classdict['__annotations__']
+      annotations = classdict['__annotations__'] # TODO: implementacja custom morph przez annotations?
     except KeyError:
       annotations = {}
     for name,type_ in classdict.items():
@@ -74,120 +74,151 @@ class MorphMeta(type):
     super().__setattr__(name, value)
     
 
-class MorphInitFailedException(Exception):
-  pass
-    
 class Morph(metaclass=MorphMeta):
-  ''' Throws MorphInitFailedException on failure,
-      see construct for details
-  '''
   def __init__( self, data ):
-    instance = type(self).construct( data, self=self )
-    if instance is None:
-      raise MorphInitFailedException('Missing argument for %r __init__' % (type(self))) from None
+    for member in list(type(self)):
+      setattr( self, member.name, data[member] )
   
-  def morph( self, update, *args ):
-    result = {}
-    for member in type(self):
-      result.update( getattr( self, member.name ).morph( update, *args ) )
-    if callable(self):
-      result.update( self( update, *args ) )
+  def decompose( self ):
+    result = {  member : getattr( value, member.name )
+                  for value in values.values() if isinstance( value, Morph )
+                    for member in list(type(value)) }
+    result.update( value.decompose() for value in result.values() if isinstance(value, Morph) )
     return result
     
-  ''' Tries to initialize class instance using data dict
-      when no direct members are present, tries to construct them recursively
-      Does not call .morph, use .solve instead
-      returns the constructed instance, or None upon failure
+  def consistent( self, data ):
+    if all( data.get(member, self) == getattr(self, member.value) for member in type(self) ):
+      data = { key:value for key,value in data.items() if key not in type(self) }
+      return all( member.consistent( data ) for member in type(self) if isinstance( member.type, Morph ) )
+    else:
+      return False
+  
+  ''' Builds cls instance from data dict using *args
+      returns None in case of failure, uses morph and dismember to extend the amount of data
+      mutates data by adding intermediate morphism results
   '''
   @classmethod
-  def construct( cls, data, self=None ):
-    if self is None:
-      self = cls.__new__(cls)
-    # If any of the member values failed, we want to keep constructing
-    # so that data is updated accordingly
-    failed = False
-    # Try to find data for each declared member
-    for member in cls:
-      value  = None
-      update = None
-      try:
-        value = data[member]
-        # if type is inconsistent with declaration, try to convert it
-        if type(value) != member.type:
-          value = member.type(value)
-      except KeyError: 
-        # no member data, try to construct recursively
-        try:
-          value = member.type.construct(data) # returns None on failure
-        except AttributeError: # The class does not support Morph interface
-          pass
-        if value is None:
-          failed = True
-        else:
-          data[member] = value
-      # in case of failure, self is ignored so setting None is ok
-      setattr(self, member.name, value)
-    
-    return self if not failed else None
-    
-  @classmethod
   def solve( cls, data, *args ):
-    instance  = None
-    processed = {}
-    # assure type consistency so that .morph works
-    queue  = { source : (source.type(value) if type(value) != source.type else value)
-                          for source,value in data.items() }
-    # instance construction loop
+    instance = cls.__new__(cls)
+    members = list(cls)
+    skipped = []
     while True:
-      # save the processed key set for difference
-      processedKeys = set(processed.keys())
-      # all items in queue have been processed, try building the cls instance
-      instance = cls.construct( processed )
-      if instance is not None:
-        break # instance constructed
-      elif len(processed) != len(processedKeys):
-        # instance not constructed, but new items have been constructed
-        # run the morphing loop on them and try again
-        queue.update(( key,value for key,value in processed if key not in processedKeys ))
-      else:
-        # no instance created and no new items for morphing
-        break
-      
-      # morphing loop
-      while True:
+      # Try to find data for each declared member
+      for member in members:
+        value  = None
         try:
-          # Get source and value from queue
-          source, value = queue.popitem()
+          value = data[member]
         except KeyError:
-          break # No more elements to process
-        # append for consistency checks in case source == target
-        processed[source] = value
+          # no member data, try to construct recursively
+          try:
+            value = member.type.solve(data, *args) # returns None on failure
+          except AttributeError: # The class does not support Morph interface
+            pass
+          if value is None:
+            skipped.append(member)
+          else:
+            data[member] = value
+        # if there was no member in data and it was obtained by type.solve,
+        # but the solve failed - it is safe to assign the value
+        # because member was added to skipped and will either be re-iterated, or discarded
+        setattr(instance, member.name, value)
+      
+      if len(skipped) > 0:
+        # morph the data to see if anything new appears
+        dataCount = len(data)
+        morph( data, *args )
+        if dataCount < len(data):
+          members = skipped
+          skipped = []
+        else:
+          return None
+      else:
+        return instance
+    
+    
+def consistence( values, data ):
+  if any( data.get(key, value) != value for key,value in values.items() ):
+    inconsistent = { key : value for key,value in values.items() if data.get(key, value) != value }
+    error = ''
+    for key,value in inconsistent.items():
+      error = '(values[%s]=%s) != (data[%s]=%s)\n' % (key,value,key,data[key])
+    # if any key : value pair from values is inconsistent with key : value pair from data,
+    raise RuntimeError('Inconsistent input data during Morph decompose:\n'+error) # raise an error
+    
+''' Checks consistency of key:value pairs of values with data
+    if value is a Morph, recursively breaks it down to members and checks their consistency aswell
+    returns a dict of key:value pairs that were broken down
+    throws RuntimeError in case of inconsistency
+'''
+def decompose( values, data = None ):
+  if data is None:
+    data = dict(values)
+  else:
+    consistence( values, data )
+  
+  # for each item in values, see if it is derived from Morph
+  # drop the key of that value and break it down to its constituent members
+  # store the pair member : value.member in the values
+  values = {
+    member : getattr( value, member.name )
+      for value in values.values() if isinstance( value, Morph )
+        for member in list(type(value))
+    }
+  
+  # recursion termination
+  if len(values) == 0:
+    return {}
+  else:
+    consistence( values, data )    
+    # perform recursion - pass the values for further dismemberment
+    # update the newly created values and return them
+    values.update( decompose( data, values ) )
+    return values
         
-        try:
-        # call the morphism
-        results = value.morph( value, *args )
-        except AttributeError:
-          continue # does not support the Morph interface, skip it
-          
-        for target, result in results.items():
-          # Check if result is contained in queue and processed,
-          # see if the value is consistent using the == operator
-          queueConsistent     = queue.get(target,result)     == result
-          processedConsistent = processed.get(target,result) == result
-          # Check if the target is new
-          newTarget = target not in queue and target not in processed
-          
-          if not queueConsistent or not processedConsistent:
-            # If the target is already present, raise an error if its value is inconsistent
-            # It may have been added by transform function, this ensures that its inverse works properly
-            raise RuntimeError('Inconsistent value for '+str(source)+':'+str(value)+'->'+str(target)+':'+str(result))
-          if newTarget:
-            # If target is new, add it to the queue for invariant processing
-            queue[target] = result
-          
-        # source has been processed consistently
-        # it's okay to overwrite in case when source == target
-        processed.update( results )
+''' Runs the morphisms of the data until no new results are available
+    Recursively breaks each result to its constituent members and morphs them as well
+    Checks inner consistency of results with data, throws RuntimeError in case of inconsistent results
+    Morphisms have to be deterministic, their arguments are f( assigned member, *args )
+    Mutates data by adding new results obtained in the process
+'''
+def morph( values, *args ):
+  values.update( decompose( values ) )
+  all_items = dict(values)
+  new_items = {}
+  # process the values, morph the values contents
+  while len(values) > 0:
+    # Get source and value from values
+    source, value = values.popitem()
+    try:
+      # if type is inconsistent with declaration, try to convert it
+      if type(value) != source.type:
+        values[source] = value = source.type(value)
+    except AttributeError:
+      # source does not support Morph interface
+      pass
     
-    return instance
-    
+    if callable( value ):
+      # call the morphism
+      results = value( source, *args )
+      # recursively decompose the results and check consistency with all_items
+      # throws RuntimeError on consistency failure
+      results.update( decompose( results, all_items ) )
+      # update the values with newly created items
+      new = { target : result for target,result in results.items() if target not in all_items }
+      new_items.update( new )
+      values.update( new )
+      # source has been processed consistently, update the all_items dict
+      all_items.update( results )
+    else:
+      continue # source does not encode transformation, so skip it
+  # push the processed results back to values
+  values.update( all_items )
+  return new
+  
+def morphism( type, f ):
+  class Morphing(type):
+    def __call__( self, *args, **kwargs ):
+      return f(self, *args, **kwargs)
+    def __repr__( self ):
+      return '<Morphing(%s) : %s>' % (type,f)
+  return Morphing

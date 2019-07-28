@@ -1,5 +1,6 @@
 from enum import Enum, IntEnum, unique
-from languages.heidenhain.type import Morph
+from languages.heidenhain.type import Morph, MorphMeta, morphism
+import math
   
 @unique
 class Registers(IntEnum):
@@ -25,71 +26,69 @@ def isIncremental( coord ):
   return hasattr( coord, 'absolute' )
   
 def abs2inc( value ):
-  return value.type.incremental[value.name]
+  return value.cls.incremental[value.name]
   
 def inc2abs( value ):
-  return value.type.absolute[value.name]
+  return value.cls.absolute[value.name]
   
-def Abs2Inc( source, value, state ):
+def Abs2Inc( value, source, state ):
     return { abs2inc(source) : value - state[source] }
 
-def Inc2Abs( source, value, state ):
+def Inc2Abs( value, source, state ):
     return { inc2abs(source) : value + state[source] }
-
-'''class Abs2Inc(Morph):
-  def __call__( self, source, value, state ):
-    return { abs2inc(source) : value - state[source] }
-
-class Inc2Abs(Morph):
-  def __call__( self, source, value, state ):
-    return { inc2abs(source) : value + state[source] }'''
     
 def makeIncremental( absolute, incremental ):
   absolute.incremental = incremental
   incremental.absolute = absolute
-  # return result
 
-    
+def angNorm( a ):
+  return (a+2*math.pi) % (2 * math.pi)
+      
 class Cartesian(Morph):
-  X = Abs2Inc
-  Y = Abs2Inc
-  Z = Abs2Inc
-    
+  X = morphism( float, Abs2Inc )
+  Y = morphism( float, Abs2Inc )
+  Z = morphism( float, Abs2Inc )
+  
+  def __call__( self, member, state ):
+    return cartesian2polar( self, member, state )
   
 class Polar(Morph):
-  ANG = Abs2Inc
-  RAD = Abs2Inc
-  LEN = Abs2Inc
+  ANG = morphism( float, Abs2Inc )
+  RAD = morphism( float, Abs2Inc )
+  LEN = morphism( float, Abs2Inc )
+  
+  def __call__( self, member, state ):
+    return cartesian2polar( self, member, state )
     
 class Angular(Morph):
-  A = Abs2Inc
-  B = Abs2Inc
-  C = Abs2Inc
+  A = morphism( float, Abs2Inc )
+  B = morphism( float, Abs2Inc )
+  C = morphism( float, Abs2Inc )
 
 class Center(Morph): # CIRCLE CENTER X Y Z
-  X = Abs2Inc
-  Y = Abs2Inc
-  Z = Abs2Inc
+  X = morphism( float, Abs2Inc )
+  Y = morphism( float, Abs2Inc )
+  Z = morphism( float, Abs2Inc )
 
 class CartesianInc(Morph):
-  X = Inc2Abs
-  Y = Inc2Abs
-  Z = Inc2Abs
+  X = morphism( float, Inc2Abs )
+  Y = morphism( float, Inc2Abs )
+  Z = morphism( float, Inc2Abs )
 
 class PolarInc(Morph):
-  ANG = Inc2Abs
-  RAD = Inc2Abs
-  LEN = Inc2Abs
+  ANG = morphism( float, Inc2Abs )
+  RAD = morphism( float, Inc2Abs )
+  LEN = morphism( float, Inc2Abs )
 
 class AngularInc(Morph):
-  A = Inc2Abs
-  B = Inc2Abs
-  C = Inc2Abs
+  A = morphism( float, Inc2Abs )
+  B = morphism( float, Inc2Abs )
+  C = morphism( float, Inc2Abs )
 
 class CenterInc(Morph):
-  X = Inc2Abs
-  Y = Inc2Abs
-  Z = Inc2Abs
+  X = morphism( float, Inc2Abs )
+  Y = morphism( float, Inc2Abs )
+  Z = morphism( float, Inc2Abs )
 
 makeIncremental( Cartesian, CartesianInc )  
 makeIncremental( Polar, PolarInc )
@@ -99,10 +98,25 @@ makeIncremental( Center, CenterInc )
 class Cart(Morph):
   absolute    = Cartesian
   incremental = CartesianInc
+  
+class Pol( Morph ):
+  absolute    = Polar
+  incremental = PolarInc
 
+class Ang( Morph ):
+  absolute    = Angular
+  incremental = AngularInc
 
-
- 
+class Cent( Morph ):
+  absolute    = Center
+  incremental = CenterInc
+  
+class Position( Morph ):
+  cartesian = Cart
+  polar     = Pol
+  angular   = Ang
+  center    = Cent
+   
 @unique
 class Units(IntEnum):
   MM    = 0
@@ -166,7 +180,7 @@ class MachineState:
   __slots__ = 'registers', 'cartesian', 'polar', 'angular', 'center'
   def __init__( self, state=None ):
     if state is None:
-      state = cmd.StateDict()
+      state = StateDict()
     
     self.registers = {}
     self.cartesian = {}
@@ -250,3 +264,41 @@ class SetGOTODefaults:
       # update constants with symtable to override conflicts
     constants.update( state.symtable )
     state.symtable = constants
+    
+planeCoordDict = {  
+    Plane.XY : (Cartesian.X,Cartesian.Y,Cartesian.Z),
+    Plane.YZ : (Cartesian.Y,Cartesian.Z,Cartesian.X),
+    Plane.ZX : (Cartesian.Z,Cartesian.X,Cartesian.Y)
+  }
+# circle center mappings for polar calculation
+planeCenterDict = {  
+    Plane.XY : (Center.X,Center.Y),
+    Plane.YZ : (Center.Y,Center.Z),
+    Plane.ZX : (Center.Z,Center.X)
+  }
+  
+def cartesian2polar( self, member, state ):  
+  plane = state[Registers.POLARPLANE]
+  x1, x2, x3 = planeCoordDict[plane] # get cartesian coordinates for substitution
+  cx1, cx2 = planeCenterDict[plane]  # get circle center coordinates
+  
+  r1, r2 = (getattr( self, x1.name)-state[cx1]), (getattr( self, x2.name)-state[cx2])
+  
+  result = {}
+  result[ Polar.RAD ] = math.sqrt(r1**2 + r2**2)
+  result[ Polar.ANG ] = angNorm(math.atan2(r2, r1)) * float(180)/math.pi
+  result[ Polar.LEN ] = getattr(self, x3.name )
+  return result
+  
+def polar2cartesian( self, member, state ):
+    plane = state[Registers.POLARPLANE]
+    x1, x2   = planeCoordDict[plane]   # get cartesian coordinates for substitution
+    x3       = planeNormDict[plane]    # get cartesian LEN offset coordinate
+    cx1, cx2 = planeCenterDict[plane]  # get circle center coordinates
+    
+    result = {}
+    result[ x1 ] = state[ cx1 ] + self.RAD*math.cos(self.ANG*math.pi/180)
+    result[ x2 ] = state[ cx2 ] + self.RAD*math.sin(self.ANG*math.pi/180)
+    result[ x3 ] = self.LEN
+    
+    return result
