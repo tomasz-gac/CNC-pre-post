@@ -16,7 +16,7 @@ class Member:
     raise AttributeError('Cannot delete Member values')
     
   def __repr__( self ):
-    return '%s.%s:%s' % (self.cls.__name__, self.name, self.type.__name__)
+    return '<%s.%s:%s>' % (self.cls.__name__, self.name, self.type.__name__)
 
 class MorphMeta(type):  
   def __prepare__(metacls, cls):
@@ -79,6 +79,15 @@ class Morph(metaclass=MorphMeta):
     for member in list(type(self)):
       setattr( self, member.name, data[member] )
   
+  ''' Decomposes the self down to its constituent members
+      calls itself recursively if a member is of type Morph
+  '''
+  def decompose( self ):
+    members = { member : getattr( self, member.name ) for member in type(self) }
+    recursiveIter = ( value.decompose() for value in members.values() if isinstance( value, Morph ) )
+    members.update(pair for update in recursiveIter for pair in update.items())
+    return members
+  
   ''' Builds cls instance from data dict using *args
       returns None in case of failure, uses morph and dismember to extend the amount of data
       mutates data by adding intermediate morphism results
@@ -121,7 +130,10 @@ class Morph(metaclass=MorphMeta):
       else:
         return instance
     
-    
+def inconsistent( values, data ):
+  return ( key for key,value in values.items() if data.get( key, value ) != value )
+
+
 def consistence( values, data ):
   if any( data.get(key, value) != value for key,value in values.items() ):
     inconsistent = { key : value for key,value in values.items() if data.get(key, value) != value }
