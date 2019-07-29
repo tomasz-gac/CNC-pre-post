@@ -84,8 +84,8 @@ class Morph(metaclass=MorphMeta):
   '''
   def decompose( self ):
     members = { member : getattr( self, member.name ) for member in type(self) }
-    recursiveIter = ( value.decompose() for value in members.values() if isinstance( value, Morph ) )
-    members.update(pair for update in recursiveIter for pair in update.items())
+    recursive = ( value.decompose() for value in members.values() if isinstance( value, Morph ) )
+    members.update( pair for update in recursive for pair in update.items() )
     return members
   
   ''' Builds cls instance from data dict using *args
@@ -200,11 +200,18 @@ def morph( values, *args, data = None ):
     if callable( value ):
       # call the morphism
       results = value( source, *args )
-      # recursively decompose the results and check consistency with data
-      # throws RuntimeError on consistency failure
-      results.update( decompose( results, data ) )
+      # decompose the results that are of type Morph
+      decomposed = ( item for result in results 
+                            for item in result.decompose().items()
+                              if isinstance(result,Morph) )
+      # partition the results into two lists based using consistency with data
+      consistent, inconsistent = [], []
+      for key, value in decomposed:
+        (consistent if data.get(key,value) == value else inconsistent).append((key,value))
+      
+      results.update( consistent )
       # update the values with newly created items
-      values.update( { target : result for target,result in results.items() if target not in data } )
+      values.update( results )
       # source has been processed consistently, update the data dict
       data.update( results )
     else:
