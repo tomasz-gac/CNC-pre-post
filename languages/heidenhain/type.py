@@ -106,76 +106,34 @@ class Morph(metaclass=MorphMeta):
       returns None in case of failure, uses morph and dismember to extend the amount of data
       mutates data by adding intermediate morphism results
   '''  
-  class SolveSentinel:
-    pass
   @classmethod
   def solve( cls, data, *args ):
-    stack = [ (SolveSentinel,cls.__new__( cls )) ]
-    while len(stack) > 0:
-      target, instance = stack.pop(-1)
-      skipped = []
-      for member in type(instance):
-        try:
-          value = data[member]        
-        except KeyError:
-          skipped.append((member, member.type.__new__( member.type ))
-          continue
-        setattr( instance, member.name, value )
-      
-      if len(skipped) > 0:
-        stack.append((target,instance))
-        stack.extend(skipped)
-      else:
-        data[target] = instance
-        dataLen = len(data)
-        inconsistent = morph( data, *args )
-        if len(inconsistent) > 0:
-          err = ('Inconsistence during %s.solve:\n' % cls) + '\n'.join('%s=%s' % (key,value) for key,value in inconsistent)
-          raise RuntimeError(err) from None
-        if dataLen == len(data):
-          return None
+    class Sentinel(Morph):
+      value = cls
     
-    target, result = data.pop(SolveSentinel)
-    return result
-      
-  
-  @classmethod
-  def solve( cls, data, *args ):
-    instance = cls.__new__(cls)
-    members = list(cls)
-    skipped = []
-    while True:
-      # Try to find data for each declared member
-      for member in members:
-        try:
-          value = data[member]
-        except KeyError:
-          # no member data, try to construct recursively
-          try:
-            value = member.type.solve(data, *args) # returns None on failure
-          except AttributeError: # The class does not support Morph interface
-            value = None
-          if value is None:
-            skipped.append(member)
-          else:
-            data[member] = value
-        # It is safe to assign None because member was added to skipped
-        # and will either be re-iterated, or discarded
-        setattr(instance, member.name, value)
-      
-      if len(skipped) > 0:
-        # morph the data to see if anything new appears
-        dataLen = len(data)
-        inconsistent = morph( data, *args )
-        if len(inconsistent) > 0:
-          err = ('Inconsistence during %s.solve:\n' % cls) + '\n'.join('%s=%s' % (key,value) for key,value in inconsistent)
-          raise RuntimeError(err) from None
-        if dataLen < len(data):
-          members, skipped = skipped, []
-        else:
-          return None
-      else:
-        return instance
+    created = []
+    items_created = True
+    while items_created:
+      # morph the data contents to look for new items
+      inconsistent = morph( data, *args )
+      if len(inconsistent) > 0:
+        print( ('Inconsistence during %s.solve:\n' % cls) + '\n'.join('%s=%s' % (key,value) for key,value in inconsistent) )
+      created = []
+      stack   = [ Sentinel.value ]
+      # traverse the cls hierarchy and try to build members
+      while len(stack) > 0:
+        target = stack.pop(-1)
+          # only try building members of type Morph
+        if issubclass( target.type, Morph ):
+          missing = [ member for member in target.type if member not in data ]
+          if len(missing) > 0:
+            stack.extend( missing )
+          else:# if target not in data:
+            created.append( (target,target.type( data )) )
+      data.update( created )
+      items_created = len(created) > 0 and created[-1][0] != Sentinel.value
+            
+    return data.pop( Sentinel.value, None )
         
 ''' Runs the morphisms of the data until no new results are available
     Recursively breaks each result to its constituent members and morphs them as well

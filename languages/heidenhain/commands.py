@@ -58,7 +58,7 @@ class Polar(Morph):
   LEN = morphism( float, Abs2Inc )
   
   def __call__( self, member, state ):
-    return cartesian2polar( self, member, state )
+    return polar2cartesian( self, member, state )
     
 class Angular(Morph):
   A = morphism( float, Abs2Inc )
@@ -291,14 +291,13 @@ def cartesian2polar( self, member, state ):
   return result
   
 def polar2cartesian( self, member, state ):
-    plane = state[Registers.POLARPLANE]
-    x1, x2   = planeCoordDict[plane]   # get cartesian coordinates for substitution
-    x3       = planeNormDict[plane]    # get cartesian LEN offset coordinate
-    cx1, cx2 = planeCenterDict[plane]  # get circle center coordinates
-    
-    result = {}
-    result[ x1 ] = state[ cx1 ] + self.RAD*math.cos(self.ANG*math.pi/180)
-    result[ x2 ] = state[ cx2 ] + self.RAD*math.sin(self.ANG*math.pi/180)
-    result[ x3 ] = self.LEN
-    
-    return result
+  plane = state[Registers.POLARPLANE]
+  x1, x2, x3  = planeCoordDict[plane]   # get cartesian coordinates for substitution
+  cx1, cx2    = planeCenterDict[plane]  # get circle center coordinates
+  
+  result = {}
+  result[ x1 ] = state[ cx1 ] + self.RAD*math.cos(self.ANG*math.pi/180)
+  result[ x2 ] = state[ cx2 ] + self.RAD*math.sin(self.ANG*math.pi/180)
+  result[ x3 ] = self.LEN
+  
+  return result
