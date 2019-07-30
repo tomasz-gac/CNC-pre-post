@@ -1,4 +1,5 @@
 import enum
+from types import MappingProxyType
 
 class Member:
   __slots__ = 'cls', 'name', 'type'
@@ -16,7 +17,7 @@ class Member:
     raise AttributeError('Cannot delete Member values')
     
   def __repr__( self ):
-    return '<%s.%s:%s>' % (self.cls.__name__, self.name, self.type.__name__)
+    return '%s.%s:%s' % (self.cls.__name__, self.name, self.type.__name__)
 
 class MorphMeta(type):  
   def __prepare__(metacls, cls):
@@ -78,20 +79,66 @@ class Morph(metaclass=MorphMeta):
   def __init__( self, data ):
     for member in list(type(self)):
       setattr( self, member.name, data[member] )
+
+  def __iter__(self):
+    return (getattr(self, name) for name in self._member_names_)
+
+  def __len__(self):
+    return len(self._member_names_)
+
+  def __reversed__(self):
+    return (getattr(self, name) for name in reversed(self._member_names_))
   
   ''' Decomposes the self down to its constituent members
-      calls itself recursively if a member is of type Morph
+      until non-decomposible element is encountered
   '''
   def decompose( self ):
-    members = { member : getattr( self, member.name ) for member in type(self) }
-    recursive = ( value.decompose() for value in members.values() if isinstance( value, Morph ) )
-    members.update( pair for update in recursive for pair in update.items() )
-    return members
+    decomposition = []
+    stack = [self]
+    while len(stack) > 0:
+      current = stack.pop(-1)
+      index = len(decomposition)
+      decomposition.extend( (member,getattr( current, member.name )) for member in type(current) )
+      stack.extend( value for key,value in decomposition[index:] if isinstance( value, Morph ) )
+    return decomposition
   
   ''' Builds cls instance from data dict using *args
       returns None in case of failure, uses morph and dismember to extend the amount of data
       mutates data by adding intermediate morphism results
-  '''
+  '''  
+  class SolveSentinel:
+    pass
+  @classmethod
+  def solve( cls, data, *args ):
+    stack = [ (SolveSentinel,cls.__new__( cls )) ]
+    while len(stack) > 0:
+      target, instance = stack.pop(-1)
+      skipped = []
+      for member in type(instance):
+        try:
+          value = data[member]        
+        except KeyError:
+          skipped.append((member, member.type.__new__( member.type ))
+          continue
+        setattr( instance, member.name, value )
+      
+      if len(skipped) > 0:
+        stack.append((target,instance))
+        stack.extend(skipped)
+      else:
+        data[target] = instance
+        dataLen = len(data)
+        inconsistent = morph( data, *args )
+        if len(inconsistent) > 0:
+          err = ('Inconsistence during %s.solve:\n' % cls) + '\n'.join('%s=%s' % (key,value) for key,value in inconsistent)
+          raise RuntimeError(err) from None
+        if dataLen == len(data):
+          return None
+    
+    target, result = data.pop(SolveSentinel)
+    return result
+      
+  
   @classmethod
   def solve( cls, data, *args ):
     instance = cls.__new__(cls)
@@ -100,7 +147,6 @@ class Morph(metaclass=MorphMeta):
     while True:
       # Try to find data for each declared member
       for member in members:
-        value  = None
         try:
           value = data[member]
         except KeyError:
@@ -108,70 +154,28 @@ class Morph(metaclass=MorphMeta):
           try:
             value = member.type.solve(data, *args) # returns None on failure
           except AttributeError: # The class does not support Morph interface
-            pass
+            value = None
           if value is None:
             skipped.append(member)
           else:
             data[member] = value
-        # if there was no member in data and it was obtained by type.solve,
-        # but the solve failed - it is safe to assign the value
-        # because member was added to skipped and will either be re-iterated, or discarded
+        # It is safe to assign None because member was added to skipped
+        # and will either be re-iterated, or discarded
         setattr(instance, member.name, value)
       
       if len(skipped) > 0:
         # morph the data to see if anything new appears
-        dataCount = len(data)
-        morph( data, *args )
-        if dataCount < len(data):
-          members = skipped
-          skipped = []
+        dataLen = len(data)
+        inconsistent = morph( data, *args )
+        if len(inconsistent) > 0:
+          err = ('Inconsistence during %s.solve:\n' % cls) + '\n'.join('%s=%s' % (key,value) for key,value in inconsistent)
+          raise RuntimeError(err) from None
+        if dataLen < len(data):
+          members, skipped = skipped, []
         else:
           return None
       else:
         return instance
-    
-def inconsistent( values, data ):
-  return ( key for key,value in values.items() if data.get( key, value ) != value )
-
-
-def consistence( values, data ):
-  if any( data.get(key, value) != value for key,value in values.items() ):
-    inconsistent = { key : value for key,value in values.items() if data.get(key, value) != value }
-    error = ''
-    for key,value in inconsistent.items():
-      error = '(values[%s]=%s) != (data[%s]=%s)\n' % (key,value,key,data[key])
-    # if any key : value pair from values is inconsistent with key : value pair from data,
-    raise RuntimeError('Inconsistent input data during Morph decompose:\n'+error) # raise an error
-    
-''' Checks consistency of key:value pairs of values with data
-    if value is a Morph, recursively breaks it down to members and checks their consistency aswell
-    returns a dict of key:value pairs that were broken down
-    throws RuntimeError in case of inconsistency
-'''
-def decompose( values, data = None ):
-  if data is None:
-    data = dict(values)
-  else:
-    consistence( values, data )
-  
-  # for each item in values, see if it is derived from Morph
-  # drop the key of that value and break it down to its constituent members
-  # store the pair member : value.member in the values
-  values = {
-    member : getattr( value, member.name )
-      for value in values.values() if isinstance( value, Morph )
-        for member in list(type(value))
-    }
-  
-  # recursion termination
-  if len(values) == 0:
-    return {}
-  else:
-    consistence( values, data )    
-    # perform recursion - pass the values for further dismemberment
-    # update the newly created values and return them
-    values.update( decompose( values, data ) )
-    return values
         
 ''' Runs the morphisms of the data until no new results are available
     Recursively breaks each result to its constituent members and morphs them as well
@@ -179,12 +183,15 @@ def decompose( values, data = None ):
     Morphisms have to be deterministic, their arguments are f( assigned member, *args )
     Mutates data by adding new results obtained in the process
 '''
-def morph( values, *args, data = None ):
-  if data is None:
-    values.update( decompose( values ) )
-    data = dict(values)
-  else:
-    values.update( decompose( values, data ) )
+def morph( values, *args ):
+  data = dict(values)
+  # decompose the values that are of type Morph
+  decomposed = [ item for key,value in values.items() if isinstance(value,Morph)
+                        for item in value.decompose() ]
+  # get the items from data that are not consistent with values decomposition
+  inconsistent = [ (key,data[key]) for key,value in decomposed if data.get(key,value) != value ]
+  values.update( decomposed )
+  
   # morph the values contents
   while len(values) > 0:
     # Get source and value from values
@@ -201,23 +208,19 @@ def morph( values, *args, data = None ):
       # call the morphism
       results = value( source, *args )
       # decompose the results that are of type Morph
-      decomposed = ( item for result in results 
-                            for item in result.decompose().items()
-                              if isinstance(result,Morph) )
-      # partition the results into two lists based using consistency with data
-      consistent, inconsistent = [], []
-      for key, value in decomposed:
-        (consistent if data.get(key,value) == value else inconsistent).append((key,value))
-      
-      results.update( consistent )
+      results.update( item for key,value in results.items() if isinstance(value,Morph)
+                            for item in value.decompose() )
+      # get the items from data that are not consistent with results
+      inconsistent.extend( (key,data[key]) for key,value in results.items() if data.get(key,value) != value )
       # update the values with newly created items
-      values.update( results )
+      values.update( (key,value) for key,value in results.items() if key not in data )
       # source has been processed consistently, update the data dict
       data.update( results )
     else:
       continue # source does not encode transformation, so skip it
   # push the processed results back to values
   values.update( data )
+  return inconsistent
   
 def morphism( type, f ):
   class Morphing(type):
