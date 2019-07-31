@@ -107,8 +107,8 @@ class Morph(metaclass=MorphMeta):
   '''  
   @classmethod
   def solve( cls, data, *args ):
-    class Sentinel(Morph):
-      value = cls
+    class Sentinel:
+      type = cls
     
     created = list(data.items())
     while len(created) > 0:
@@ -117,10 +117,10 @@ class Morph(metaclass=MorphMeta):
       if len(inconsistent) > 0:
         print( ('Inconsistence during %s.solve:\n' % cls) + 
                   '\n'.join('data[%s]=%s, %s->%s' % (key,data[key],old,new) for key,old,new in inconsistent) )
-      if Sentinel.value in data:
-        return data.pop(Sentinel.value)
+      if Sentinel in data:
+        return data.pop(Sentinel)
       
-      stack = [ Sentinel.value ]
+      stack = [ Sentinel ]
       # traverse the cls hierarchy and try to build members
       while len(stack) > 0:
         target = stack.pop(-1)
@@ -129,7 +129,7 @@ class Morph(metaclass=MorphMeta):
           if len(missing) > 0:
             stack.extend( missing )
           else:
-            created.append( target,target.type( data )))
+            created.append( (target,target.type( data )))
             
     return None
         
