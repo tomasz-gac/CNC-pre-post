@@ -102,7 +102,7 @@ class Morph(metaclass=MorphMeta):
     return decomposition
   
   ''' Builds cls instance from data dict using *args
-      returns None in case of failure, uses morph and dismember to extend the amount of data
+      returns None in case of failure, uses morph to extend the amount of data
       mutates data by adding intermediate morphism results
   '''  
   @classmethod
@@ -112,24 +112,29 @@ class Morph(metaclass=MorphMeta):
     
     created = list(data.items())
     while len(created) > 0:
-      # morph the newly created data
+      # morph the newly created data, pushes created to data
       inconsistent = morph( data, *args, stack=created )
       if len(inconsistent) > 0:
         print( ('Inconsistence during %s.solve:\n' % cls) + 
-                  '\n'.join('data[%s]=%s, %s->%s' % (key,data[key],old,new) for key,old,new in inconsistent) )
+                  '\n'.join('%s: %s->%s' % (key,old,new) for key,old,new in inconsistent) )
       if Sentinel in data:
         return data.pop(Sentinel)
       
-      stack = [ Sentinel ]
+      stack = [ (Sentinel,False) ]
       # traverse the cls hierarchy and try to build members
       while len(stack) > 0:
-        target = stack.pop(-1)
+        target, visited = stack.pop(-1)
         if issubclass( target.type, Morph ):
-          missing = [ member for member in target.type if member not in data ]
+          missing = [ (member,False) for member in target.type if member not in data ]
+          # print(target, len(missing), visited)
           if len(missing) > 0:
-            stack.extend( missing )
+            if not visited:
+              stack.append( (target, True) )
+              stack.extend( missing )
           else:
+            # print('creating')
             created.append( (target,target.type( data )))
+      # print('loop')
             
     return None
         
@@ -143,8 +148,9 @@ def morph( data, *args, stack=None ):
   if stack is None:
     stack = list(data.items())
   # decompose the values that are of type Morph
-  decomposed = [ item for key,value in stack if isinstance(value,Morph)
-                        for item in value.decompose() ]
+  decomposed = [ (key, key.type(value) if type(value) != key.type else value )
+                    for key,value in stack if isinstance(value,Morph)
+                      for item in value.decompose() ]
   # get the items from data that are not consistent with values decomposition
   inconsistent = [ (key,data[key],value) for key,value in decomposed if data.get(key,value) != value ]
   stack.extend( decomposed )
