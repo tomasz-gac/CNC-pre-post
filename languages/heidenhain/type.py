@@ -1,5 +1,5 @@
 import enum
-from types import MappingProxyType
+from math import isclose
 
 class Member:
   __slots__ = 'cls', 'name', 'type'
@@ -74,7 +74,6 @@ class MorphMeta(type):
       raise AttributeError('Cannot reassign Morph members.')
     super().__setattr__(name, value)
     
-
 class Morph(metaclass=MorphMeta):
   def __init__( self, data ):
     for member in list(type(self)):
@@ -111,29 +110,28 @@ class Morph(metaclass=MorphMeta):
     class Sentinel(Morph):
       value = cls
     
-    created = []
-    items_created = True
-    while items_created:
-      # morph the data contents to look for new items
-      inconsistent = morph( data, *args )
+    created = list(data.items())
+    while len(created) > 0:
+      # morph the newly created data
+      inconsistent = morph( data, *args, stack=created )
       if len(inconsistent) > 0:
-        print( ('Inconsistence during %s.solve:\n' % cls) + '\n'.join('%s=%s' % (key,value) for key,value in inconsistent) )
-      created = []
-      stack   = [ Sentinel.value ]
+        print( ('Inconsistence during %s.solve:\n' % cls) + 
+                  '\n'.join('data[%s]=%s, %s->%s' % (key,data[key],old,new) for key,old,new in inconsistent) )
+      if Sentinel.value in data:
+        return data.pop(Sentinel.value)
+      
+      stack = [ Sentinel.value ]
       # traverse the cls hierarchy and try to build members
       while len(stack) > 0:
         target = stack.pop(-1)
-          # only try building members of type Morph
         if issubclass( target.type, Morph ):
           missing = [ member for member in target.type if member not in data ]
           if len(missing) > 0:
             stack.extend( missing )
-          else:# if target not in data:
-            created.append( (target,target.type( data )) )
-      data.update( created )
-      items_created = len(created) > 0 and created[-1][0] != Sentinel.value
+          else:
+            created.append( target,target.type( data )))
             
-    return data.pop( Sentinel.value, None )
+    return None
         
 ''' Runs the morphisms of the data until no new results are available
     Recursively breaks each result to its constituent members and morphs them as well
@@ -141,23 +139,24 @@ class Morph(metaclass=MorphMeta):
     Morphisms have to be deterministic, their arguments are f( assigned member, *args )
     Mutates data by adding new results obtained in the process
 '''
-def morph( values, *args ):
-  data = dict(values)
+def morph( data, *args, stack=None ):
+  if stack is None:
+    stack = list(data.items())
   # decompose the values that are of type Morph
-  decomposed = [ item for key,value in values.items() if isinstance(value,Morph)
+  decomposed = [ item for key,value in stack if isinstance(value,Morph)
                         for item in value.decompose() ]
   # get the items from data that are not consistent with values decomposition
-  inconsistent = [ (key,data[key]) for key,value in decomposed if data.get(key,value) != value ]
-  values.update( decomposed )
+  inconsistent = [ (key,data[key],value) for key,value in decomposed if data.get(key,value) != value ]
+  stack.extend( decomposed )
   
   # morph the values contents
-  while len(values) > 0:
+  while len(stack) > 0:
     # Get source and value from values
-    source, value = values.popitem()
+    source, value = stack.pop(-1)
     try:
       # if type is inconsistent with declaration, try to convert it
       if type(value) != source.type:
-        values[source] = value = source.type(value)
+        value = source.type(value)
     except AttributeError:
       # source does not support Morph interface
       pass
@@ -168,22 +167,27 @@ def morph( values, *args ):
       # decompose the results that are of type Morph
       results.update( item for key,value in results.items() if isinstance(value,Morph)
                             for item in value.decompose() )
+      results = { key : key.type(value) if type(value) != key.type else value for key,value in results.items() }
       # get the items from data that are not consistent with results
-      inconsistent.extend( (key,data[key]) for key,value in results.items() if data.get(key,value) != value )
-      # update the values with newly created items
-      values.update( (key,value) for key,value in results.items() if key not in data )
+      inconsistent.extend( (key,data[key],value) for key,value in results.items() if data.get(key,value) != value )
+      # update the stack with newly created items
+      stack.extend( (key,value) for key,value in results.items() if key not in data )
       # source has been processed consistently, update the data dict
       data.update( results )
     else:
-      continue # source does not encode transformation, so skip it
-  # push the processed results back to values
-  values.update( data )
+      pass # source does not encode transformation, so skip it
+    data[source] = value
   return inconsistent
   
-def morphism( type, f ):
-  class Morphing(type):
+def morphism( type_, f ):
+  class Morphing(type_):
     def __call__( self, *args, **kwargs ):
       return f(self, *args, **kwargs)
     def __repr__( self ):
-      return '<Morphing(%s) : %s>' % (type,f)
+      return super().__repr__() + 'M'
+      
+    def __eq__( self, other ):
+      return isclose(self,other, abs_tol=0.0001)
+    def __ne__(self,other):
+      return not isclose(self,other, abs_tol=0.0001)
   return Morphing
