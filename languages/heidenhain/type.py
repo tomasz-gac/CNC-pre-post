@@ -88,15 +88,17 @@ class Morph(metaclass=MorphMeta):
   def __reversed__(self):
     return (getattr(self, name) for name in reversed(self._member_names_))
     
-  def traverse( self ):
-    stack = [(None, self)]
+  def post_order(self):
+    stack = [ (member, getattr(value,member.name),False) for member in reversed(type(self)) ]
     while len(stack) > 0:
-      member, current = stack.pop(-1)
-      index = len(stack)
-      if isinstance( current, Morph ):
-        stack.extend( (member,getattr( current, member.name )) for member in type(current) )
-        yield from stack[index:]
-    
+      source, value, visited = stack.pop(-1)
+      if not visited:
+        stack.append( (source, value, True) ) 
+        if isinstance( value, Morph ):
+          stack.extend( (member, getattr(value,member.name),False) for member in reversed(type(value)) )
+      else:
+        yield source, value
+
   
   ''' Decomposes the self down to its constituent members
       until non-decomposible element is encountered
@@ -117,44 +119,52 @@ class Morph(metaclass=MorphMeta):
   '''  
   @classmethod
   def solve( cls, data, *args ):
-    class Sentinel:
-      type = cls
-    
-    inconsistent = list( guard(data,data) )
+    # assure proper type assignment and decomposition
+    guard(data,data)
+    inconsistent = []
     created = list(data.items())
+    traversal = list( post_order(cls) )
+    result = None
     
-    while len(created) > 0 and Sentinel not in data:
+    while len(created) > 0:
       # morph the created items, push them to data
-      inconsistent = morph( data, *args, stack=created )
-      if len(inconsistent) > 0:
-        print( ('Inconsistence during %s.solve:\n' % cls) + 
-                  '\n'.join('%s: %s->%s' % (key,old,new) for key,old,new in inconsistent) )
+      inconsistent.extend( morph( data, *args, stack=created ) )
       
-      stack = [ (Sentinel,False) ]
-      # traverse the cls hierarchy and try to build members
-      while len(stack) > 0:
-        target, visited = stack.pop(-1)
-        if issubclass( target.type, Morph ):
-          missing = [ (member,False) for member in target.type if member not in data ]
-          if len(missing) > 0:
-            if not visited:
-              stack.append( (target, True) )
-              stack.extend( missing )
-          else:
-            created.append( (target,target.type( data )))
+      # try building cls
+      if all( member in data for member in cls ):
+         result = cls( data )
+         break
+      # traverse cls, create members that are available
+      created.extend( (key, key.type(data)) for key in traversal 
+                        if issubclass(key.type, Morph)
+                          and key not in data 
+                          and all( member in data for member in key.type ) )
+    
+    if len(inconsistent) > 0:
+        print( ('Inconsistence during %s.solve:\n' % cls) + 
+                  '\n'.join('%s->%s' % err for err in inconsistent) )
             
-    return data.pop(Sentinel, None)
+    return result, inconsistent
 
+    
+def post_order( cls ):
+  stack = [ (mem, False) for mem in cls ]
+  while len(stack) > 0:
+    member, visited = stack.pop(-1)
+    if not visited:
+      stack.append( (member, True) ) 
+      if issubclass( member.type, Morph ):
+        stack.extend( (mem, False) for mem in member.type )
+    else:
+      yield member
+          
 def guard( values, data ):
   # make sure that each value has the type declared by its associated member
   values.update( (key, key.type(value)) for key,value in values.items() 
                     if isinstance(key,Member) and type(value) != key.type )
   # decompose the values that are of type Morph
-  decomposed = [ item for key,value in values.items() if isinstance(value,Morph)
-                        for item in value.decompose() ]
-  values.update( decomposed )
-  # get the items from data that are not consistent with values decomposition
-  return ((key,data[key],value) for key,value in decomposed if data.get(key,value) != value)
+  values.update( item for key,value in values.items() if isinstance(value,Morph)
+                        for item in value.decompose() )
   
 
 
@@ -177,7 +187,10 @@ def morph( data, *args, stack=None ):
     if callable( value ):
       # call the morphism
       results = value( source, *args )
-      inconsistent.extend( guard( results, data ) )
+      # assure proper type assignment and decomposition
+      guard( results, data )
+      # get the items from data that are not consistent with values decomposition
+      inconsistent.extend( (source, key) for key,value in results.items() if data.get(key,value) != value )
       stack.extend( (target,result) for target,result in results.items() if target not in data )
       # source has been processed consistently, update the data dict
       data.update( results )
