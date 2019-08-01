@@ -87,6 +87,16 @@ class Morph(metaclass=MorphMeta):
 
   def __reversed__(self):
     return (getattr(self, name) for name in reversed(self._member_names_))
+    
+  def traverse( self ):
+    stack = [(None, self)]
+    while len(stack) > 0:
+      member, current = stack.pop(-1)
+      index = len(stack)
+      if isinstance( current, Morph ):
+        stack.extend( (member,getattr( current, member.name )) for member in type(current) )
+        yield from stack[index:]
+    
   
   ''' Decomposes the self down to its constituent members
       until non-decomposible element is encountered
