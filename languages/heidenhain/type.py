@@ -109,8 +109,16 @@ class Morph(metaclass=MorphMeta):
   def solve( cls, data, *args ):
     class Sentinel:
       type = cls
-    
+      
     created = list(data.items())
+    # decompose the values that are of type Morph
+    decomposed = [ (key, key.type(value) if type(value) != key.type else value )
+                      for key,value in created if isinstance(value,Morph)
+                        for item in value.decompose() ]
+    # get the items from data that are not consistent with values decomposition
+    inconsistent = [ (key,data[key],value) for key,value in decomposed if data.get(key,value) != value ]
+    created.extend( decomposed )
+    
     while len(created) > 0:
       # morph the newly created data, pushes created to data
       inconsistent = morph( data, *args, stack=created )
@@ -134,7 +142,7 @@ class Morph(metaclass=MorphMeta):
           else:
             # print('creating')
             created.append( (target,target.type( data )))
-      # print('loop')
+      # print('loop, %s' % created)
             
     return None
         
@@ -147,13 +155,8 @@ class Morph(metaclass=MorphMeta):
 def morph( data, *args, stack=None ):
   if stack is None:
     stack = list(data.items())
-  # decompose the values that are of type Morph
-  decomposed = [ (key, key.type(value) if type(value) != key.type else value )
-                    for key,value in stack if isinstance(value,Morph)
-                      for item in value.decompose() ]
-  # get the items from data that are not consistent with values decomposition
-  inconsistent = [ (key,data[key],value) for key,value in decomposed if data.get(key,value) != value ]
-  stack.extend( decomposed )
+    
+  inconsistent = []
   
   # morph the values contents
   while len(stack) > 0:
