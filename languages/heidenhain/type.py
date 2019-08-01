@@ -109,24 +109,16 @@ class Morph(metaclass=MorphMeta):
   def solve( cls, data, *args ):
     class Sentinel:
       type = cls
-      
-    created = list(data.items())
-    # decompose the values that are of type Morph
-    decomposed = [ (key, key.type(value) if type(value) != key.type else value )
-                      for key,value in created if isinstance(value,Morph)
-                        for item in value.decompose() ]
-    # get the items from data that are not consistent with values decomposition
-    inconsistent = [ (key,data[key],value) for key,value in decomposed if data.get(key,value) != value ]
-    created.extend( decomposed )
     
-    while len(created) > 0:
-      # morph the newly created data, pushes created to data
+    inconsistent = list( guard(data,data) )
+    created = list(data.items())
+    
+    while len(created) > 0 and Sentinel not in data:
+      # morph the created items, push them to data
       inconsistent = morph( data, *args, stack=created )
       if len(inconsistent) > 0:
         print( ('Inconsistence during %s.solve:\n' % cls) + 
                   '\n'.join('%s: %s->%s' % (key,old,new) for key,old,new in inconsistent) )
-      if Sentinel in data:
-        return data.pop(Sentinel)
       
       stack = [ (Sentinel,False) ]
       # traverse the cls hierarchy and try to build members
@@ -134,53 +126,49 @@ class Morph(metaclass=MorphMeta):
         target, visited = stack.pop(-1)
         if issubclass( target.type, Morph ):
           missing = [ (member,False) for member in target.type if member not in data ]
-          # print(target, len(missing), visited)
           if len(missing) > 0:
             if not visited:
               stack.append( (target, True) )
               stack.extend( missing )
           else:
-            # print('creating')
             created.append( (target,target.type( data )))
-      # print('loop, %s' % created)
             
-    return None
-        
+    return data.pop(Sentinel, None)
+
+def guard( values, data ):
+  # make sure that each value has the type declared by its associated member
+  values.update( (key, key.type(value)) for key,value in values.items() 
+                    if isinstance(key,Member) and type(value) != key.type )
+  # decompose the values that are of type Morph
+  decomposed = [ item for key,value in values.items() if isinstance(value,Morph)
+                        for item in value.decompose() ]
+  values.update( decomposed )
+  # get the items from data that are not consistent with values decomposition
+  return ((key,data[key],value) for key,value in decomposed if data.get(key,value) != value)
+  
+
+
 ''' Runs the morphisms of the data until no new results are available
     Recursively breaks each result to its constituent members and morphs them as well
-    Checks inner consistency of results with data, throws RuntimeError in case of inconsistent results
+    Checks inner consistency of results with data, returns the list of inconsistencies
     Morphisms have to be deterministic, their arguments are f( assigned member, *args )
-    Mutates data by adding new results obtained in the process
+    Mutates data by adding new results obtained in the process and the contents of the stack
 '''
 def morph( data, *args, stack=None ):
   if stack is None:
     stack = list(data.items())
-    
   inconsistent = []
   
   # morph the values contents
   while len(stack) > 0:
     # Get source and value from values
     source, value = stack.pop(-1)
-    try:
-      # if type is inconsistent with declaration, try to convert it
-      if type(value) != source.type:
-        value = source.type(value)
-    except AttributeError:
-      # source does not support Morph interface
-      pass
     
     if callable( value ):
       # call the morphism
       results = value( source, *args )
-      # decompose the results that are of type Morph
-      results.update( item for key,value in results.items() if isinstance(value,Morph)
-                            for item in value.decompose() )
-      results = { key : key.type(value) if type(value) != key.type else value for key,value in results.items() }
-      # get the items from data that are not consistent with results
-      inconsistent.extend( (key,data[key],value) for key,value in results.items() if data.get(key,value) != value )
-      # update the stack with newly created items
-      stack.extend( (key,value) for key,value in results.items() if key not in data )
+      inconsistent.extend( guard( results, data ) )
+      stack.extend( (target,result) for target,result in results.items() if target not in data )
       # source has been processed consistently, update the data dict
       data.update( results )
     else:
