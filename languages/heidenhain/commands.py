@@ -41,9 +41,6 @@ def makeIncremental( absolute, incremental ):
   absolute.incremental = incremental
   incremental.absolute = absolute
 
-def angNorm( a ):
-  return (a+2*math.pi) % (2 * math.pi)
-      
 class Cartesian(Morph):
   X = morphism( float, Abs2Inc )
   Y = morphism( float, Abs2Inc )
@@ -276,8 +273,12 @@ planeCenterDict = {
     Plane.YZ : (Center.Y,Center.Z),
     Plane.ZX : (Center.Z,Center.X)
   }
+
+def angNorm( a ):
+  # ang = (a+2*math.pi) % (2 * math.pi)
+  return a - (2 * math.pi)*math.floor((a+math.pi)/(2*math.pi))
   
-def cartesian2polar( self, member, state ):  
+def cartesian2polar( self, member, state ):
   plane = state[Registers.POLARPLANE]
   x1, x2, x3 = planeCoordDict[plane] # get cartesian coordinates for substitution
   cx1, cx2 = planeCenterDict[plane]  # get circle center coordinates
