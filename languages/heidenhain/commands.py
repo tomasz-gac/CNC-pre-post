@@ -26,16 +26,16 @@ def isIncremental( coord ):
   return hasattr( coord, 'absolute' )
   
 def abs2inc( value ):
-  return value.cls.incremental[value.name]
+  return getattr( value.cls.incremental, value.name )
   
 def inc2abs( value ):
-  return value.cls.absolute[value.name]
+  return getattr( value.cls.absolute, value.name )
   
 def Abs2Inc( value, source, state ):
-    return { abs2inc(source) : value - state[source] }
+  return { abs2inc(source) : value - state[source] }
 
 def Inc2Abs( value, source, state ):
-    return { inc2abs(source) : value + state[source] }
+  return { inc2abs(source) : value + state[source] }
     
 def makeIncremental( absolute, incremental ):
   absolute.incremental = incremental
@@ -156,14 +156,14 @@ class Plane(IntEnum):
 
 def StateDict():
   result = { key : 0 for key in list(Registers) }
-  result.update( { key : 0 for key in list(Cartesian)} )
-  result.update( { key : 0 for key in list(CartesianInc)} )
-  result.update( { key : 0 for key in list(Polar) } )
-  result.update( { key : 0 for key in list(PolarInc) } )
-  result.update( { key : 0 for key in list(Angular) } )
-  result.update( { key : 0 for key in list(AngularInc) } )
-  result.update( { key : 0 for key in list(Center) } )
-  result.update( { key : 0 for key in list(CenterInc) } )
+  result.update( { key : 0 for key,value in Cartesian} )
+  result.update( { key : 0 for key,value in CartesianInc} )
+  result.update( { key : 0 for key,value in Polar } )
+  result.update( { key : 0 for key,value in PolarInc } )
+  result.update( { key : 0 for key,value in Angular } )
+  result.update( { key : 0 for key,value in AngularInc } )
+  result.update( { key : 0 for key,value in Center } )
+  result.update( { key : 0 for key,value in CenterInc } )
   result[Registers.COMPENSATION] = Compensation.NONE
   result[Registers.DIRECTION]    = Direction.CW
   result[Registers.UNITS]        = Units.MM
@@ -256,7 +256,7 @@ class SetGOTODefaults:
       # For each coordinate in 'self.coordinates'
       # that is  missing from state.symtable
       # set its incremental counterpart to 0
-    constants = { abs2inc(abs) : 0 for abs in self.coordinates if abs not in state.symtable }
+    constants = { abs2inc(abs) : 0 for abs,value in self.coordinates if abs not in state.symtable }
       # In case the user already specified incremental coordinates in symtable,
       # update constants with symtable to override conflicts
     constants.update( state.symtable )
