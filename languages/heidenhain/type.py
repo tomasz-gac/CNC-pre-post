@@ -2,13 +2,16 @@ import enum
 from math import isclose
 
 class Member:
-  __slots__ = 'cls', 'name', 'type'
-  def __init__(self, cls, name, type_):
-    if isinstance( type_, Member ) or (hasattr(cls, name) and getattr(cls, name) != type_):
-      raise RuntimeError('Cannot manually create instances of Member')
-    object.__setattr__(self,'cls', cls)
+  __slots__ = 'instance', 'name'
+  def __init__(self, instance, name):
+    object.__setattr__(self,'instance', instance)
     object.__setattr__(self,'name',   name )
-    object.__setattr__(self,'type',   type_ )
+    
+  def get( self ):
+    return getattr( self.instance, self.name )
+  
+  def set( self, value ):
+    return setattr( self.instance, self.name, value )
     
   def __setattr__( self, name, value ):
     raise AttributeError('Cannot reassign Member values')
@@ -17,33 +20,23 @@ class Member:
     raise AttributeError('Cannot delete Member values')
     
   def __repr__( self ):
-    return '%s.%s:%s' % (self.cls.__name__, self.name, self.type.__name__)
+    return '%s.%s' % (self.instance, self.name)
 
-class MorphMeta(type):  
-  def __prepare__(metacls, cls):
-    return enum._EnumDict()
-
-  def __new__(metacls, cls, bases, classdict):
-    cls_instance = super().__new__(metacls, cls, bases, classdict)
-    cls_instance._members_ = []
-    try:
-      annotations = classdict['__annotations__'] # TODO: implementacja custom morph przez annotations?
-    except KeyError:
-      annotations = {}
-    for name,type_ in classdict.items():
-      # enum._EnumDict fails to detect functions assigned as enum values,
-      # use annotations instead
-      if name in annotations or name in classdict._member_names:
-        member = Member( cls_instance, name, type_ )
-        setattr( cls_instance, name, member )
-        cls_instance._members_.append((member,type_))
-    cls_instance._member_names_ = classdict._member_names
-    return cls_instance
+class Members:
+  def __init__( self, instance, names ):
+    self._members_ = []
+    member_names = set(names)
+    for name in member_names:
+      member = Member( instance, name )
+      setattr( self, name, member )
+      self._members_.append(member)
+    
+    self._member_names_ = member_names
   
-  def __contains__(cls, member):
-    return isinstance(member, Member) and member.name in cls._member_names_
-
-  def __delattr__(cls, attr):
+  def __contains__(self, member):
+    return isinstance(member, Member) and member.name in self._member_names_
+  
+  def __delattr__(self, attr):
     if attr in cls._member_names_:
         raise AttributeError(
                 "%s: cannot delete Morph member." % cls.__name__)
@@ -51,44 +44,7 @@ class MorphMeta(type):
 
   def __dir__(self):
     return (['__class__', '__doc__', '__members__', '__module__'] +
-            list(self._member_names_.keys()))
-
-  def __iter__(cls):
-    return cls._members_.__iter__()# (cls._member_map_[name] for name in cls._member_names_)
-
-  def __len__(cls):
-    return len(cls._members_)
-
-  def __repr__(cls):
-    return "<Morph %r>" % cls.__name__
-
-  def __reversed__(cls):
-    return reversed(cls._members_.__iter__())
-
-  def __setattr__(cls, name, value):
-    members = cls.__dict__.get('_member_names_', [])
-    if name in members:
-      raise AttributeError('Cannot reassign Morph members.')
-    super().__setattr__(name, value)  
-    
-class Morph(metaclass=MorphMeta):
-  def __init__( self, data ):
-    self._members_ = [(member,data[member]) for member,t in type(self)]
-    for member,t in type(self):
-      setattr( self, member.name, data[member] )
-      
-  def __contains__(self, member):
-    return isinstance(member, Member) and member.name in type(self)._member_names_
-
-  def __delattr__(self, attr):
-    if attr in type(self)._member_names_:
-        raise AttributeError(
-                "%s: cannot delete Morph member." % type(self).__name__)
-    super().__delattr__(attr)
-
-  def __dir__(self):
-    return (['__class__', '__doc__', '__members__', '__module__'] +
-            list(self._member_names_.keys()))
+            list(self._member_names_))
 
   def __iter__(self):
     return self._members_.__iter__()
@@ -96,39 +52,82 @@ class Morph(metaclass=MorphMeta):
   def __len__(self):
     return len(self._members_)
 
-  def __reversed__(cls):
+  def __reversed__(self):
     return reversed(self._members_.__iter__())
 
-def post_order( cls ):
-  stack = [ (member, value, False) for member,value in cls ]
-  while len(stack) > 0:
-    member, value, visited = stack.pop(-1)
-    if not visited and issubclass( member.type, Morph ):
-      stack.append( (member, value, True) ) 
-      stack.extend( (mem,v, False) for mem,v in value )
-      continue
-    yield member, value 
+  def __setattr__(self, name, value):
+    members = self.__dict__.get('_member_names_', [])
+    if name in members:
+      raise AttributeError('Cannot reassign Morph members.')
+    super().__setattr__(name, value)  
 
-def post_order_obj( obj ):
-  stack = [ (member, getattr(value,member.name),False) for member in reversed(type(obj)) ]
+class MorphMeta(type):  
+  def __prepare__(metacls, cls):
+    return enum._EnumDict()
+
+  def __new__(metacls, cls, bases, classdict):
+    cls_instance = super().__new__(metacls, cls, bases, classdict)
+    try:
+      annotations = classdict['__annotations__'] # TODO: implementacja custom morph przez annotations?
+    except KeyError:
+      annotations = {}
+    members = [ name for name,value in classdict.items() 
+                  if name in annotations or name in classdict._member_names ]
+    cls_instance.members = Members( cls_instance, members )
+    return cls_instance
+
+  def __delattr__(cls, attr):
+    if attr == 'members' or attr in cls.members._member_names_:
+        raise AttributeError("%s: cannot delete Morph member." % cls.__name__)
+    super().__delattr__(attr)
+
+  def __repr__(cls):
+    return "<Morph %r>" % cls.__name__
+
+  def __setattr__(cls, name, value):
+    members = cls.__dict__.get('members', None)
+    if members is not None and ( name in members._member_names_ or name == 'members' ):
+      raise AttributeError('Cannot reassign Morph members.')
+    super().__setattr__(name, value)  
+    
+class Morph(metaclass=MorphMeta):
+  def __init__( self, data ):
+    self.members = Members( self, ( member.name for member in type(self).members ) )
+    for member in type(self).members:
+      setattr( self, member.name, data[member] )
+
+def in_order( cls ):
+  stack = [ member for member in cls.members ]
   while len(stack) > 0:
-    source, value, visited = stack.pop(-1)
-    if not visited and issubclass( source.type, Morph ):
-      stack.append( (source, value, True) ) 
-      stack.extend( (member, getattr(value,member.name),False) for member in reversed(type(value)) )
+    member = stack.pop(-1)
+    value = member.get()
+    if not visited and hasattr(value, 'members'):
+      stack.extend( mem for mem in value.members )
       continue
-    yield source, value
+    yield member
+
+def post_order( cls ):
+  stack = [ (member, False) for member in cls.members ]
+  while len(stack) > 0:
+    member, visited = stack.pop(-1)
+    value = member.get()
+    if not visited and hasattr(value, 'members'):
+      stack.append( (member, True) ) 
+      stack.extend( (mem, False) for mem in value.members )
+      continue
+    yield member
 
 ''' Performs breadth-first traversal
 '''
-def breadth_first_obj( obj ):
-  stack = [ (member,getattr( obj, member.name )) for member, in type(obj) ]
+def breadth_first( obj ):
+  stack = [ member for member in obj.members ]
+  yield from stack
   while len(stack) > 0:
-    member, current = stack.pop(-1)
-    if isinstance( current, Morph ):
-      l = len(stack)
-      stack.extend( (member,getattr( current, member.name )) for member, in type(current) )
-      yield from stack[l:]
+    stack = [ bottom_item 
+                for top_item in stack if hasattr( top_item.get(), 'members')
+                  for bottom_item in top_item.get().members ]
+    yield from stack
+    
 
 ''' Builds cls instance from data dict using *args
     returns None in case of failure, uses morph to extend the amount of data
@@ -147,25 +146,26 @@ def solve( cls, data, *args, traversal=post_order ):
     conflicts.extend( morph( data, *args, stack=created ) )
     
     # try building cls
-    if all( member in data for member,value in cls ):
+    if all( member in data for member in cls.members ):
        result = cls( data )
        break
     # traverse cls, create members that are available
-    created.extend( (key, key.type(data)) for key,value in traversal 
-                      if issubclass(value, Morph)
+    created.extend( (key, key.get()(data)) for key in traversal 
+                      if issubclass(key.get(), Morph)
                         and key not in data 
-                        and all( member in data for member,value in key.type ) )
+                        and all( member in data for member in key.get().members ) )
     
           
   return result, conflicts 
           
 def guard( values ):
   # make sure that each value has the type declared by its associated member
-  values.update( (key, key.type(value)) for key,value in values.items() 
-                    if isinstance(key,Member) and type(value) != key.type )
+  values.update( (key, key.get()(value)) for key,value in values.items() 
+                    if isinstance(key,Member) and type(value) != key.get() )
   # decompose the values that are of type Morph
-  values.update( item for key,value in values.items() if isinstance(value,Morph)
-                        for item in breadth_first_obj(value) )
+  values.update( (member, member.get()) 
+                    for key,value in values.items() if isinstance(value,Morph)
+                      for member in breadth_first(value) )
 
 ''' Runs the morphisms of the data until no new results are available
     Recursively breaks each result to its constituent members and morphs them as well

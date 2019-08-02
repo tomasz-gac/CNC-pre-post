@@ -26,10 +26,10 @@ def isIncremental( coord ):
   return hasattr( coord, 'absolute' )
   
 def abs2inc( value ):
-  return getattr( value.cls.incremental, value.name )
+  return getattr( value.instance.incremental.members, value.name )
   
 def inc2abs( value ):
-  return getattr( value.cls.absolute, value.name )
+  return getattr( value.instance.absolute.members, value.name )
   
 def Abs2Inc( value, source, state ):
   return { abs2inc(source) : value - state[source] }
@@ -156,14 +156,14 @@ class Plane(IntEnum):
 
 def StateDict():
   result = { key : 0 for key in list(Registers) }
-  result.update( { key : 0 for key,value in Cartesian} )
-  result.update( { key : 0 for key,value in CartesianInc} )
-  result.update( { key : 0 for key,value in Polar } )
-  result.update( { key : 0 for key,value in PolarInc } )
-  result.update( { key : 0 for key,value in Angular } )
-  result.update( { key : 0 for key,value in AngularInc } )
-  result.update( { key : 0 for key,value in Center } )
-  result.update( { key : 0 for key,value in CenterInc } )
+  result.update( { key : 0 for key in Cartesian.members} )
+  result.update( { key : 0 for key in CartesianInc.members} )
+  result.update( { key : 0 for key in Polar.members } )
+  result.update( { key : 0 for key in PolarInc.members } )
+  result.update( { key : 0 for key in Angular.members } )
+  result.update( { key : 0 for key in AngularInc.members } )
+  result.update( { key : 0 for key in Center.members } )
+  result.update( { key : 0 for key in CenterInc.members } )
   result[Registers.COMPENSATION] = Compensation.NONE
   result[Registers.DIRECTION]    = Direction.CW
   result[Registers.UNITS]        = Units.MM
@@ -172,27 +172,6 @@ def StateDict():
   result[Registers.POLARPLANE]   = Plane.XY
   result[Registers.COOLANT]      = Coolant.OFF
   return result
-
-class MachineState:
-  __slots__ = 'registers', 'cartesian', 'polar', 'angular', 'center'
-  def __init__( self, state=None ):
-    if state is None:
-      state = StateDict()
-    
-    self.registers = {}
-    self.cartesian = {}
-    self.polar     = {}
-    self.angular   = {}
-    self.center    = {}
-    vars = { 
-      Registers : self.registers,
-      Cartesian : self.cartesian,  
-      Polar     : self.polar,
-      Angular   : self.angular,
-      Center    : self.center
-    }
-    for key, item in state.items():
-      vars[type(key)][key] = item
         
 class Setval: # Setval(B, A) -> B = A
   def __init__( self, attribute, value ):
@@ -256,22 +235,22 @@ class SetGOTODefaults:
       # For each coordinate in 'self.coordinates'
       # that is  missing from state.symtable
       # set its incremental counterpart to 0
-    constants = { abs2inc(abs) : 0 for abs,value in self.coordinates if abs not in state.symtable }
+    constants = { abs2inc(abs) : 0 for abs in self.coordinates.members if abs not in state.symtable }
       # In case the user already specified incremental coordinates in symtable,
       # update constants with symtable to override conflicts
     constants.update( state.symtable )
     state.symtable = constants
     
 planeCoordDict = {  
-    Plane.XY : (Cartesian.X,Cartesian.Y,Cartesian.Z),
-    Plane.YZ : (Cartesian.Y,Cartesian.Z,Cartesian.X),
-    Plane.ZX : (Cartesian.Z,Cartesian.X,Cartesian.Y)
+    Plane.XY : (Cartesian.members.X,Cartesian.members.Y,Cartesian.members.Z),
+    Plane.YZ : (Cartesian.members.Y,Cartesian.members.Z,Cartesian.members.X),
+    Plane.ZX : (Cartesian.members.Z,Cartesian.members.X,Cartesian.members.Y)
   }
 # circle center mappings for polar calculation
 planeCenterDict = {  
-    Plane.XY : (Center.X,Center.Y),
-    Plane.YZ : (Center.Y,Center.Z),
-    Plane.ZX : (Center.Z,Center.X)
+    Plane.XY : (Center.members.X,Center.members.Y),
+    Plane.YZ : (Center.members.Y,Center.members.Z),
+    Plane.ZX : (Center.members.Z,Center.members.X)
   }
 
 def angNorm( a ):
@@ -286,9 +265,9 @@ def cartesian2polar( self, member, state ):
   r1, r2 = (getattr( self, x1.name)-state[cx1]), (getattr( self, x2.name)-state[cx2])
   
   result = {}
-  result[ Polar.RAD ] = math.sqrt(r1**2 + r2**2)
-  result[ Polar.ANG ] = angNorm(math.atan2(r2, r1)) * float(180)/math.pi
-  result[ Polar.LEN ] = getattr(self, x3.name )
+  result[ Polar.members.RAD ] = math.sqrt(r1**2 + r2**2)
+  result[ Polar.members.ANG ] = angNorm(math.atan2(r2, r1)) * float(180)/math.pi
+  result[ Polar.members.LEN ] = getattr(self, x3.name )
   return result
   
 def polar2cartesian( self, member, state ):

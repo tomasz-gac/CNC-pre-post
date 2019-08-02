@@ -54,8 +54,8 @@ def handleCoord( map ):
   return _handleCoord
   
 cartesianCoordMap = { 
-  'X' : cart.X, 'Y' : cart.Y, 'Z' : cart.Z, 
-  'A' : ang.A, 'B' : ang.B, 'C' : ang.C
+  'X' : cart.members.X, 'Y' : cart.members.Y, 'Z' : cart.members.Z, 
+  'A' : ang.members.A, 'B' : ang.members.B, 'C' : ang.members.C
 }
 
 cartesianCoord = Switch({
@@ -65,8 +65,8 @@ cartesianCoord = Switch({
 }.items())
 
 polarCoordMap = { 
-  'PA' : pol.ANG, 'PR' : pol.RAD,
-  'X'  : pol.LEN, 'Y'  : pol.LEN, 'Z' : pol.LEN
+  'PA' : pol.members.ANG, 'PR' : pol.members.RAD,
+  'X'  : pol.members.LEN, 'Y'  : pol.members.LEN, 'Z' : pol.members.LEN
 }
 
 polarCoord = Switch({
@@ -75,7 +75,7 @@ polarCoord = Switch({
   p('(I)?(X|Y|Z)') : handleCoord(polarCoordMap),
 }.items())
 
-CCcoordmap = { 'X' : cen.X, 'Y' : cen.Y, 'Z' : cen.Z }
+CCcoordmap = { 'X' : cen.members.X, 'Y' : cen.members.Y, 'Z' : cen.members.Z }
 
 CCcoord = Switch({
   p(pattern) : handleCoord(CCcoordmap) for pattern in
