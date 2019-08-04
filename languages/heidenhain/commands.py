@@ -1,5 +1,5 @@
 from enum import Enum, IntEnum, unique
-from languages.heidenhain.type import Morph, MorphMeta, morphism
+from hydra import Morph, morphism
 import math
   
 @unique
@@ -32,10 +32,12 @@ def inc2abs( value ):
   return getattr( value.instance.absolute.members, value.name )
   
 def Abs2Inc( value, source, state ):
-  return { abs2inc(source) : value - state[source] }
+  incrementalCoord = abs2inc(source)
+  return { incrementalCoord : value - state[source] }
 
 def Inc2Abs( value, source, state ):
-  return { inc2abs(source) : value + state[source] }
+  absoluteCoord = inc2abs(source)
+  return { absoluteCoord : value + state[absoluteCoord] }
     
 def makeIncremental( absolute, incremental ):
   absolute.incremental = incremental
@@ -258,6 +260,7 @@ def angNorm( a ):
   return a - (2 * math.pi)*math.floor((a+math.pi)/(2*math.pi))
   
 def cartesian2polar( self, member, state ):
+  # print('cart2pol')
   plane = state[Registers.POLARPLANE]
   x1, x2, x3 = planeCoordDict[plane] # get cartesian coordinates for substitution
   cx1, cx2 = planeCenterDict[plane]  # get circle center coordinates
@@ -271,6 +274,7 @@ def cartesian2polar( self, member, state ):
   return result
   
 def polar2cartesian( self, member, state ):
+  # print('pol2cart')
   plane = state[Registers.POLARPLANE]
   x1, x2, x3  = planeCoordDict[plane]   # get cartesian coordinates for substitution
   cx1, cx2    = planeCenterDict[plane]  # get circle center coordinates
