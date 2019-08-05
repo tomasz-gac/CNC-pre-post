@@ -3,12 +3,31 @@ import languages.heidenhain.commands as cmd
 import hydra as h
 import babel as b
 
-s = b.State('L Z+150 IX-20 FMAX')
-r = p.Parse(s)
+class C(h.Morph):
+  common = int
+
+class B1(h.Morph):
+  c = C
+  x = int
+
+class B2(h.Morph):
+  c = C
+  x = float
+
+class A(h.Morph):
+  b1 = B1
+  b2 = B2
+  
+init = { attr : attr.value() for attr in h.breadth_first(A) if attr.terminal }
+s, i = h.solve( A, init )
 
 class Cartpol(h.Morph):
   cartesian = cmd.Cartesian
   polar = cmd.Polar
+
+'''s = b.State('L Z+150 IX-20 FMAX')
+r = p.Parse(s)
+
   
 s0,i = h.solve(Cartpol, cmd.StateDict(), cmd.StateDict())
 d0 = cmd.StateDict()
@@ -55,4 +74,4 @@ def test( sol=None, prevState=None ):
   r = p.Parse( s )
   solution = h.update(solution, s.symtable, prevState )
   prevState.update( { type(attr) : attr.value for attr in h.breadth_first(solution) if attr.terminal } )
-  return solution, prevState
+  return solution, prevState'''

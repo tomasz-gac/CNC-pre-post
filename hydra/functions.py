@@ -1,11 +1,12 @@
 from hydra.classes import Morph, AttributeMeta
 from hydra.iteration import post_order, breadth_first
+from collections import Counter
 
 def update( value, data, *args ):
   cls = type(value)
   guard(data)
   decomposed = { type(attr) : attr.value for attr in breadth_first(value) if attr.terminal }
-  print('decomposed ',decomposed)
+  # print('decomposed ',decomposed)
   result = None
   conflicts = {None}
   attempt = {}
@@ -17,10 +18,10 @@ def update( value, data, *args ):
     conflicts = { attribute for pair in solve_conflicts
                               for conflict in pair 
                                 for attribute in breadth_first(conflict.instance) if attribute.terminal }
-    print('solve_conflicts ',solve_conflicts)
-    print('conflicts ',conflicts)
+    # print('solve_conflicts ',solve_conflicts)
+    # print('conflicts ',conflicts)
     decomposed = { key : value for key,value in decomposed.items() if key not in conflicts }
-    print('decomposed ',decomposed)
+    # print('decomposed ',decomposed)
   return result, attempt
   
 ''' Builds cls instance from data dict using *args
@@ -32,24 +33,49 @@ def solve( cls, data, *args ):
   guard(data)
   conflicts = []
   created = list(data.items())
-  traversal = list( post_order(cls) )
+  post_order_composites = list( attr for attr in post_order(cls) if not attr.terminal)
   result = None
+  
+  ''' Iteratively morphs the data and tries to construct higher-order classes
+      Assures object equality through morph, but not identity in case of internal shared variables ''' 
   
   while len(created) > 0:
     # morph the created items, push them to data
     conflicts.extend( morph( data, *args, stack=created ) )
-    
-    # try building cls
+    # see if it's possible to build cls
     if all( member in data for member in cls.attr ):
-       result = cls( data )
        break
     # traverse cls, create members that are available
-    created.extend( (key, key.value(data)) for key in traversal 
-                      if issubclass(key.value, Morph)
-                        and key not in data 
-                        and all( member in data for member in key.value.attr ) )
+    created.extend( (attr, attr.value(data)) for attr in post_order_composites 
+                      if attr not in data 
+                        and all( member in data for member in attr.value.attr ) )
+  else:
+    # morph was exhausted, but and it's not possible to build cls
+    # print( next( attr for attr in breadth_first(cls) if attr in data ) )
+    return None, conflicts
+  
+  # just the terminals and non-hydra items
+  new_data = { attr : value for attr,value in data.items() if attr not in post_order_composites }
+  # types that occur multiple times in post_order_composites
+  compositeCounter = Counter( attr.value for attr in post_order_composites )
+  shared_types = { type for (type,c) in compositeCounter.items() if c > 1 }
+  # type -> object mapping for shared objects
+  shared_objects = {}
+  # iterating in the post order so that
+  # object dependency during construction is satisfied
+  for attr in post_order_composites:
+    attrType = attr.value
+    if attrType in shared_types:
+      if attrType not in shared_objects:
+        shared_objects[attrType] = attrType(new_data)
+      new_data[attr] = shared_objects[attrType]
+    else:  
+      new_data[attr] = attrType(new_data) 
+  
+  result = cls(new_data)
+  data.clear()
+  data.update(new_data) # update the data
     
-          
   return result, conflicts 
           
 def guard( values ):

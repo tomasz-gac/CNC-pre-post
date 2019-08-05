@@ -14,8 +14,6 @@ from languages.heidenhain.commands import Direction     as dir
 from languages.heidenhain.commands import Coolant       as cool
 from languages.heidenhain.commands import Spindle       as spin
 
-import languages.expression.commands as art
-
 import languages.expression.parser    as expr
 import babel.lang.parser as p
 
