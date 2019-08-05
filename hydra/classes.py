@@ -1,12 +1,12 @@
 import enum
 from math import isclose
 
-class Member:
+class Attribute:
   __slots__ = 'instance', 'name'
   def __init__( self, instance, name ):
     self.instance = instance
     self.name     = name
-    self.terminal = not hasattr(getattr(instance,name), 'members')
+    self.terminal = not hasattr(getattr(instance,name), 'attr')
   
   # This has to be a property because Members serve as keys
   # and their value cannot take part in hasing
@@ -22,13 +22,13 @@ class Member:
     return '%s.%s' % (self.instance, self.name)    
 
 
-class MemberMeta(type):
+class AttributeMeta(type):
   __slots__ = 'instance', 'name'
   def __new__(metacls, cls, bases, classdict ):
-    cls_instance = super().__new__(metacls, cls, bases+(Member,), classdict)
+    cls_instance = super().__new__(metacls, cls, bases+(Attribute,), classdict)
     cls_instance.instance = classdict['instance']
     cls_instance.name = classdict['name']
-    cls_instance.terminal = not hasattr(getattr(cls_instance.instance,cls_instance.name), 'members')
+    cls_instance.terminal = not hasattr(getattr(cls_instance.instance,cls_instance.name), 'attr')
     return cls_instance
     
   # This has to be a property because Members serve as keys
@@ -44,54 +44,59 @@ class MemberMeta(type):
   def __repr__( self ):
     return '%s.%s' % (self.instance, self.name)    
 
-class Members:
+class Attributes:
   def __init__( self, instance ):
-    self._members_ = []
-    for memberType in type(instance).members:
-      member = memberType(instance, memberType.name)
-      setattr( self, member.name, member )
-      self._members_.append(member)
+    self._attributes_ = []
+    for attrType in type(instance).attr:
+      attr = attrType(instance, attrType.name)
+      setattr( self, attr.name, attr )
+      self._attributes_.append(attr)
     
-    self._member_names_ = { member.name for member in self._members_ }
+    self._attribute_names_ = { attr.name for attr in self._attributes_ }
   
-  def __contains__(self, member):
-    return isinstance(member, MemberMeta) and member.name in self._member_names_
+  def __contains__(self, attr):
+    return isinstance(attr, AttributeMeta) and attr.name in self._attribute_names_
   
   def __iter__(self):
-    return self._members_.__iter__()
+    return self._attributes_.__iter__()
 
   def __len__(self):
-    return len(self._members_)
+    return len(self._attributes_)
 
   def __reversed__(self):
-    return reversed(self._members_.__iter__())
+    return reversed(self._attributes_.__iter__())
 
     
-class MembersMeta(type):
+class AttributesMeta(type):
   def __new__(metacls, cls, bases, classdict ):
-    cls_instance = super().__new__(metacls, cls, bases+(Members,), classdict)
+    cls_instance = super().__new__(metacls, cls, bases+(Attributes,), classdict)
     instance = classdict['instance']
-    cls_instance._members_ = []
-    member_names = set(classdict['names'])
-    for name in member_names:
-      member = MemberMeta( 'Member', (), {'instance' : instance, 'name' : name } )
-      setattr( cls_instance, name, member )
-      cls_instance._members_.append(member)
+    # base inheritance is handled by type(), but iteration is not.
+    # remove duplicates while preserving order
+    seen = set()
+    cls_instance._attributes_ = [attr for base in bases 
+                                        for attr in base 
+                                          if not (attr in seen or seen.add(attr))]
+    attribute_names = set(classdict['names'])
+    for name in attribute_names:
+      attr = AttributeMeta( 'Attribute', (), {'instance' : instance, 'name' : name } )
+      setattr( cls_instance, name, attr )
+      cls_instance._attributes_.append(attr)
     
-    cls_instance._member_names_ = member_names
+    cls_instance._attribute_names_ = attribute_names
     return cls_instance
   
-  def __contains__(self, member):
-    return isinstance(member, Member) and member.name in self._member_names_
+  def __contains__(self, attr):
+    return isinstance(attr, Member) and attr.name in self._attribute_names_
   
   def __iter__(self):
-    return self._members_.__iter__()
+    return self._attributes_.__iter__()
 
   def __len__(self):
-    return len(self._members_)
+    return len(self._attributes_)
 
   def __reversed__(self):
-    return reversed(self._members_.__iter__())
+    return reversed(self._attributes_.__iter__())
     
 class MorphMeta(type):  
   def __prepare__(metacls, cls):
@@ -103,11 +108,11 @@ class MorphMeta(type):
       annotations = classdict['__annotations__'] # TODO: implementacja custom morph przez annotations?
     except KeyError:
       annotations = {}
-    members = [ name for name,value in classdict.items() 
-                  if name in annotations or name in classdict._member_names ]
-    
-    cls_instance.members = [] # to properly initailize member.terminal
-    cls_instance.members = MembersMeta( 'Members', (), {'instance' : cls_instance, 'names' : members } )
+    attributes = [ name for name,value in classdict.items() 
+                    if name in annotations or name in classdict._member_names ]
+    attr_bases = tuple( base.attr for base in bases if hasattr(base, 'attr')  )
+    cls_instance.attr = None # to properly initailize attribute.terminal
+    cls_instance.attr = AttributesMeta( 'Attributes', attr_bases, {'instance' : cls_instance, 'names' : attributes } )
     return cls_instance
 
   def __repr__(cls):
@@ -115,10 +120,10 @@ class MorphMeta(type):
   
 class Morph(metaclass=MorphMeta):
   def __init__( self, data ): 
-    self.members = None # to properly initialize member.terminal
-    self.members = type(self).members(self)
-    for member in self.members:
-      member.value = data[type(member)]
+    self.attr = None # to properly initialize Attribute.terminal
+    self.attr = type(self).attr(self)
+    for attr in self.attr:
+      attr.value = data[type(attr)]
 
 def morphism( type_, f ):
   class Morphing(type_):

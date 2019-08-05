@@ -7,17 +7,21 @@ s = b.State('L Z+150 IX-20 FMAX')
 r = p.Parse(s)
 
 class Cartpol(h.Morph):
-  cartesian = cmd.Cart
-  polar = cmd.Pol
+  cartesian = cmd.Cartesian
+  polar = cmd.Polar
   
-c,i = h.solve(Cartpol, s.symtable, cmd.StateDict())
+s0,i = h.solve(Cartpol, cmd.StateDict(), cmd.StateDict())
+d0 = cmd.StateDict()
+s1, att = h.update(s0, s.symtable, d0)
+print(s1)
+d1 = { type(attr) : attr.value for attr in h.breadth_first(s1) if attr.terminal }
 
 s = b.State('L IX-30 FMAX')
 r = p.Parse(s)
 
-dec = cmd.StateDict()
-dec.update( { type(attr) : attr.value for attr in h.breadth_first(c) if attr.terminal } )
-c = h.update(c, s.symtable, dec)
+# dec = cmd.StateDict()
+# dec.update( { type(attr) : attr.value for attr in h.breadth_first(c) if attr.terminal } )
+s2, att2 = h.update(s1, s.symtable, d1)
 
 def bench( n = 1000 ):
   import time

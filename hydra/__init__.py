@@ -1,7 +1,8 @@
 from hydra.classes import Morph
-from hydra.classes import Member
-from hydra.classes import MemberMeta
-from hydra.classes import Members
+from hydra.classes import Attribute
+from hydra.classes import AttributeMeta
+from hydra.classes import Attributes
+from hydra.classes import AttributesMeta
 from hydra.classes import morphism
 
 from hydra.functions import update

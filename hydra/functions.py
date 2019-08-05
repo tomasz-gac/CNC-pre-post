@@ -1,13 +1,14 @@
-from hydra.classes import Morph, MemberMeta
+from hydra.classes import Morph, AttributeMeta
 from hydra.iteration import post_order, breadth_first
 
 def update( value, data, *args ):
   cls = type(value)
   guard(data)
   decomposed = { type(attr) : attr.value for attr in breadth_first(value) if attr.terminal }
-  
+  print('decomposed ',decomposed)
   result = None
   conflicts = {None}
+  attempt = {}
   while len(conflicts) > 0:
     attempt = dict(decomposed)
     attempt.update(data)
@@ -16,8 +17,11 @@ def update( value, data, *args ):
     conflicts = { attribute for pair in solve_conflicts
                               for conflict in pair 
                                 for attribute in breadth_first(conflict.instance) if attribute.terminal }
+    print('solve_conflicts ',solve_conflicts)
+    print('conflicts ',conflicts)
     decomposed = { key : value for key,value in decomposed.items() if key not in conflicts }
-  return result
+    print('decomposed ',decomposed)
+  return result, attempt
   
 ''' Builds cls instance from data dict using *args
     returns None in case of failure, uses morph to extend the amount of data
@@ -36,14 +40,14 @@ def solve( cls, data, *args ):
     conflicts.extend( morph( data, *args, stack=created ) )
     
     # try building cls
-    if all( member in data for member in cls.members ):
+    if all( member in data for member in cls.attr ):
        result = cls( data )
        break
     # traverse cls, create members that are available
     created.extend( (key, key.value(data)) for key in traversal 
                       if issubclass(key.value, Morph)
                         and key not in data 
-                        and all( member in data for member in key.value.members ) )
+                        and all( member in data for member in key.value.attr ) )
     
           
   return result, conflicts 
@@ -51,7 +55,7 @@ def solve( cls, data, *args ):
 def guard( values ):
   # make sure that each value has the type declared by its associated member
   values.update( (attribute, attribute.value(value)) for attribute,value in values.items() 
-                    if isinstance(attribute,MemberMeta) and type(value) != attribute.value )
+                    if isinstance(attribute,AttributeMeta) and type(value) != attribute.value )
   # decompose the values that are of type Morph
   values.update( (type(attribute), attribute.value) 
                     for key,value in values.items() if isinstance(value,Morph)
@@ -79,7 +83,9 @@ def morph( data, *args, stack=None ):
       # assure proper type assignment and decomposition
       guard( results )
       # get the value inconsistencies between data and results
-      conflicts.extend( (source, key) for key,value in results.items() if data.get(key,value) != value )      
+      conflicts.extend( (source, key) for key,value in results.items() 
+                          if data.get(key,value) != value )
+                          # and key not in breadth_first(source)
       stack.extend( (target,result) for target,result in results.items() if target not in data )
       # source has been processed consistently, update the data dict
       data.update( results )

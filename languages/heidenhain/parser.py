@@ -8,10 +8,6 @@ import babel.compiler   as c
 import languages.heidenhain.commands as cmd
 
 from languages.heidenhain.commands import Registers     as reg
-from languages.heidenhain.commands import Cartesian     as cart
-from languages.heidenhain.commands import Polar         as pol
-from languages.heidenhain.commands import Angular       as ang
-from languages.heidenhain.commands import Center        as cen
 from languages.heidenhain.commands import Motion        as mot
 from languages.heidenhain.commands import Compensation  as comp
 from languages.heidenhain.commands import Direction     as dir
@@ -30,13 +26,13 @@ with open( 'languages/heidenhain/heidenhain.lang' ) as file:
 p = re.compile
 
 GOTOcartesian = Lookup({ 
-  p('L ')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(cmd.Cartesian), cmd.invariant ),
-  p('C ')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(cmd.Cartesian), cmd.invariant )
+  p('L ')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(cmd.Cartesian.Absolute), cmd.invariant ),
+  p('C ')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(cmd.Cartesian.Absolute), cmd.invariant )
 }.items())
 
 GOTOpolar = Lookup({ 
-  p('LP')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(cmd.Polar), cmd.invariant ),
-  p('CP')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(cmd.Polar), cmd.invariant )
+  p('LP')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(cmd.Polar.Absolute), cmd.invariant ),
+  p('CP')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(cmd.Polar.Absolute), cmd.invariant )
 }.items())
 
 toolCallOptions = Lookup({
@@ -54,8 +50,12 @@ def handleCoord( map ):
   return _handleCoord
   
 cartesianCoordMap = { 
-  'X' : cart.members.X, 'Y' : cart.members.Y, 'Z' : cart.members.Z, 
-  'A' : ang.members.A, 'B' : ang.members.B, 'C' : ang.members.C
+  'X' : cmd.Cartesian.Absolute.attr.X, 
+  'Y' : cmd.Cartesian.Absolute.attr.Y, 
+  'Z' : cmd.Cartesian.Absolute.attr.Z, 
+  'A' : cmd.Angular.Absolute.attr.A, 
+  'B' : cmd.Angular.Absolute.attr.B, 
+  'C' : cmd.Angular.Absolute.attr.C
 }
 
 cartesianCoord = Switch({
@@ -65,8 +65,11 @@ cartesianCoord = Switch({
 }.items())
 
 polarCoordMap = { 
-  'PA' : pol.members.ANG, 'PR' : pol.members.RAD,
-  'X'  : pol.members.LEN, 'Y'  : pol.members.LEN, 'Z' : pol.members.LEN
+  'PA' : cmd.Polar.Absolute.attr.ANG, 
+  'PR' : cmd.Polar.Absolute.attr.RAD,
+  'X'  : cmd.Polar.Absolute.attr.LEN, 
+  'Y'  : cmd.Polar.Absolute.attr.LEN, 
+  'Z'  : cmd.Polar.Absolute.attr.LEN
 }
 
 polarCoord = Switch({
@@ -75,7 +78,11 @@ polarCoord = Switch({
   p('(I)?(X|Y|Z)') : handleCoord(polarCoordMap),
 }.items())
 
-CCcoordmap = { 'X' : cen.members.X, 'Y' : cen.members.Y, 'Z' : cen.members.Z }
+CCcoordmap = { 
+  'X' : cmd.Polar.Center.Absolute.attr.X, 
+  'Y' : cmd.Polar.Center.Absolute.attr.Y, 
+  'Z' : cmd.Polar.Center.Absolute.attr.Z 
+}
 
 CCcoord = Switch({
   p(pattern) : handleCoord(CCcoordmap) for pattern in
