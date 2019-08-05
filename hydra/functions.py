@@ -34,48 +34,45 @@ def solve( cls, data, *args ):
   conflicts = []
   created = list(data.items())
   post_order_composites = list( attr for attr in post_order(cls) if not attr.terminal)
-  result = None
   
   ''' Iteratively morphs the data and tries to construct higher-order classes
-      Assures object equality through morph, but not identity in case of internal shared variables ''' 
-  
+      Assures object equality through morph, but not identity in case of internal shared variables '''   
   while len(created) > 0:
     # morph the created items, push them to data
     conflicts.extend( morph( data, *args, stack=created ) )
-    # see if it's possible to build cls
-    if all( member in data for member in cls.attr ):
-       break
     # traverse cls, create members that are available
     created.extend( (attr, attr.value(data)) for attr in post_order_composites 
                       if attr not in data 
                         and all( member in data for member in attr.value.attr ) )
-  else:
-    # morph was exhausted, but and it's not possible to build cls
-    # print( next( attr for attr in breadth_first(cls) if attr in data ) )
-    return None, conflicts
   
-  # just the terminals and non-hydra items
-  new_data = { attr : value for attr,value in data.items() if attr not in post_order_composites }
+  ''' At this stage, data is constructed, but it may contain multiple copies of an object
+      that satisfies the class' == operator. Since all objects need to be decomposible
+      to an unique set of key : value pairs, these copies are actually one object.
+      We need to make sure that the hierarchy does not contain repetitions
+      
+      Morph classes express dependency, and in this light, equality is actually an identity.
+      We need to make sure that the constructed hierarchy does not contain multiple copies 
+      of an object.
+  '''
+  
   # types that occur multiple times in post_order_composites
   compositeCounter = Counter( attr.value for attr in post_order_composites )
   shared_types = { type for (type,c) in compositeCounter.items() if c > 1 }
   # type -> object mapping for shared objects
   shared_objects = {}
-  # iterating in the post order so that
-  # object dependency during construction is satisfied
-  for attr in post_order_composites:
-    attrType = attr.value
-    if attrType in shared_types:
-      if attrType not in shared_objects:
-        shared_objects[attrType] = attrType(new_data)
-      new_data[attr] = shared_objects[attrType]
-    else:  
-      new_data[attr] = attrType(new_data) 
+  for type_attr in post_order_composites:
+    try:
+      obj = data[type_attr]
+    except KeyError:
+      continue
+    if type_attr.value in shared_types and type_attr.value not in shared_objects:
+      shared_objects[type_attr.value] = obj
+      
+    for val_attr in obj.attr:
+      if type(val_attr).value in shared_objects:
+        attr.value = shared_objects[type(val_attr).value]
   
-  result = cls(new_data)
-  data.clear()
-  data.update(new_data) # update the data
-    
+  result = cls(data) if all( attr for attr in cls.attr if attr in data ) else None
   return result, conflicts 
           
 def guard( values ):
@@ -89,7 +86,7 @@ def guard( values ):
 
 ''' Runs the morphisms of the data until no new results are available
     Recursively breaks each result to its constituent members and morphs them as well
-    Checks inner consistency of results with data, returns the list of inconsistencies
+    Checks inner consistency of results with data by class' operator !=, returns the list of conflicts
     Morphisms have to be deterministic, their arguments are f( assigned member, *args )
     Mutates data by adding new results obtained in the process and the contents of the stack
 '''
