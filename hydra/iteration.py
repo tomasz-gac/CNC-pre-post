@@ -25,11 +25,3 @@ def breadth_first( cls ):
     stack = [ bottom_item 
                 for top_item in stack if not top_item.terminal
                   for bottom_item in top_item.value.attr ]
-
-def terminals( cls ):
-  stack = [ member for member in cls.attr ]
-  while len(stack) > 0:
-    yield from stack
-    stack = [ bottom_item 
-                for top_item in stack if not top_item.terminal
-                  for bottom_item in top_item.value.attr ]

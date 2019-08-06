@@ -9,7 +9,7 @@ class Attribute:
     self.terminal = not hasattr(getattr(instance,name), 'attr')
   
   # This has to be a property because Members serve as keys
-  # and their value cannot take part in hasing
+  # and their value cannot take part in hashing
   @property
   def value( self ):
     return getattr( self.instance, self.name )
@@ -32,7 +32,7 @@ class AttributeMeta(type):
     return cls_instance
     
   # This has to be a property because Members serve as keys
-  # and their value cannot take part in hasing
+  # and their value cannot take part in hashing
   @property
   def value( self ):
     return getattr( self.instance, self.name )

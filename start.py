@@ -19,20 +19,23 @@ class A(h.Morph):
   b2 = B2
   
 init = { attr : attr.value() for attr in h.breadth_first(A) if attr.terminal }
-s, i = h.solve( A, init )
+a, i = h.solve( A, init )
 
 class Cartpol(h.Morph):
   cartesian = cmd.Cartesian
   polar = cmd.Polar
 
-'''s = b.State('L Z+150 IX-20 FMAX')
+s = b.State('L Z+150 IX-20 FMAX')
 r = p.Parse(s)
 
-  
+print('s0')
+input()  
 s0,i = h.solve(Cartpol, cmd.StateDict(), cmd.StateDict())
 d0 = cmd.StateDict()
+print('s1')
+input()
 s1, att = h.update(s0, s.symtable, d0)
-print(s1)
+# print(s1)
 d1 = { type(attr) : attr.value for attr in h.breadth_first(s1) if attr.terminal }
 
 s = b.State('L IX-30 FMAX')
@@ -74,4 +77,4 @@ def test( sol=None, prevState=None ):
   r = p.Parse( s )
   solution = h.update(solution, s.symtable, prevState )
   prevState.update( { type(attr) : attr.value for attr in h.breadth_first(solution) if attr.terminal } )
-  return solution, prevState'''
+  return solution, prevState

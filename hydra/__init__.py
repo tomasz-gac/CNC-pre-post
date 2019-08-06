@@ -12,4 +12,3 @@ from hydra.functions import morph
 from hydra.iteration import in_order
 from hydra.iteration import post_order
 from hydra.iteration import breadth_first
-from hydra.iteration import terminals

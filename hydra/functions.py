@@ -6,11 +6,11 @@ def update( value, data, *args ):
   cls = type(value)
   guard(data)
   decomposed = { type(attr) : attr.value for attr in breadth_first(value) if attr.terminal }
-  # print('decomposed ',decomposed)
   result = None
   conflicts = {None}
   attempt = {}
   while len(conflicts) > 0:
+    print('-----------UPDATE START')
     attempt = dict(decomposed)
     attempt.update(data)
     
@@ -18,10 +18,9 @@ def update( value, data, *args ):
     conflicts = { attribute for pair in solve_conflicts
                               for conflict in pair 
                                 for attribute in breadth_first(conflict.instance) if attribute.terminal }
-    # print('solve_conflicts ',solve_conflicts)
-    # print('conflicts ',conflicts)
+    
     decomposed = { key : value for key,value in decomposed.items() if key not in conflicts }
-    # print('decomposed ',decomposed)
+    print('-------UPDATE END')
   return result, attempt
   
 ''' Builds cls instance from data dict using *args
@@ -29,7 +28,6 @@ def update( value, data, *args ):
     mutates data by adding intermediate morphism results
 '''
 def solve( cls, data, *args ):
-  # assure proper type assignment and decomposition
   guard(data)
   conflicts = []
   created = list(data.items())
@@ -44,35 +42,28 @@ def solve( cls, data, *args ):
     created.extend( (attr, attr.value(data)) for attr in post_order_composites 
                       if attr not in data 
                         and all( member in data for member in attr.value.attr ) )
-  
+
   ''' At this stage, data is constructed, but it may contain multiple copies of an object
       that satisfies the class' == operator. Since all objects need to be decomposible
-      to an unique set of key : value pairs, these copies are actually one object.
-      We need to make sure that the hierarchy does not contain repetitions
-      
-      Morph classes express dependency, and in this light, equality is actually an identity.
-      We need to make sure that the constructed hierarchy does not contain multiple copies 
-      of an object.
-  '''
-  
-  # types that occur multiple times in post_order_composites
-  compositeCounter = Counter( attr.value for attr in post_order_composites )
-  shared_types = { type for (type,c) in compositeCounter.items() if c > 1 }
+      to unique set of attribute : value pairs (data is a dict), these copies are actually one object.
+      We need to make sure that the hierarchy contains only one object of each type. '''
+  type_occurrences = Counter( type_attr.value for type_attr in post_order_composites )
   # type -> object mapping for shared objects
-  shared_objects = {}
-  for type_attr in post_order_composites:
-    try:
-      obj = data[type_attr]
-    except KeyError:
-      continue
-    if type_attr.value in shared_types and type_attr.value not in shared_objects:
-      shared_objects[type_attr.value] = obj
-      
-    for val_attr in obj.attr:
-      if type(val_attr).value in shared_objects:
-        attr.value = shared_objects[type(val_attr).value]
+  shared_composites = { 
+    type_attr.value : data.get(type_attr, None)
+      for type_attr in post_order_composites
+        if type_occurrences[type_attr.value] > 1
+    }
+  # decompose all composite values from data and return the attributes
+  # that contain values of type that appears in shared_composites
+  shared_attributes = ( shared_attr 
+                          for type_attr in post_order_composites if type_attr in data
+                            for shared_attr in data[type_attr].attr if type(shared_attr).value in shared_composites )
+  # update the value of the attribute to its shared state
+  for shared_attr in shared_attributes:
+    shared_attr.value = shared_composites[ type(shared_attr).value ]
   
-  result = cls(data) if all( attr for attr in cls.attr if attr in data ) else None
+  result = cls(data) if all( attr in data for attr in cls.attr ) else None
   return result, conflicts 
           
 def guard( values ):

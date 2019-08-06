@@ -47,62 +47,71 @@ def associate_absinc( absolute, incremental ):
   absolute.incremental = incremental
   incremental.absolute = absolute
 
+class CenterAbs(Morph): # CIRCLE CENTER X Y Z
+  X = morphism( float, Abs2Inc )
+  Y = morphism( float, Abs2Inc )
+  Z = morphism( float, Abs2Inc )
+  
+class CenterInc(Morph):
+  X = morphism( float, Inc2Abs )
+  Y = morphism( float, Inc2Abs )
+  Z = morphism( float, Inc2Abs )
+
+associate_absinc( CenterAbs, CenterInc )
+class Center(Morph):  
+  absolute    = CenterAbs
+  incremental = CenterInc
+  
+  
 class Cartesian(Morph):
-  class Absolute(Morph):
+  class absolute(Morph):
     X = morphism( float, Abs2Inc )
     Y = morphism( float, Abs2Inc )
     Z = morphism( float, Abs2Inc )
-    
-    def __call__( self, member, state ):
-      return cartesian2polar( self, member, state )
   
-  class Incremental(Morph):
+  class incremental(Morph):
     X = morphism( float, Inc2Abs )
     Y = morphism( float, Inc2Abs )
     Z = morphism( float, Inc2Abs )
+  
+  center = Center
+  
+  def __call__( self, member, state ):
+      return cartesian2polar( self, member, state )
 
-associate_absinc( Cartesian.Absolute, Cartesian.Incremental )
+associate_absinc( Cartesian.absolute, Cartesian.incremental )
     
 class Polar(Morph):
-  class Absolute(Morph):
+  class absolute(Morph):
     ANG = morphism( float, Abs2Inc )
     RAD = morphism( float, Abs2Inc )
     LEN = morphism( float, Abs2Inc )
-    
-    def __call__( self, member, state ):
-      return polar2cartesian( self, member, state )
 
-  class Incremental(Morph):
+  class incremental(Morph):
     ANG = morphism( float, Inc2Abs )
     RAD = morphism( float, Inc2Abs )
     LEN = morphism( float, Inc2Abs )
     
-  class Center(Morph):  
-    class Absolute(Morph): # CIRCLE CENTER X Y Z
-      X = morphism( float, Abs2Inc )
-      Y = morphism( float, Abs2Inc )
-      Z = morphism( float, Abs2Inc )
-      
-    class Incremental(Morph):
-      X = morphism( float, Inc2Abs )
-      Y = morphism( float, Inc2Abs )
-      Z = morphism( float, Inc2Abs )
+  center = Center
+    
+  def __call__( self, member, state ):
+    return polar2cartesian( self, member, state )
+    
 
-associate_absinc( Polar.Absolute, Polar.Incremental )
-associate_absinc( Polar.Center.Absolute, Polar.Center.Incremental )
+associate_absinc( Polar.absolute, Polar.incremental )
 
 
 class Angular(Morph):
-  class Absolute(Morph):
+  class absolute(Morph):
     A = morphism( float, Abs2Inc )
     B = morphism( float, Abs2Inc )
     C = morphism( float, Abs2Inc )
-  class Incremental(Morph):
+  class incremental(Morph):
     A = morphism( float, Inc2Abs )
     B = morphism( float, Inc2Abs )
     C = morphism( float, Inc2Abs )
 
-associate_absinc( Angular.Absolute, Angular.Incremental )
+associate_absinc( Angular.absolute, Angular.incremental )
    
 @unique
 class Units(IntEnum):
@@ -146,14 +155,14 @@ class Plane(IntEnum):
 
 def StateDict():
   result = { key : 0 for key in list(Registers) }
-  result.update( { key : 0 for key in Cartesian.Absolute.attr} )
-  result.update( { key : 0 for key in Cartesian.Incremental.attr} )
-  result.update( { key : 0 for key in Polar.Absolute.attr } )
-  result.update( { key : 0 for key in Polar.Incremental.attr } )
-  result.update( { key : 0 for key in Angular.Absolute.attr } )
-  result.update( { key : 0 for key in Angular.Incremental.attr } )
-  result.update( { key : 0 for key in Polar.Center.Absolute.attr } )
-  result.update( { key : 0 for key in Polar.Center.Incremental.attr } )
+  result.update( { key : 0 for key in Cartesian.absolute.attr} )
+  result.update( { key : 0 for key in Cartesian.incremental.attr} )
+  result.update( { key : 0 for key in Polar.absolute.attr } )
+  result.update( { key : 0 for key in Polar.incremental.attr } )
+  result.update( { key : 0 for key in Angular.absolute.attr } )
+  result.update( { key : 0 for key in Angular.incremental.attr } )
+  result.update( { key : 0 for key in Center.absolute.attr } )
+  result.update( { key : 0 for key in Center.incremental.attr } )
   result[Registers.COMPENSATION] = Compensation.NONE
   result[Registers.DIRECTION]    = Direction.CW
   result[Registers.UNITS]        = Units.MM
@@ -232,15 +241,15 @@ class SetGOTODefaults:
     state.symtable = constants
     
 planeCoordDict = {  
-    Plane.XY : (Cartesian.Absolute.attr.X,Cartesian.Absolute.attr.Y,Cartesian.Absolute.attr.Z),
-    Plane.YZ : (Cartesian.Absolute.attr.Y,Cartesian.Absolute.attr.Z,Cartesian.Absolute.attr.X),
-    Plane.ZX : (Cartesian.Absolute.attr.Z,Cartesian.Absolute.attr.X,Cartesian.Absolute.attr.Y)
+    Plane.XY : (Cartesian.absolute.attr.X,Cartesian.absolute.attr.Y,Cartesian.absolute.attr.Z),
+    Plane.YZ : (Cartesian.absolute.attr.Y,Cartesian.absolute.attr.Z,Cartesian.absolute.attr.X),
+    Plane.ZX : (Cartesian.absolute.attr.Z,Cartesian.absolute.attr.X,Cartesian.absolute.attr.Y)
   }
 # circle center mappings for polar calculation
 planeCenterDict = {  
-    Plane.XY : (Polar.Center.Absolute.attr.X,Polar.Center.Absolute.attr.Y),
-    Plane.YZ : (Polar.Center.Absolute.attr.Y,Polar.Center.Absolute.attr.Z),
-    Plane.ZX : (Polar.Center.Absolute.attr.Z,Polar.Center.Absolute.attr.X)
+    Plane.XY : (Center.absolute.attr.X,Center.absolute.attr.Y),
+    Plane.YZ : (Center.absolute.attr.Y,Center.absolute.attr.Z),
+    Plane.ZX : (Center.absolute.attr.Z,Center.absolute.attr.X)
   }
 
 def angNorm( a ):
@@ -253,12 +262,12 @@ def cartesian2polar( self, member, state ):
   x1, x2, x3 = planeCoordDict[plane] # get cartesian coordinates for substitution
   cx1, cx2 = planeCenterDict[plane]  # get circle center coordinates
   
-  r1, r2 = (getattr( self, x1.name)-state[cx1]), (getattr( self, x2.name)-state[cx2])
+  r1, r2 = (getattr( self.absolute, x1.name)-state[cx1]), (getattr( self.absolute, x2.name)-state[cx2])
   
   result = {}
-  result[ Polar.Absolute.attr.RAD ] = math.sqrt(r1**2 + r2**2)
-  result[ Polar.Absolute.attr.ANG ] = angNorm(math.atan2(r2, r1)) * float(180)/math.pi
-  result[ Polar.Absolute.attr.LEN ] = getattr(self, x3.name )
+  result[ Polar.absolute.attr.RAD ] = math.sqrt(r1**2 + r2**2)
+  result[ Polar.absolute.attr.ANG ] = angNorm(math.atan2(r2, r1)) * float(180)/math.pi
+  result[ Polar.absolute.attr.LEN ] = getattr(self.absolute, x3.name )
   return result
   
 def polar2cartesian( self, member, state ):
@@ -268,8 +277,8 @@ def polar2cartesian( self, member, state ):
   cx1, cx2    = planeCenterDict[plane]  # get circle center coordinates
   
   result = {}
-  result[ x1 ] = state[ cx1 ] + self.RAD*math.cos(self.ANG*math.pi/180)
-  result[ x2 ] = state[ cx2 ] + self.RAD*math.sin(self.ANG*math.pi/180)
-  result[ x3 ] = self.LEN
+  result[ x1 ] = state[ cx1 ] + self.absolute.RAD*math.cos(self.absolute.ANG*math.pi/180)
+  result[ x2 ] = state[ cx2 ] + self.absolute.RAD*math.sin(self.absolute.ANG*math.pi/180)
+  result[ x3 ] = self.absolute.LEN
   
   return result
