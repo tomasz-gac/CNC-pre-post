@@ -19,7 +19,7 @@ class A(h.Morph):
   b2 = B2
   
 init = { attr : attr.value() for attr in h.breadth_first(A) if attr.terminal }
-a, i = h.solve( A, init )
+a, i, sh = h.solve( A, init )
 
 class Cartpol(h.Morph):
   cartesian = cmd.Cartesian
@@ -30,20 +30,21 @@ r = p.Parse(s)
 
 print('s0')
 input()  
-s0,i = h.solve(Cartpol, cmd.StateDict(), cmd.StateDict())
+s0,i, sh = h.solve(Cartpol, cmd.StateDict(), cmd.StateDict())
 d0 = cmd.StateDict()
 print('s1')
 input()
 s1, att = h.update(s0, s.symtable, d0)
-# print(s1)
-d1 = { type(attr) : attr.value for attr in h.breadth_first(s1) if attr.terminal }
+print(s1.cartesian.absolute.X)
+'''print('s2')
+input()
 
 s = b.State('L IX-30 FMAX')
 r = p.Parse(s)
 
-# dec = cmd.StateDict()
-# dec.update( { type(attr) : attr.value for attr in h.breadth_first(c) if attr.terminal } )
-s2, att2 = h.update(s1, s.symtable, d1)
+d1 = cmd.StateDict()
+d1.update( { type(attr) : attr.value for attr in h.breadth_first(s1) if attr.terminal } )
+s1 = h.update(s1, s.symtable, d1)'''
 
 def bench( n = 1000 ):
   import time

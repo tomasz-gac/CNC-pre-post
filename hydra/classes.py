@@ -1,5 +1,6 @@
 import enum
 from math import isclose
+from collections import Counter
 
 class Attribute:
   __slots__ = 'instance', 'name'

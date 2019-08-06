@@ -257,7 +257,6 @@ def angNorm( a ):
   return a - (2 * math.pi)*math.floor((a+math.pi)/(2*math.pi))
   
 def cartesian2polar( self, member, state ):
-  # print('cart2pol')
   plane = state[Registers.POLARPLANE]
   x1, x2, x3 = planeCoordDict[plane] # get cartesian coordinates for substitution
   cx1, cx2 = planeCenterDict[plane]  # get circle center coordinates
@@ -271,7 +270,6 @@ def cartesian2polar( self, member, state ):
   return result
   
 def polar2cartesian( self, member, state ):
-  # print('pol2cart')
   plane = state[Registers.POLARPLANE]
   x1, x2, x3  = planeCoordDict[plane]   # get cartesian coordinates for substitution
   cx1, cx2    = planeCenterDict[plane]  # get circle center coordinates
