@@ -35,8 +35,8 @@ def update( value, data, *args ):
     # decompose each source to terminals that are not present in shared_terminals
     '''conflicts = { attribute for source in (solve_conflicts & dependencies.keys())
                               for attribute in (dependencies[source] - shared_terminals) }'''
-    conflicts = { attribute for source in solve_conflicts if source in dependencies
-                                    for attribute in (dependencies[source] - shared_terminals) }
+    conflicts = { attribute for source in solve_conflicts if source.value in dependencies
+                                    for attribute in dependencies[source.value] if attribute not in shared_terminals }
     conflicts.update( shared_terminal for source in (conflicts & shared.keys())
                                         for shared_terminal in dependencies[source] )
     conflicts.update( solve_conflicts )
