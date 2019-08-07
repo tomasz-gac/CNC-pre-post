@@ -19,7 +19,7 @@ class A(h.Morph):
   b2 = B2
   
 init = { attr : attr.value() for attr in h.breadth_first(A) if attr.terminal }
-a, i, sh = h.solve( A, init )
+a, i, sh, ass = h.solve( A, init )
 
 class Cartpol(h.Morph):
   cartesian = cmd.Cartesian
@@ -35,7 +35,7 @@ s = b.State('L Z+150 IX-20 FMAX')
 r = p.Parse(s)
 
 print('s0')
-s0,i, sh = h.solve(Cartpol, cmd.StateDict(), cmd.StateDict())
+s0,i, sh, ass = h.solve(Cartpol, cmd.StateDict(), cmd.StateDict())
 print('s1 : linear 1')
 s1, att1 = decompose_solve(s0, s.symtable)
 tests = [
@@ -62,12 +62,25 @@ if any( not test for test in tests):
   input()
 
 print('s3 : circle center change')
-s = b.State('CC X-20 Y+30')
+s = b.State('L IX-30 IZ+5 FMAX')
+# s = b.State('CC X-20 Y+30')
 r = p.Parse(s)
-s.symtable.update({
+'''s.symtable.update({
   Cartpol.cartesian.incremental.attr.X : 0,
   Cartpol.cartesian.incremental.attr.Y : 0,
   Cartpol.cartesian.incremental.attr.Z : 0
-})
+})'''
 
-s3, att3 = decompose_solve(s2, s.symtable)
+import time
+start = time.time()
+
+s2, att3 = decompose_solve(s2, s.symtable)
+'''for i in range(100000):
+  print(i)
+  s2, att3 = decompose_solve(s2, s.symtable)
+  #  i % 1000 == 0:
+  print(i)
+  if s2 is None:
+    print('failed ',i)
+    break'''
+print( time.time() - start )

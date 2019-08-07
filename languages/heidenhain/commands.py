@@ -34,13 +34,13 @@ def inc2abs( value ):
 def Abs2Inc( value, source, state ):
   incrementalCoord = abs2inc(source)
   result = { incrementalCoord : value - state[source] }
-  print( 'abs2inc value:%s source:%s result:%s' % (value, source, result))
+  # print( 'abs2inc value:%s source:%s result:%s' % (value, source, result))
   return result 
 
 def Inc2Abs( value, source, state ):
   absoluteCoord = inc2abs(source)
   result = { absoluteCoord : value + state[absoluteCoord] }
-  print( 'inc2abs value:%s source:%s result:%s' % (value, source, result))
+  # print( 'inc2abs value:%s source:%s result:%s' % (value, source, result))
   return result
     
 def associate_absinc( absolute, incremental ):
@@ -257,6 +257,7 @@ def angNorm( a ):
   return a - (2 * math.pi)*math.floor((a+math.pi)/(2*math.pi))
   
 def cartesian2polar( self, member, state ):
+  print('cartesian2polar')
   plane = state[Registers.POLARPLANE]
   x1, x2, x3 = planeCoordDict[plane] # get cartesian coordinates for substitution
   cx1, cx2 = planeCenterDict[plane]  # get circle center coordinates
@@ -267,9 +268,11 @@ def cartesian2polar( self, member, state ):
   result[ Polar.absolute.attr.RAD ] = math.sqrt(r1**2 + r2**2)
   result[ Polar.absolute.attr.ANG ] = angNorm(math.atan2(r2, r1)) * float(180)/math.pi
   result[ Polar.absolute.attr.LEN ] = getattr(self.absolute, x3.name )
+  print(result)
   return result
   
 def polar2cartesian( self, member, state ):
+  print('polar2cartesian')
   plane = state[Registers.POLARPLANE]
   x1, x2, x3  = planeCoordDict[plane]   # get cartesian coordinates for substitution
   cx1, cx2    = planeCenterDict[plane]  # get circle center coordinates
@@ -277,6 +280,6 @@ def polar2cartesian( self, member, state ):
   result = {}
   result[ x1 ] = state[ cx1 ] + self.absolute.RAD*math.cos(self.absolute.ANG*math.pi/180)
   result[ x2 ] = state[ cx2 ] + self.absolute.RAD*math.sin(self.absolute.ANG*math.pi/180)
-  result[ x3 ] = self.absolute.LEN
-  
+  result[ x3 ] = self.absolute.LEN  
+  print(result)
   return result

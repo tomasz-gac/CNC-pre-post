@@ -2,7 +2,7 @@ from hydra.classes import Morph, AttributeMeta
 from hydra.iteration import post_order, breadth_first
 from collections import Counter
 
-
+_dependencies_ = {}
 
 def update( value, data, *args ):
   cls = type(value)
@@ -14,12 +14,13 @@ def update( value, data, *args ):
                         for key,value in data.items() if isinstance(key, AttributeMeta) and isinstance( value, Morph )
                           for value_attr in breadth_first(value) if value_attr.terminal }
   decomposed_data.update( (key, value) for key,value in data.items() if not isinstance(key, AttributeMeta) or not isinstance( value, Morph ) )
-  print('----- data in',decomposed_data )
+  # print('----- data in',decomposed_data )
   # for all composite types in cls
   # mapping of type -> set of type's terminal dependencies
   # TODO : omit nested breadth_first? 
-  dependencies = { type_attr.value : { dec_attr for dec_attr in breadth_first(type_attr.value) if dec_attr.terminal } 
-                                    for type_attr in breadth_first(cls) if not type_attr.terminal }  
+  for type_attr in breadth_first(cls):
+    if type_attr.value not in _dependencies_ and not type_attr.terminal:
+      _dependencies_[ type_attr.value ] = { dec_attr for dec_attr in breadth_first(type_attr.value) if dec_attr.terminal }
   
   result = None
   attempt = {}
@@ -30,26 +31,29 @@ def update( value, data, *args ):
     attempt = dict(decomposed_value)
     attempt.update(decomposed_data)
     a0 = dict(attempt)
-    print('attempt ', attempt)
+    print('----- attempt ', attempt)
     # try building result
-    result, solve_conflicts, shared = solve(cls, attempt, *args)
+    result, solve_conflicts, shared, assoc = solve(cls, attempt, *args)
+    solve_conflicts = { conflict for pair in solve_conflicts for conflict in pair }
     # decompose shared values down to terminals
-    shared_terminals = { attr for item in shared for attr in dependencies[item] }
+    shared_terminals = { attr for item in shared for attr in _dependencies_[item] }
     # for each composite source of conflict, add their terminal decomposition, but omit the terminals that are shared
-    conflicts = { attribute for source in solve_conflicts if source.value in dependencies
-                              for attribute in ( dependencies[source.value] - shared_terminals ) }
+    conflicts = { attribute for source in solve_conflicts if source.value in _dependencies_
+                              for attribute in ( _dependencies_[source.value] - shared_terminals ) }
     # handle the case when the shared terminal itself is the source of conflict
     conflicts.update( shared_terminal for source in solve_conflicts if source.value in shared
-                                        for shared_terminal in dependencies[source.value] )
+                                        for shared_terminal in _dependencies_[source.value] )
     # append the terminals
     conflicts.update( solve_conflicts )
     # remove conflicts from decomposed_value
     decomposed_value = { key : value for key,value in decomposed_value.items() if key not in conflicts }
+    print('----- assoc', assoc )
     print('----- attempt diff', { key : value for key,value in attempt.items() if key not in a0 or a0[key] != value})
     print('----- conflicts ',conflicts)
     print('----- solve_conflicts ',solve_conflicts)
     print('----- decomposed_value ',decomposed_value)
     print('----------------------------------')
+    input()
     
   return result, attempt
   
@@ -61,17 +65,21 @@ def solve( cls, data, *args ):
   guard(data)
   conflicts = []
   created = list(data.items())
-  post_order_composites = list( attr for attr in post_order(cls) if not attr.terminal)
+  post_order_composites = set( attr for attr in post_order(cls) if not attr.terminal)
+  assoc = {}
   
   ''' Iteratively morphs the data and tries to construct higher-order classes
       Assures object equality through morph, but not identity in case of internal shared variables '''   
   while len(created) > 0:
     # morph the created items, push them to data
-    conflicts.extend( morph( data, *args, stack=created ) )
-    # traverse cls, create members that are available
-    created.extend( (type_attr, type_attr.value(data)) for type_attr in post_order_composites 
-                        if type_attr not in data 
-                          and all( member in data for member in type_attr.value.attr ) )
+    morph_conflicts, morph_assoc = morph( data, *args, stack=created )
+    conflicts.extend( morph_conflicts )
+    assoc.update( morph_assoc )
+    post_order_composites = post_order_composites - data.keys()
+    # traverse cls, create members that are available        
+    for type_attr in post_order_composites:
+      if all( member in data for member in type_attr.value.attr ):
+        created.append( (type_attr, type_attr.value(data)) )
   
   ''' At this stage, data is constructed, but it may contain multiple copies of an object
       that satisfies the class' == operator. Since all objects need to be decomposible
@@ -93,7 +101,7 @@ def solve( cls, data, *args ):
         shared_attr.value = shared_composites[value_type]
   
   result = cls(data) if all( attr in data for attr in cls.attr ) else None
-  return result, conflicts, shared_composites
+  return result, conflicts, shared_composites, assoc
           
 def guard( values ):
   # make sure that each value has the type declared by its associated member
@@ -114,6 +122,7 @@ def morph( data, *args, stack=None ):
   if stack is None:
     stack = list(data.items())
   conflicts = set()
+  assoc = {}
   
   # morph the values contents
   while len(stack) > 0:
@@ -122,17 +131,21 @@ def morph( data, *args, stack=None ):
     
     if callable( value ):
       # call the morphism
-      results = value( source, *args )      
+      results = value( source, *args )
       # assure proper type assignment and decomposition
       guard( results )
+      if source not in assoc:
+        assoc[source] = set( results.keys() )
+      else:
+        assoc[source].update( results.keys() )
       # get the value inconsistencies between data and results
-      conflicts.update( source for key,value in results.items() 
-                                if data.get(key,value) != value )
+      conflicts.update( (source, key) for key,value in results.items() 
+                                          if data.get(key,value) != value )
       stack.extend( (target,result) for target,result in results.items() if target not in data )
       # source has been processed consistently, update the data dict
       data.update( results )
     else:
       pass # source does not encode transformation, so skip it
     data[source] = value
-  return conflicts
+  return conflicts, assoc
   
