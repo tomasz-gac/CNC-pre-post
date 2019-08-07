@@ -33,21 +33,10 @@ def update( value, data, *args ):
     a0 = dict(attempt)
     print('----- attempt ', attempt)
     # try building result
-    result, solve_conflicts, shared, assoc = solve(cls, attempt, *args)
+    result, solve_conflicts, shared = solve(cls, attempt, *args)
     solve_conflicts = { conflict for pair in solve_conflicts for conflict in pair }
     # decompose shared values down to terminals
-    shared_terminals = { attr for item in shared for attr in _dependencies_[item] }    
-    '''creators = {}
-    for source, targets in assoc.items():
-      for target in targets:
-        value = _dependencies_.get( source.value, {source} )
-        try:
-          creators[target].update( value )
-        except KeyError:
-          creators[target] = value
-    
-    conflicts = { type_attr for source,target in solve_conflicts
-                              for type_attr in (creators[target] - _dependencies_.get(source.value, set())) }'''
+    shared_terminals = { attr for item in shared for attr in _dependencies_[item] }
     
     
     # TODO: morphism tylko pomiedzy wartosciami, ktorych klucze naleza do tego samego Morph
@@ -84,15 +73,12 @@ def solve( cls, data, *args ):
   conflicts = []
   created = list(data.items())
   post_order_composites = set( attr for attr in post_order(cls) if not attr.terminal)
-  assoc = {}
   
   ''' Iteratively morphs the data and tries to construct higher-order classes
       Assures object equality through morph, but not identity in case of internal shared variables '''   
   while len(created) > 0:
     # morph the created items, push them to data
-    morph_conflicts, morph_assoc = morph( data, *args, stack=created )
-    conflicts.extend( morph_conflicts )
-    assoc.update( morph_assoc )
+    conflicts.extend( morph( data, *args, stack=created ) )
     post_order_composites = post_order_composites - data.keys()
     # traverse cls, create members that are available        
     for type_attr in post_order_composites:
@@ -119,7 +105,7 @@ def solve( cls, data, *args ):
         shared_attr.value = shared_composites[value_type]
   
   result = cls(data) if all( attr in data for attr in cls.attr ) else None
-  return result, conflicts, shared_composites, assoc
+  return result, conflicts, shared_composites
           
 def guard( values ):
   # make sure that each value has the type declared by its associated member
@@ -140,7 +126,6 @@ def morph( data, *args, stack=None ):
   if stack is None:
     stack = list(data.items())
   conflicts = set()
-  assoc = {}
   
   # morph the values contents
   while len(stack) > 0:
@@ -150,12 +135,12 @@ def morph( data, *args, stack=None ):
     if callable( value ):
       # call the morphism
       results = value( source, *args )
+      if any( key.instance is not source.instance for key in results ):
+        raise RuntimeError(
+        'Morphisms have to return keys that belong to the same Morph as source\nSource:%s, source.instance:%s\n' % (source, source.instance) + 
+                            '\n'.join( ['Result key:%s, key.instance:%s' % (key,key.instance) for key in results if key.instance is not source.instance ] ) )
       # assure proper type assignment and decomposition
       guard( results )
-      if source not in assoc:
-        assoc[source] = set( results.keys() )
-      else:
-        assoc[source].update( results.keys() )
       # get the value inconsistencies between data and results
       conflicts.update( (source, key) for key,value in results.items() 
                                           if data.get(key,value) != value )
@@ -165,5 +150,5 @@ def morph( data, *args, stack=None ):
     else:
       pass # source does not encode transformation, so skip it
     data[source] = value
-  return conflicts, assoc
+  return conflicts
   

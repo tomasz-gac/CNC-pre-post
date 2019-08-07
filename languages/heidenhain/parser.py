@@ -24,13 +24,13 @@ with open( 'languages/heidenhain/heidenhain.lang' ) as file:
 p = re.compile
 
 GOTOcartesian = Lookup({ 
-  p('L ')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(cmd.Cartesian.absolute), cmd.invariant ),
-  p('C ')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(cmd.Cartesian.absolute), cmd.invariant )
+  p('L ')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(cmd.Cartesian), cmd.invariant ),
+  p('C ')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(cmd.Cartesian), cmd.invariant )
 }.items())
 
 GOTOpolar = Lookup({ 
-  p('LP')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(cmd.Polar.absolute), cmd.invariant ),
-  p('CP')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(cmd.Polar.absolute), cmd.invariant )
+  p('LP')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(cmd.Polar), cmd.invariant ),
+  p('CP')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(cmd.Polar), cmd.invariant )
 }.items())
 
 toolCallOptions = Lookup({
@@ -48,12 +48,12 @@ def handleCoord( map ):
   return _handleCoord
   
 cartesianCoordMap = { 
-  'X' : cmd.Cartesian.absolute.attr.X, 
-  'Y' : cmd.Cartesian.absolute.attr.Y, 
-  'Z' : cmd.Cartesian.absolute.attr.Z, 
-  'A' : cmd.Angular.absolute.attr.A, 
-  'B' : cmd.Angular.absolute.attr.B, 
-  'C' : cmd.Angular.absolute.attr.C
+  'X' : cmd.Cartesian.X.attr.abs, 
+  'Y' : cmd.Cartesian.Y.attr.abs, 
+  'Z' : cmd.Cartesian.Z.attr.abs, 
+  'A' : cmd.Angular.A.attr.abs, 
+  'B' : cmd.Angular.B.attr.abs, 
+  'C' : cmd.Angular.C.attr.abs
 }
 
 cartesianCoord = Switch({
@@ -63,11 +63,11 @@ cartesianCoord = Switch({
 }.items())
 
 polarCoordMap = { 
-  'PA' : cmd.Polar.absolute.attr.ANG, 
-  'PR' : cmd.Polar.absolute.attr.RAD,
-  'X'  : cmd.Polar.absolute.attr.LEN, 
-  'Y'  : cmd.Polar.absolute.attr.LEN, 
-  'Z'  : cmd.Polar.absolute.attr.LEN
+  'PA' : cmd.Polar.ANG.attr.abs, 
+  'PR' : cmd.Polar.RAD.attr.abs,
+  'X'  : cmd.Polar.LEN.attr.abs, 
+  'Y'  : cmd.Polar.LEN.attr.abs, 
+  'Z'  : cmd.Polar.LEN.attr.abs
 }
 
 polarCoord = Switch({
@@ -77,9 +77,9 @@ polarCoord = Switch({
 }.items())
 
 CCcoordmap = { 
-  'X' : cmd.Center.absolute.attr.X, 
-  'Y' : cmd.Center.absolute.attr.Y, 
-  'Z' : cmd.Center.absolute.attr.Z 
+  'X' : cmd.Center.CX.attr.abs, 
+  'Y' : cmd.Center.CY.attr.abs, 
+  'Z' : cmd.Center.CZ.attr.abs
 }
 
 CCcoord = Switch({

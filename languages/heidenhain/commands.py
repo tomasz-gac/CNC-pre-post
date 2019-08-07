@@ -26,10 +26,10 @@ def isIncremental( coord ):
   return hasattr( coord, 'absolute' )
   
 def abs2inc( value ):
-  return getattr( value.instance.incremental.attr, value.name )
+  return value.instance.inc
   
 def inc2abs( value ):
-  return getattr( value.instance.absolute.attr, value.name )
+  return value.instance.abs
   
 def Abs2Inc( value, source, state ):
   incrementalCoord = abs2inc(source)
@@ -42,76 +42,63 @@ def Inc2Abs( value, source, state ):
   result = { absoluteCoord : value + state[absoluteCoord] }
   # print( 'inc2abs value:%s source:%s result:%s' % (value, source, result))
   return result
-    
-def associate_absinc( absolute, incremental ):
-  absolute.incremental = incremental
-  incremental.absolute = absolute
 
-class CenterAbs(Morph): # CIRCLE CENTER X Y Z
-  X = morphism( float, Abs2Inc )
-  Y = morphism( float, Abs2Inc )
-  Z = morphism( float, Abs2Inc )
-  
-class CenterInc(Morph):
-  X = morphism( float, Inc2Abs )
-  Y = morphism( float, Inc2Abs )
-  Z = morphism( float, Inc2Abs )
-
-associate_absinc( CenterAbs, CenterInc )
+# CIRCLE CENTER X Y Z
 class Center(Morph):  
-  absolute    = CenterAbs
-  incremental = CenterInc
+  class CX(Morph):
+    abs = morphism( float, Abs2Inc )
+    inc = morphism( float, Inc2Abs )
+  class CY(Morph):
+    abs = morphism( float, Abs2Inc )
+    inc = morphism( float, Inc2Abs )
+  class CZ(Morph):
+    abs = morphism( float, Abs2Inc )
+    inc = morphism( float, Inc2Abs )
   
   
 class Cartesian(Morph):
-  class absolute(Morph):
-    X = morphism( float, Abs2Inc )
-    Y = morphism( float, Abs2Inc )
-    Z = morphism( float, Abs2Inc )
-  
-  class incremental(Morph):
-    X = morphism( float, Inc2Abs )
-    Y = morphism( float, Inc2Abs )
-    Z = morphism( float, Inc2Abs )
+  class X(Morph):
+    abs = morphism( float, Abs2Inc )
+    inc = morphism( float, Inc2Abs )
+  class Y(Morph):
+    abs = morphism( float, Abs2Inc )
+    inc = morphism( float, Inc2Abs )
+  class Z(Morph):
+    abs = morphism( float, Abs2Inc )
+    inc = morphism( float, Inc2Abs )
   
   center = Center
   
   def __call__( self, member, state ):
       return cartesian2polar( self, member, state )
-
-associate_absinc( Cartesian.absolute, Cartesian.incremental )
     
 class Polar(Morph):
-  class absolute(Morph):
-    ANG = morphism( float, Abs2Inc )
-    RAD = morphism( float, Abs2Inc )
-    LEN = morphism( float, Abs2Inc )
-
-  class incremental(Morph):
-    ANG = morphism( float, Inc2Abs )
-    RAD = morphism( float, Inc2Abs )
-    LEN = morphism( float, Inc2Abs )
+  class RAD(Morph):
+    abs = morphism( float, Abs2Inc )
+    inc = morphism( float, Inc2Abs )
+  class ANG(Morph):
+    abs = morphism( float, Abs2Inc )
+    inc = morphism( float, Inc2Abs )
+  class LEN(Morph):
+    abs = morphism( float, Abs2Inc )
+    inc = morphism( float, Inc2Abs )
     
   center = Center
     
   def __call__( self, member, state ):
     return polar2cartesian( self, member, state )
-    
-
-associate_absinc( Polar.absolute, Polar.incremental )
-
 
 class Angular(Morph):
-  class absolute(Morph):
-    A = morphism( float, Abs2Inc )
-    B = morphism( float, Abs2Inc )
-    C = morphism( float, Abs2Inc )
-  class incremental(Morph):
-    A = morphism( float, Inc2Abs )
-    B = morphism( float, Inc2Abs )
-    C = morphism( float, Inc2Abs )
+  class A(Morph):
+    abs = morphism( float, Abs2Inc )
+    inc = morphism( float, Inc2Abs )
+  class B(Morph):
+    abs = morphism( float, Abs2Inc )
+    inc = morphism( float, Inc2Abs )
+  class C(Morph):
+    abs = morphism( float, Abs2Inc )
+    inc = morphism( float, Inc2Abs )
 
-associate_absinc( Angular.absolute, Angular.incremental )
    
 @unique
 class Units(IntEnum):
@@ -234,22 +221,22 @@ class SetGOTODefaults:
       # For each coordinate in 'self.coordinates'
       # that is  missing from state.symtable
       # set its incremental counterpart to 0
-    constants = { abs2inc(abs) : 0 for abs in self.coordinates.attr if abs not in state.symtable }
+    constants = { coord.value.attr.abs : 0 for coord in self.coordinates.attr if coord not in state.symtable }
       # In case the user already specified incremental coordinates in symtable,
       # update constants with symtable to override conflicts
     constants.update( state.symtable )
     state.symtable = constants
     
 planeCoordDict = {  
-    Plane.XY : (Cartesian.absolute.attr.X,Cartesian.absolute.attr.Y,Cartesian.absolute.attr.Z),
-    Plane.YZ : (Cartesian.absolute.attr.Y,Cartesian.absolute.attr.Z,Cartesian.absolute.attr.X),
-    Plane.ZX : (Cartesian.absolute.attr.Z,Cartesian.absolute.attr.X,Cartesian.absolute.attr.Y)
+    Plane.XY : (Cartesian.X.attr.abs,Cartesian.Y.attr.abs,Cartesian.Z.attr.abs),
+    Plane.YZ : (Cartesian.Y.attr.abs,Cartesian.Z.attr.abs,Cartesian.X.attr.abs),
+    Plane.ZX : (Cartesian.Z.attr.abs,Cartesian.X.attr.abs,Cartesian.Y.attr.abs)
   }
 # circle center mappings for polar calculation
 planeCenterDict = {  
-    Plane.XY : (Center.absolute.attr.X,Center.absolute.attr.Y),
-    Plane.YZ : (Center.absolute.attr.Y,Center.absolute.attr.Z),
-    Plane.ZX : (Center.absolute.attr.Z,Center.absolute.attr.X)
+    Plane.XY : (Center.CX.attr.abs,Center.CY.attr.abs),
+    Plane.YZ : (Center.CY.attr.abs,Center.CZ.attr.abs),
+    Plane.ZX : (Center.CZ.attr.abs,Center.CX.attr.abs)
   }
 
 def angNorm( a ):
