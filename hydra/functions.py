@@ -49,6 +49,11 @@ def update( value, data, *args ):
     conflicts = { type_attr for source,target in solve_conflicts
                               for type_attr in (creators[target] - _dependencies_.get(source.value, set())) }'''
     
+    
+    # TODO: morphism tylko pomiedzy wartosciami, ktorych klucze naleza do tego samego Morph
+    
+    
+    
     # for each composite source of conflict, add their terminal decomposition, but omit the terminals that are shared
     conflicts = { attribute for source in solve_conflicts if source.value in _dependencies_
                               for attribute in ( _dependencies_[source.value] - shared_terminals ) }
