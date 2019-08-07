@@ -34,13 +34,13 @@ def inc2abs( value ):
 def Abs2Inc( value, source, state ):
   incrementalCoord = abs2inc(source)
   result = { incrementalCoord : value - state[source] }
-  # print( 'abs2inc value:%s source:%s result:%s' % (value, source, result))
+  print( 'abs2inc value:%s source:%s result:%s' % (value, source, result))
   return result 
 
 def Inc2Abs( value, source, state ):
   absoluteCoord = inc2abs(source)
   result = { absoluteCoord : value + state[absoluteCoord] }
-  # print( 'inc2abs value:%s source:%s result:%s' % (value, source, result))
+  print( 'inc2abs value:%s source:%s result:%s' % (value, source, result))
   return result
     
 def associate_absinc( absolute, incremental ):
