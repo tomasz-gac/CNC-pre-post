@@ -36,7 +36,19 @@ def update( value, data, *args ):
     result, solve_conflicts, shared, assoc = solve(cls, attempt, *args)
     solve_conflicts = { conflict for pair in solve_conflicts for conflict in pair }
     # decompose shared values down to terminals
-    shared_terminals = { attr for item in shared for attr in _dependencies_[item] }
+    shared_terminals = { attr for item in shared for attr in _dependencies_[item] }    
+    '''creators = {}
+    for source, targets in assoc.items():
+      for target in targets:
+        value = _dependencies_.get( source.value, {source} )
+        try:
+          creators[target].update( value )
+        except KeyError:
+          creators[target] = value
+    
+    conflicts = { type_attr for source,target in solve_conflicts
+                              for type_attr in (creators[target] - _dependencies_.get(source.value, set())) }'''
+    
     # for each composite source of conflict, add their terminal decomposition, but omit the terminals that are shared
     conflicts = { attribute for source in solve_conflicts if source.value in _dependencies_
                               for attribute in ( _dependencies_[source.value] - shared_terminals ) }
@@ -47,7 +59,8 @@ def update( value, data, *args ):
     conflicts.update( solve_conflicts )
     # remove conflicts from decomposed_value
     decomposed_value = { key : value for key,value in decomposed_value.items() if key not in conflicts }
-    print('----- assoc', assoc )
+    # print('----- assoc', assoc )
+    # print('----- creators', creators )
     print('----- attempt diff', { key : value for key,value in attempt.items() if key not in a0 or a0[key] != value})
     print('----- conflicts ',conflicts)
     print('----- solve_conflicts ',solve_conflicts)
