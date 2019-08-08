@@ -4,7 +4,7 @@ from collections import Counter
 
 _dependencies_ = {}
 
-def update( value, data, *args ):
+def update( value, data, *args, limit=10 ):
   cls = type(value)
   guard(data)
   # decompose value down to terminals
@@ -25,13 +25,15 @@ def update( value, data, *args ):
   attempt = {}
   solve_conflicts = {None}
   
-  while len(solve_conflicts) > 0:
+  for i in range(limit):
     # overwrite decomposed_value with decomposed_data
     attempt = dict(decomposed_value)
     attempt.update(decomposed_data)
     a0 = dict(attempt)
     # try building result
     result, solve_conflicts, shared = solve(cls, attempt, *args)
+    if len(solve_conflicts) == 0:
+      return result, attempt
     solve_conflicts = { conflict for pair in solve_conflicts for conflict in pair }
     # decompose shared values down to terminals
     shared_terminals = { attr for item in shared for attr in _dependencies_[item] }
@@ -51,8 +53,8 @@ def update( value, data, *args ):
     print('----- decomposed_value ',decomposed_value)
     print('----------------------------------')
     input()'''
-    
-  return result, attempt
+  raise RuntimeError('Update iteration limit reached')
+  
 
 
 def construct( cls, data ):
@@ -67,7 +69,7 @@ def construct( cls, data ):
     mutates data by adding intermediate morphism results
 '''
 def solve( cls, data, *args ):
-  guard(data)
+  # guard(data)
   conflicts = []
   created = list(data.items())
   post_order_composites = set( attr for attr in breadth_first(cls) if not attr.terminal)
@@ -140,28 +142,24 @@ def morph( data, *args, stack=None ):
         'Morphisms have to return keys that belong to the same Morph as source\nSource:%s, source.instance:%s\n' % 
          (source, source.instance) + '\n'.join( error ) )
       
-      processed_results = {}
-      for target, result in results.items():
+      results_to_process = list(results.items())
+      while len(results_to_process) > 0:
+        target, result = results_to_process.pop()
         # assure that the type of value equals the one declared in target
         if target.value != type(result):
-          processed_results[target] = target.value(result)
+          results[target] = target.value(result)
         else:
-          processed_results[target] = result
+          results[target] = result
         if target.terminal:
           # conflict checking
           if data.get(target,result) != result:
             conflicts.append( (source, target) )
         else:
-          # decomposition and conflict checking
-          for value_attr in breadth_first(result):
-            type_attr = type(value_attr)
-            value_ = value_attr.value # does not work as 'value' instad of 'value_' for some reason ?!
-            processed_results[type_attr] = value_
-            if value_attr.terminal and data.get(type_attr,value_) != value_:
-              conflicts.append( (source, type_attr) )
-      stack.extend( (target,result) for target,result in processed_results.items() if target not in data )
-      # source has been processed consistently, update the data dict
-      data.update( processed_results )
+          # composites are in conflict if their terminals are in conflict, do not decompose
+          results_to_process.extend( (type(attr), attr.value) for attr in breadth_first(result) if attr.terminal )
+     
+      stack.extend( (target,result) for target,result in results.items() if target not in data )
+      data.update( results )
     else:
       pass # source does not encode transformation, so skip it
     data[source] = value

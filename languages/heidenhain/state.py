@@ -153,7 +153,7 @@ class Cartesian2Polar(Morph):
   
   def __call__( self, member, state ):
     # print('cartesian2polar')
-    plane  = state[Registers.POLARPLANE]
+    plane  = self.center.plane
     coord  = planeCoordDict[plane] # get cartesian coordinates for substitution
     center = planeCenterDict[plane]  # get circle center coordinates
     
@@ -166,7 +166,7 @@ class Cartesian2Polar(Morph):
     result[ Polar.RAD.attr.abs ] = math.sqrt(r1**2 + r2**2)
     result[ Polar.ANG.attr.abs ] = angNorm(math.atan2(r2, r1)) * float(180)/math.pi
     result[ Polar.LEN.attr.abs ] = x2
-    inc_results = ( Abs2Inc(value, key, state).items() for key,value in result.items() )
+    inc_results = [ Abs2Inc(value, key, state).items() for key,value in result.items() ]
     result.update( pair for list in inc_results for pair in list )
     result[Polar.ANG.attr.inc] = angNorm(result[Polar.ANG.attr.inc]*math.pi/float(180)) * float(180)/math.pi
     result[Polar2Cartesian.attr.center] = self.center
@@ -180,7 +180,7 @@ class Polar2Cartesian(Morph):
     
   def __call__( self, member, state ):
     # print('polar2cartesian')
-    plane = state[Registers.POLARPLANE]
+    plane  = self.center.plane
     coord  = planeCoordDict[plane]   # get cartesian coordinates for substitution
     center = planeCenterDict[plane]  # get circle center coordinates
     
@@ -191,7 +191,7 @@ class Polar2Cartesian(Morph):
     result[ x0 ] = cx0 + self.polar.RAD.abs*math.cos(self.polar.ANG.abs*math.pi/180)
     result[ x1 ] = cx1 + self.polar.RAD.abs*math.sin(self.polar.ANG.abs*math.pi/180)
     result[ x2 ] = self.polar.LEN.abs
-    inc_results = ( Abs2Inc(value, key, state).items() for key,value in result.items() )
+    inc_results = [ Abs2Inc(value, key, state).items() for key,value in result.items() ]
     result.update( pair for list in inc_results for pair in list )
     result[Cartesian2Polar.attr.center] = self.center
     obj = construct( Cartesian2Polar, result )
@@ -207,7 +207,7 @@ def StateDict():
   result.update( { kind : 0 for key in Cartesian.attr for kind in key.value.attr } )
   result.update( { kind : 0 for key in Polar.attr     for kind in key.value.attr } )
   result.update( { kind : 0 for key in Angular.attr   for kind in key.value.attr } )
-  result.update( { kind : 0 for key in list(Center.attr)[:-1]  for kind in key.value.attr } )  
+  result.update( { kind : 0 for key in [Center.attr.CX,Center.attr.CY,Center.attr.CZ]  for kind in key.value.attr } )  
   result[Registers.COMPENSATION] = Compensation.NONE
   result[Registers.DIRECTION]    = Direction.CW
   result[Registers.UNITS]        = Units.MM
