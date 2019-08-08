@@ -6,13 +6,14 @@ import babel.rule       as r
 import babel.compiler   as c
 
 import languages.heidenhain.commands as cmd
+import languages.heidenhain.state    as s
 
-from languages.heidenhain.commands import Registers     as reg
-from languages.heidenhain.commands import Motion        as mot
-from languages.heidenhain.commands import Compensation  as comp
-from languages.heidenhain.commands import Direction     as dir
-from languages.heidenhain.commands import Coolant       as cool
-from languages.heidenhain.commands import Spindle       as spin
+from languages.heidenhain.state import Registers     as reg
+from languages.heidenhain.state import Motion        as mot
+from languages.heidenhain.state import Compensation  as comp
+from languages.heidenhain.state import Direction     as dir
+from languages.heidenhain.state import Coolant       as cool
+from languages.heidenhain.state import Spindle       as spin
 
 import languages.expression.parser    as expr
 import babel.lang.parser as p
@@ -24,13 +25,13 @@ with open( 'languages/heidenhain/heidenhain.lang' ) as file:
 p = re.compile
 
 GOTOcartesian = Lookup({ 
-  p('L ')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(cmd.Cartesian), cmd.invariant ),
-  p('C ')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(cmd.Cartesian), cmd.invariant )
+  p('L ')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(s.Cartesian), cmd.invariant ),
+  p('C ')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(s.Cartesian), cmd.invariant )
 }.items())
 
 GOTOpolar = Lookup({ 
-  p('LP')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(cmd.Polar), cmd.invariant ),
-  p('CP')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(cmd.Polar), cmd.invariant )
+  p('LP')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(s.Polar), cmd.invariant ),
+  p('CP')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(s.Polar), cmd.invariant )
 }.items())
 
 toolCallOptions = Lookup({
@@ -43,17 +44,17 @@ def handleCoord( map ):
   def _handleCoord( match ):
     symbol = map[ match.groups()[1] ]
     if match.groups()[0] is 'I':
-      symbol = cmd.abs2inc(symbol)
+      symbol = symbol.instance.attr.inc
     return ( cmd.Set(symbol), )
   return _handleCoord
   
 cartesianCoordMap = { 
-  'X' : cmd.Cartesian.X.attr.abs, 
-  'Y' : cmd.Cartesian.Y.attr.abs, 
-  'Z' : cmd.Cartesian.Z.attr.abs, 
-  'A' : cmd.Angular.A.attr.abs, 
-  'B' : cmd.Angular.B.attr.abs, 
-  'C' : cmd.Angular.C.attr.abs
+  'X' : s.Cartesian.X.attr.abs, 
+  'Y' : s.Cartesian.Y.attr.abs, 
+  'Z' : s.Cartesian.Z.attr.abs, 
+  'A' : s.Angular.A.attr.abs, 
+  'B' : s.Angular.B.attr.abs, 
+  'C' : s.Angular.C.attr.abs
 }
 
 cartesianCoord = Switch({
@@ -63,11 +64,11 @@ cartesianCoord = Switch({
 }.items())
 
 polarCoordMap = { 
-  'PA' : cmd.Polar.ANG.attr.abs, 
-  'PR' : cmd.Polar.RAD.attr.abs,
-  'X'  : cmd.Polar.LEN.attr.abs, 
-  'Y'  : cmd.Polar.LEN.attr.abs, 
-  'Z'  : cmd.Polar.LEN.attr.abs
+  'PA' : s.Polar.ANG.attr.abs, 
+  'PR' : s.Polar.RAD.attr.abs,
+  'X'  : s.Polar.LEN.attr.abs, 
+  'Y'  : s.Polar.LEN.attr.abs, 
+  'Z'  : s.Polar.LEN.attr.abs
 }
 
 polarCoord = Switch({
@@ -77,9 +78,9 @@ polarCoord = Switch({
 }.items())
 
 CCcoordmap = { 
-  'X' : cmd.Center.CX.attr.abs, 
-  'Y' : cmd.Center.CY.attr.abs, 
-  'Z' : cmd.Center.CZ.attr.abs
+  'X' : s.Center.CX.attr.abs, 
+  'Y' : s.Center.CY.attr.abs, 
+  'Z' : s.Center.CZ.attr.abs
 }
 
 CCcoord = Switch({

@@ -1,5 +1,5 @@
 import languages.heidenhain.parser as p
-import languages.heidenhain.commands as cmd
+import languages.heidenhain.state as state
 import hydra as h
 import babel as b
 
@@ -22,7 +22,7 @@ init = { attr : attr.value() for attr in h.breadth_first(A) if attr.terminal }
 a, i, sh = h.solve( A, init )
 
 def decompose_solve( obj, data ):
-  decomposition = cmd.StateDict()
+  decomposition = state.StateDict()
   decomposition.update( { type(attr) : attr.value for attr in h.breadth_first(obj) if attr.terminal } )
   return h.update(obj, data, decomposition)
 
@@ -31,8 +31,8 @@ s = b.State('L Z+150 IX-20 FMAX')
 r = p.Parse(s)
 
 print('s0')
-s0, i, sh = h.solve(cmd.Position, cmd.StateDict(), cmd.StateDict())
-s00,i, sh = h.solve(cmd.Position, cmd.StateDict(), cmd.StateDict())
+s0, i, sh = h.solve(state.Position, state.StateDict(), state.StateDict())
+s00,i, sh = h.solve(state.Position, state.StateDict(), state.StateDict())
 # print(s0 == s00)
 print('s1 : linear 1')
 # input()
@@ -61,24 +61,32 @@ if any( not test for test in tests):
   input()
 
 print('s3 : circle center change')
-s = b.State('L IX-30 IZ+5 FMAX')
-# s = b.State('CC X-20 Y+30')
+# s = b.State('L IX-30 IZ+5 FMAX')
+s = b.State('CC X-20 Y+30')
 r = p.Parse(s)
-'''s.symtable.update({
-  Cartpol.cartesian.incremental.attr.X : 0,
-  Cartpol.cartesian.incremental.attr.Y : 0,
-  Cartpol.cartesian.incremental.attr.Z : 0
-})'''
+s.symtable.update({
+  state.Cartesian.X.attr.inc : 0,
+  state.Cartesian.Y.attr.inc : 0,
+  state.Cartesian.Z.attr.inc : 0
+})
+s3, att3 = decompose_solve(s2, s.symtable)
+print('s4 : looping')
+
 
 import time
 start = time.time()
+s4 = s3
+att4 = None
 
-s2, att3 = decompose_solve(s2, s.symtable)
 for i in range(100000):
-  # print(i)
-  s2, att3 = decompose_solve(s2, s.symtable)
-  #  i % 1000 == 0:
-  # print(i)
+  s = b.State('LP IPA+20 PR30 FMAX')
+  r = p.Parse(s)
+  s.symtable.update({
+    state.Center.CX.attr.inc : 0,
+    state.Center.CY.attr.inc : 0,
+    state.Center.CY.attr.inc : 0
+  })
+  s4, att4 = decompose_solve(s4, s.symtable)
   if s2 is None:
     print('failed ',i)
     break
