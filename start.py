@@ -33,9 +33,9 @@ r = p.Parse(s)
 print('s0')
 s0, i, sh = h.solve(cmd.Position, cmd.StateDict(), cmd.StateDict())
 s00,i, sh = h.solve(cmd.Position, cmd.StateDict(), cmd.StateDict())
-print(s0 == s00)
+# print(s0 == s00)
 print('s1 : linear 1')
-input()
+# input()
 s1, att1 = decompose_solve(s0, s.symtable)
 tests = [
   s1.cartesian.cartesian.X.abs == -20,
@@ -74,12 +74,12 @@ import time
 start = time.time()
 
 s2, att3 = decompose_solve(s2, s.symtable)
-'''for i in range(100000):
-  print(i)
+for i in range(100000):
+  # print(i)
   s2, att3 = decompose_solve(s2, s.symtable)
   #  i % 1000 == 0:
-  print(i)
+  # print(i)
   if s2 is None:
     print('failed ',i)
-    break'''
+    break
 print( time.time() - start )

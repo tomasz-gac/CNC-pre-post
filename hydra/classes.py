@@ -127,11 +127,12 @@ class Morph(metaclass=MorphMeta):
       attr.value = data[type(attr)]
     
   def __eq__( self, other ):
-    return all( lhs.value == rhs.value for lhs,rhs in zip(self.attr,other.attr) )
-    
+    raise RuntimeError('Morph.__eq__')
+    # return all( lhs.value == rhs.value for lhs,rhs in zip(self.attr,other.attr) )
     
   def __ne__( self, other ):
-    return any( lhs.value != rhs.value for lhs,rhs in zip(self.attr,other.attr) )
+    raise RuntimeError('Morph.__ne__')
+    # return any( lhs.value != rhs.value for lhs,rhs in zip(self.attr,other.attr) )
     
 def morphism( type_, f ):
   class Morphing(type_):

@@ -14,7 +14,7 @@ def update( value, data, *args ):
                         for key,value in data.items() if isinstance(key, AttributeMeta) and isinstance( value, Morph )
                           for value_attr in breadth_first(value) if value_attr.terminal }
   decomposed_data.update( (key, value) for key,value in data.items() if not isinstance(key, AttributeMeta) or not isinstance( value, Morph ) )
-  # print('----- data in',decomposed_data )
+  # # print('----- data in',decomposed_data )
   # for all composite types in cls
   # mapping of type -> set of type's terminal dependencies
   # TODO : omit nested breadth_first? 
@@ -31,7 +31,7 @@ def update( value, data, *args ):
     attempt = dict(decomposed_value)
     attempt.update(decomposed_data)
     a0 = dict(attempt)
-    print('----- attempt ', attempt)
+    # print('----- attempt ', attempt)
     # try building result
     result, solve_conflicts, shared = solve(cls, attempt, *args)
     solve_conflicts = { conflict for pair in solve_conflicts for conflict in pair }
@@ -40,7 +40,7 @@ def update( value, data, *args ):
     # for each composite source of conflict, add their terminal decomposition, but omit the terminals that are shared
     conflicts = { attribute for source in solve_conflicts if source.value in _dependencies_
                               for attribute in ( _dependencies_[source.value] - shared_terminals ) }
-    print('----- composite conflicts ',conflicts)
+    # print('----- composite conflicts ',conflicts)
     # handle the case when the shared terminal itself is the source of conflict
     conflicts.update( shared_terminal for source in solve_conflicts if source.value in shared
                                         for shared_terminal in _dependencies_[source.value] )
@@ -48,12 +48,12 @@ def update( value, data, *args ):
     conflicts.update( solve_conflicts )
     # remove conflicts from decomposed_value
     decomposed_value = { key : value for key,value in decomposed_value.items() if key not in conflicts }
-    print('----- attempt diff', { key : value for key,value in attempt.items() if key not in a0 or a0[key] != value})
-    print('----- conflicts ',conflicts)
-    print('----- solve_conflicts ',solve_conflicts)
-    print('----- decomposed_value ',decomposed_value)
-    print('----------------------------------')
-    input()
+    # print('----- attempt diff', { key : value for key,value in attempt.items() if key not in a0 or a0[key] != value})
+    # print('----- conflicts ',conflicts)
+    # print('----- solve_conflicts ',solve_conflicts)
+    # print('----- decomposed_value ',decomposed_value)
+    # print('----------------------------------')
+    # input()
     
   return result, attempt
 
@@ -127,7 +127,8 @@ def morph( data, *args, stack=None ):
   if stack is None:
     stack = list(data.items())
   conflicts = set()
-  
+  # print('--------------------------------------- MORPH START--------------------------')
+  # print('--------- data', data)
   # morph the values contents
   while len(stack) > 0:
     # Get source and value from values
@@ -136,20 +137,51 @@ def morph( data, *args, stack=None ):
     if callable( value ):
       # call the morphism
       results = value( source, *args )
+      # print('--------- results', results )
       if any( key.instance is not source.instance for key in results ):
+        error = ( 'Result key:%s, key.instance:%s' % (key,key.instance) for key in results if key.instance is not source.instance )
         raise RuntimeError(
         'Morphisms have to return keys that belong to the same Morph as source\nSource:%s, source.instance:%s\n' % (source, source.instance) + 
-                            '\n'.join( ['Result key:%s, key.instance:%s' % (key,key.instance) for key in results if key.instance is not source.instance ] ) )
+                            '\n'.join( error ) )
+      
+      '''for target, result in results.items():
+        if target.terminal:
+          if data.get(target,result) != result:
+            conflicts.update( (source, target) )
+        else:
+          for value_attr in breadth_first(result):
+            key = type(value_attr).value
+            value = value_attr.value
+            if value_attr.terminal and data.get(key,value) != value:
+              conflicts.update( (source, key) )'''
+      
+      '''conflicts.update( (source, key) for key,value in results.items() 
+                                        if key.terminal and data.get(key,value) != value )'''
+      
+      
+      terminals = ( [ (type(value_attr), value_attr.value) 
+                      for value_attr in breadth_first(result) if value_attr.terminal 
+                      ] for type_attr, result in results.items() if not type_attr.terminal )
+      for (key, result), decomposition in zip( results.items(), terminals ):
+        # print( '---------------- terminals --------------------', key, decomposition )
+        c = [ (source, key) for key,value in decomposition if data.get(key,value) != value ]
+        # print(' ----- conflicts ', c )
+        conflicts.update( c )
+      
+      conflicts.update( (source, key) for key,value in results.items() 
+                                          if key.terminal and data.get(key,value) != value )
+      
       # assure proper type assignment and decomposition
       guard( results )
       # get the value inconsistencies between data and results
-      conflicts.update( (source, key) for key,value in results.items() 
-                                          if data.get(key,value) != value )
+      '''conflicts.update( (source, key) for key,value in results.items() 
+                                          if data.get(key,value) != value )'''
       stack.extend( (target,result) for target,result in results.items() if target not in data )
       # source has been processed consistently, update the data dict
       data.update( results )
     else:
       pass # source does not encode transformation, so skip it
     data[source] = value
+  # print('--------------------------------------- MORPH END --------------------------')
   return conflicts
   
