@@ -125,7 +125,14 @@ class Morph(metaclass=MorphMeta):
     self.attr = type(self).attr(self)
     for attr in self.attr:
       attr.value = data[type(attr)]
-
+    
+  def __eq__( self, other ):
+    return all( lhs.value == rhs.value for lhs,rhs in zip(self.attr,other.attr) )
+    
+    
+  def __ne__( self, other ):
+    return any( lhs.value != rhs.value for lhs,rhs in zip(self.attr,other.attr) )
+    
 def morphism( type_, f ):
   class Morphing(type_):
     def __call__( self, *args, **kwargs ):

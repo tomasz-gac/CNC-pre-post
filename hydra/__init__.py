@@ -8,6 +8,7 @@ from hydra.classes import morphism
 from hydra.functions import update
 from hydra.functions import solve
 from hydra.functions import morph
+from hydra.functions import construct
 
 from hydra.iteration import in_order
 from hydra.iteration import post_order

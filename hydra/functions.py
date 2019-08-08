@@ -37,15 +37,10 @@ def update( value, data, *args ):
     solve_conflicts = { conflict for pair in solve_conflicts for conflict in pair }
     # decompose shared values down to terminals
     shared_terminals = { attr for item in shared for attr in _dependencies_[item] }
-    
-    
-    # TODO: morphism tylko pomiedzy wartosciami, ktorych klucze naleza do tego samego Morph
-    
-    
-    
     # for each composite source of conflict, add their terminal decomposition, but omit the terminals that are shared
     conflicts = { attribute for source in solve_conflicts if source.value in _dependencies_
                               for attribute in ( _dependencies_[source.value] - shared_terminals ) }
+    print('----- composite conflicts ',conflicts)
     # handle the case when the shared terminal itself is the source of conflict
     conflicts.update( shared_terminal for source in solve_conflicts if source.value in shared
                                         for shared_terminal in _dependencies_[source.value] )
@@ -53,8 +48,6 @@ def update( value, data, *args ):
     conflicts.update( solve_conflicts )
     # remove conflicts from decomposed_value
     decomposed_value = { key : value for key,value in decomposed_value.items() if key not in conflicts }
-    # print('----- assoc', assoc )
-    # print('----- creators', creators )
     print('----- attempt diff', { key : value for key,value in attempt.items() if key not in a0 or a0[key] != value})
     print('----- conflicts ',conflicts)
     print('----- solve_conflicts ',solve_conflicts)
@@ -63,6 +56,14 @@ def update( value, data, *args ):
     input()
     
   return result, attempt
+
+
+def construct( cls, data ):
+  post_order_composites = ( attr for attr in post_order(cls) if not attr.terminal)
+  for type_attr in post_order_composites:
+    if type_attr not in data and all( member in data for member in type_attr.value.attr ):
+      data[type_attr] = type_attr.value(data)
+  return cls(data)
   
 ''' Builds cls instance from data dict using *args
     returns None in case of failure, uses morph to extend the amount of data

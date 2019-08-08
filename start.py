@@ -21,10 +21,6 @@ class A(h.Morph):
 init = { attr : attr.value() for attr in h.breadth_first(A) if attr.terminal }
 a, i, sh = h.solve( A, init )
 
-class Cartpol(h.Morph):
-  cartesian = cmd.Cartesian
-  polar = cmd.Polar
-
 def decompose_solve( obj, data ):
   decomposition = cmd.StateDict()
   decomposition.update( { type(attr) : attr.value for attr in h.breadth_first(obj) if attr.terminal } )
@@ -35,13 +31,16 @@ s = b.State('L Z+150 IX-20 FMAX')
 r = p.Parse(s)
 
 print('s0')
-s0,i, sh = h.solve(Cartpol, cmd.StateDict(), cmd.StateDict())
+s0, i, sh = h.solve(cmd.Position, cmd.StateDict(), cmd.StateDict())
+s00,i, sh = h.solve(cmd.Position, cmd.StateDict(), cmd.StateDict())
+print(s0 == s00)
 print('s1 : linear 1')
+input()
 s1, att1 = decompose_solve(s0, s.symtable)
 tests = [
-  s1.cartesian.absolute.X == -20,
-  s1.cartesian.incremental.X == -20,
-  s1.cartesian.absolute.Z == 150
+  s1.cartesian.cartesian.X.abs == -20,
+  s1.cartesian.cartesian.X.inc == -20,
+  s1.cartesian.cartesian.Z.abs == 150
 ]
 if any( not test for test in tests):
   print('test failed')
@@ -53,9 +52,9 @@ r = p.Parse(s)
 
 s2, att2 = decompose_solve(s1, s.symtable )
 tests = [
-  s2.cartesian.absolute.X == -50,
-  s2.cartesian.incremental.X == -30,
-  s2.cartesian.absolute.Z == 150
+  s2.cartesian.cartesian.X.abs == -50,
+  s2.cartesian.cartesian.X.inc == -30,
+  s2.cartesian.cartesian.Z.abs == 150
 ]
 if any( not test for test in tests):
   print('test failed')
