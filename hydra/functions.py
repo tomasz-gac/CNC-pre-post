@@ -1,5 +1,5 @@
 from hydra.classes import Morph, AttributeMeta
-from hydra.iteration import post_order, breadth_first
+from hydra.iteration import post_order_cached, breadth_first, breadth_first_cached
 from collections import Counter
 
 _dependencies_ = {}
@@ -11,25 +11,25 @@ def cached_dependencies( cls ):
   # for all composite types in cls
   # mapping of type -> set of type's terminal dependencies
   # TODO : omit nested breadth_first? 
-  for type_attr in breadth_first(cls):
+  for type_attr in breadth_first_cached(cls):
     if not type_attr.terminal:
       if type_attr.value not in _dependencies_:
-        _dependencies_[ type_attr.value ] = { dec_attr for dec_attr in breadth_first(type_attr.value) if dec_attr.terminal }
+        _dependencies_[ type_attr.value ] = { dec_attr for dec_attr in breadth_first_cached(type_attr.value) if dec_attr.terminal }
       _dependencies_[cls].update( _dependencies_[ type_attr.value ] )
   return _dependencies_
 
-def update( value, data, *args ):
-  cls = type(value)
+def update( val, data, *args, limit=10 ):
+  cls = type(val)
   dependencies = cached_dependencies(cls)
   guard(data)
   # decompose value down to terminals
-  decomposed_value = { type(attr) : attr.value for attr in breadth_first(value) if attr.terminal }
+  decomposed_value = { type(attr) : attr.value for attr in breadth_first(val) if attr.terminal }
   # decompose each element in data down to terminals
   decomposed_data = { type(value_attr).value : value_attr.value 
                         for key,value in data.items() if isinstance(key, AttributeMeta) and isinstance( value, Morph )
                           for value_attr in breadth_first(value) if value_attr.terminal }
   decomposed_data.update( (key, value) for key,value in data.items() if not isinstance(key, AttributeMeta) or not isinstance( value, Morph ) )
-  
+  # print('----------------------------------- UPDATE START---------------------------------------')
   result = None
   attempt = {}
   solve_conflicts = {None}
@@ -38,7 +38,7 @@ def update( value, data, *args ):
     # overwrite decomposed_value with decomposed_data
     attempt = dict(decomposed_value)
     attempt.update(decomposed_data)
-    a0 = dict(attempt)
+    # a0 = dict(attempt)
     # try building result
     result, solve_conflicts, shared = solve(cls, attempt, *args)
     if len(solve_conflicts) == 0:
@@ -56,17 +56,21 @@ def update( value, data, *args ):
     conflicts.update( solve_conflicts )
     # remove conflicts from decomposed_value
     decomposed_value = { key : value for key,value in decomposed_value.items() if key not in conflicts }
-    '''print('----- attempt diff', { key : value for key,value in attempt.items() if key not in a0 or a0[key] != value})
+    '''print('----- a0', a0 )
+    print('----- attempt diff', { key : value for key,value in attempt.items() if key not in a0 or a0[key] != value})
+    print('----- created', { key for key in attempt if key not in a0 and not key.terminal})
+    
     print('----- conflicts ',conflicts)
     print('----- solve_conflicts ',solve_conflicts)
     print('----- decomposed_value ',decomposed_value)
     print('----------------------------------')
     input()'''
+    
   raise RuntimeError('Update iteration limit reached') 
 
 
 def construct( cls, data ):
-  post_order_composites = ( attr for attr in post_order(cls) if not attr.terminal)
+  post_order_composites = ( attr for attr in post_order_cached(cls) if not attr.terminal)
   for type_attr in post_order_composites:
     if type_attr not in data and all( member in data for member in type_attr.value.attr ):
       data[type_attr] = type_attr.value(data)
@@ -80,17 +84,17 @@ def solve( cls, data, *args ):
   # guard(data)
   conflicts = []
   created = list(data.items())
-  post_order_composites = set( attr for attr in breadth_first(cls) if not attr.terminal)
+  post_order_composites = set( attr for attr in post_order_cached(cls) if not attr.terminal)
   
   ''' Iteratively morphs the data and tries to construct higher-order classes
       Assures object equality through morph, but not identity in case of internal shared variables '''   
   while len(created) > 0:
     # morph the created items, push them to data
     conflicts.extend( morph( data, *args, stack=created ) )
-    post_order_composites = post_order_composites - data.keys()
+    # post_order_composites = post_order_composites - data.keys()
     # traverse cls, create members that are available        
     for type_attr in post_order_composites:
-      if all( member in data for member in type_attr.value.attr ):
+      if type_attr not in data and all( member in data for member in type_attr.value.attr ):
         created.append( (type_attr, type_attr.value(data)) )
   
   ''' At this stage, data is constructed, but it may contain multiple copies of an object
