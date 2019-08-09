@@ -4,8 +4,23 @@ from collections import Counter
 
 _dependencies_ = {}
 
+def cached_dependencies( cls ):
+  if cls in _dependencies_:
+    return _dependencies_
+  _dependencies_[cls] = set()
+  # for all composite types in cls
+  # mapping of type -> set of type's terminal dependencies
+  # TODO : omit nested breadth_first? 
+  for type_attr in breadth_first(cls):
+    if not type_attr.terminal:
+      if type_attr.value not in _dependencies_:
+        _dependencies_[ type_attr.value ] = { dec_attr for dec_attr in breadth_first(type_attr.value) if dec_attr.terminal }
+      _dependencies_[cls].update( _dependencies_[ type_attr.value ] )
+  return _dependencies_
+
 def update( value, data, *args ):
   cls = type(value)
+  dependencies = cached_dependencies(cls)
   guard(data)
   # decompose value down to terminals
   decomposed_value = { type(attr) : attr.value for attr in breadth_first(value) if attr.terminal }
@@ -14,12 +29,6 @@ def update( value, data, *args ):
                         for key,value in data.items() if isinstance(key, AttributeMeta) and isinstance( value, Morph )
                           for value_attr in breadth_first(value) if value_attr.terminal }
   decomposed_data.update( (key, value) for key,value in data.items() if not isinstance(key, AttributeMeta) or not isinstance( value, Morph ) )
-  # for all composite types in cls
-  # mapping of type -> set of type's terminal dependencies
-  # TODO : omit nested breadth_first? 
-  for type_attr in breadth_first(cls):
-    if type_attr.value not in _dependencies_ and not type_attr.terminal:
-      _dependencies_[ type_attr.value ] = { dec_attr for dec_attr in breadth_first(type_attr.value) if dec_attr.terminal }
   
   result = None
   attempt = {}
@@ -34,13 +43,13 @@ def update( value, data, *args ):
     result, solve_conflicts, shared = solve(cls, attempt, *args)
     solve_conflicts = { conflict for pair in solve_conflicts for conflict in pair }
     # decompose shared values down to terminals
-    shared_terminals = { attr for item in shared for attr in _dependencies_[item] }
+    shared_terminals = { attr for item in shared for attr in dependencies[item] }
     # for each composite source of conflict, add their terminal decomposition, but omit the terminals that are shared
-    conflicts = { attribute for source in solve_conflicts if source.value in _dependencies_
-                              for attribute in ( _dependencies_[source.value] - shared_terminals ) }
+    conflicts = { attribute for source in solve_conflicts if source.value in dependencies
+                              for attribute in ( dependencies[source.value] - shared_terminals ) }
     # handle the case when the shared terminal itself is the source of conflict
     conflicts.update( shared_terminal for source in solve_conflicts if source.value in shared
-                                        for shared_terminal in _dependencies_[source.value] )
+                                        for shared_terminal in dependencies[source.value] )
     # append the terminals
     conflicts.update( solve_conflicts )
     # remove conflicts from decomposed_value
