@@ -79,8 +79,8 @@ def main():
   s4 = s3
   att4 = None
 
-  for i in range(15000):
-    s = b.State('L X+20 IY-3 Z+150 FMAX')
+  for i in range(100000):
+    s = b.State('LP IPA+20 PR30 FMAX')
     r = p.Parse(s)
     s.symtable.update({
       state.Center.CX.attr.inc : 0,
@@ -92,6 +92,6 @@ def main():
       print('failed ',i)
       break
   print( time.time() - start )
-  
-if __name__ == "__main__":
+
+if __name__ == '__main__':
   main()
