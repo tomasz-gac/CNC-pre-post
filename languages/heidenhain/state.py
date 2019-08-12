@@ -53,19 +53,16 @@ class Spindle(IntEnum):
   CW  = 1
   CCW = 2
 
-def angNorm( a, radians=True ):
-  if not radians:
-    a = a*math.pi/180  
-    result = a - (2 * math.pi)*math.floor((a+math.pi)/(2*math.pi))
-    return result *180/math.pi
-  else:
-    return a - (2 * math.pi)*math.floor((a+math.pi)/(2*math.pi))
+def angNorm( a ):
+  a = a*math.pi/180  
+  result = a - (2 * math.pi)*math.floor((a+math.pi)/(2*math.pi))
+  return result *180/math.pi
   
 def Abs2Inc( value, source, state ):
   incrementalCoord = source.instance.attr.inc
   result = value - state[source]
   if source.instance == Arc.ANG:
-    result = angNorm( result, radians=False )
+    result = angNorm( result )
   result = { incrementalCoord : result }
   # print( 'abs2inc value:%s source:%s result:%s' % (value, source, result))
   return result 
@@ -74,7 +71,7 @@ def Inc2Abs( value, source, state ):
   absoluteCoord = source.instance.attr.abs
   result = value + state[absoluteCoord]
   if source.instance == Arc.ANG:
-    result = angNorm( result, radians=False )
+    result = angNorm( result )
   result = { absoluteCoord : result }
   # print( 'inc2abs value:%s source:%s result:%s' % (value, source, result))
   return result
@@ -82,21 +79,21 @@ def Inc2Abs( value, source, state ):
 
 # CIRCLE CENTER X Y Z
 class Origin(Morph):  
-  class CX(Morph):
+  class OX(Morph):
     abs = morphism( float, Abs2Inc )
     inc = morphism( float, Inc2Abs )
-  class CY(Morph):
+  class OY(Morph):
     abs = morphism( float, Abs2Inc )
     inc = morphism( float, Inc2Abs )
-  class CZ(Morph):
+  class OZ(Morph):
     abs = morphism( float, Abs2Inc )
     inc = morphism( float, Inc2Abs )
     
   def __call__( self, member, state ):
     coord2type = { 
-      (self.CX.attr.inc, self.CY.attr.inc ) : { Plane.attr.kind : Plane.kind.XY },
-      (self.CZ.attr.inc, self.CX.attr.inc ) : { Plane.attr.kind : Plane.kind.ZX },
-      (self.CY.attr.inc, self.CZ.attr.inc ) : { Plane.attr.kind : Plane.kind.YZ }
+      (self.OX.attr.inc, self.OY.attr.inc ) : { Plane.attr.kind : Plane.kind.XY },
+      (self.OZ.attr.inc, self.OX.attr.inc ) : { Plane.attr.kind : Plane.kind.ZX },
+      (self.OY.attr.inc, self.OZ.attr.inc ) : { Plane.attr.kind : Plane.kind.YZ }
     }
     for (x1, x2), result in coord2type.items():
       if (not math.isclose( x1.value, 0, abs_tol=0.00001 ) and 
@@ -113,7 +110,6 @@ class Plane(Morph):
     ZX = 1
     YZ = 2
 
-  
   
 class Point(Morph):
   class X(Morph):
@@ -155,11 +151,10 @@ planeCoordDict = {
   }
 # circle center mappings for polar calculation
 planeCenterDict = {  
-    Plane.kind.XY : (Origin.attr.CX,Origin.attr.CY),
-    Plane.kind.YZ : (Origin.attr.CY,Origin.attr.CZ),
-    Plane.kind.ZX : (Origin.attr.CZ,Origin.attr.CX)
+    Plane.kind.XY : (Origin.attr.OX,Origin.attr.OY),
+    Plane.kind.YZ : (Origin.attr.OY,Origin.attr.OZ),
+    Plane.kind.ZX : (Origin.attr.OZ,Origin.attr.OX)
   }
-    
 
 class Cartesian(Morph):
   reference = Point
@@ -172,17 +167,16 @@ class Cartesian(Morph):
     center = planeCenterDict[plane]  # get circle center coordinates
     
     x0, x1, x2 = tuple( getattr( self.reference,     x.name).abs for x in coord )
-    cx0, cx1   = tuple( getattr( self.plane.origin, x.name).abs for x in center )
+    ox0, ox1   = tuple( getattr( self.plane.origin, x.name).abs for x in center )
     
-    r1, r2 = (x0-cx0), (x1-cx1)
+    r1, r2 = (x0-ox0), (x1-ox1)
     
     result = {}
     result[ Arc.RAD.attr.abs ] = math.sqrt(r1**2 + r2**2)
-    result[ Arc.ANG.attr.abs ] = angNorm(math.atan2(r2, r1)) * float(180)/math.pi
+    result[ Arc.ANG.attr.abs ] = angNorm( math.atan2(r2, r1)* float(180)/math.pi )
     result[ Arc.LEN.attr.abs ] = x2
     inc_results = [ Abs2Inc(value, key, state).items() for key,value in result.items() ]
     result.update( pair for list in inc_results for pair in list )
-    result[Arc.ANG.attr.inc] = angNorm(result[Arc.ANG.attr.inc]*math.pi/float(180)) * float(180)/math.pi
     result[Polar.attr.plane] = self.plane
     obj = construct( Polar, result )
     

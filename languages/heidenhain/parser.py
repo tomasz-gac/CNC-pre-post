@@ -80,9 +80,9 @@ polarCoord = Switch({
 }.items())
 
 CCcoordmap = { 
-  'X' : s.Origin.CX.attr, 
-  'Y' : s.Origin.CY.attr, 
-  'Z' : s.Origin.CZ.attr
+  'X' : s.Origin.OX.attr, 
+  'Y' : s.Origin.OY.attr, 
+  'Z' : s.Origin.OZ.attr
 }
 
 CCcoord = Switch({

@@ -38,7 +38,7 @@ def update( val, data, *args, limit=10 ):
     # overwrite decomposed_value with decomposed_data
     attempt = dict(decomposed_value)
     attempt.update(decomposed_data)
-    # a0 = dict(attempt)
+    a0 = dict(attempt)
     # try building result
     result, solve_conflicts, shared = solve(cls, attempt, *args)
     if len(solve_conflicts) == 0:
@@ -56,7 +56,7 @@ def update( val, data, *args, limit=10 ):
     conflicts.update( solve_conflicts )
     # remove conflicts from decomposed_value
     decomposed_value = { key : value for key,value in decomposed_value.items() if key not in conflicts }
-    '''print('----- a0', a0 )
+    print('----- a0', a0 )
     print('----- attempt diff', { key : value for key,value in attempt.items() if key not in a0 or a0[key] != value})
     print('----- created', { key for key in attempt if key not in a0 and not key.terminal})
     
@@ -64,7 +64,7 @@ def update( val, data, *args, limit=10 ):
     print('----- solve_conflicts ',solve_conflicts)
     print('----- decomposed_value ',decomposed_value)
     print('----------------------------------')
-    input()'''
+    input()
     
   raise RuntimeError('Update iteration limit reached') 
 

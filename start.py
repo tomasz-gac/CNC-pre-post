@@ -20,12 +20,22 @@ class A(h.Morph):
   
 init = { attr : attr.value() for attr in h.breadth_first(A) if attr.terminal }
 a, i, sh = h.solve( A, init )
-
+ 
 def decompose_solve( obj, data ):
   decomposition = state.StateDict()
   decomposition.update( { type(attr) : attr.value for attr in h.breadth_first(obj) if attr.terminal } )
-  return h.update(obj, data, decomposition)
-
+  for attr in decomposition:
+    if attr.name == 'inc':
+      print(attr, decomposition[attr])
+      decomposition[attr] = 0
+  obj = h.construct( type(obj), decomposition )
+  return h.update( obj, data, decomposition )
+  
+'''def decompose_solve( obj, data ):
+  decomposition = state.StateDict()
+  decomposition.update( { type(attr) : attr.value for attr in h.breadth_first(obj) if attr.terminal } )
+  return h.update(no_op(obj), data, decomposition)'''
+  
   
 s = b.State('L Z+150 IX-20 FMAX')
 r = p.Parse(s)
@@ -63,11 +73,11 @@ if any( not test for test in tests):
 print('s3 : circle center change')
 s = b.State('CC Z-20 Y+30')
 r = p.Parse(s)
-s.symtable.update({
+'''s.symtable.update({
   state.Point.X.attr.inc : 0,
   state.Point.Y.attr.inc : 0,
   state.Point.Z.attr.inc : 0
-})
+})'''
 s3, att3 = decompose_solve(s2, s.symtable)
 print('s4 : looping')
 
@@ -80,11 +90,11 @@ att4 = None
 for i in range(200000):
   s = b.State('LP IPA+20 PR30 FMAX')
   r = p.Parse(s)
-  s.symtable.update({
-    state.Origin.CX.attr.inc : 0,
-    state.Origin.CY.attr.inc : 0,
-    state.Origin.CZ.attr.inc : 0
-  })
+  '''s.symtable.update({
+    state.Origin.OX.attr.inc : 0,
+    state.Origin.OY.attr.inc : 0,
+    state.Origin.OZ.attr.inc : 0
+  })'''
   s4, att4 = decompose_solve(s4, s.symtable)
   if s2 is None:
     print('failed ',i)
