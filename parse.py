@@ -23,7 +23,7 @@ def parse( program, lineOffset ):
       if len(rest) > 0:
         raise RuntimeError( 'Parser failed at line ' + line + ' rest: "' + rest + '"' )
       else:
-        results.append( state.stack )
+        results.append( state.symtable )
         symtable.update( state.symtable )
     except RuntimeError as err:
       print(str(err))
@@ -78,6 +78,5 @@ def main():
       
   
 
-if __name__ == '__main__':
-  parseOutput = main()
-  pgm = iter(parseOutput)
+parseOutput = main()
+pgm = iter(parseOutput)
