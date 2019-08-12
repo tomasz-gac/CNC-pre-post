@@ -1,10 +1,8 @@
 import enum
 from math import isclose
-from collections import Counter
-from hydra.iteration import breadth_first
 
 class Attribute:
-  __slots__ = 'instance', 'name'
+  # __slots__ = 'instance', 'name'
   def __init__( self, instance, name ):
     self.instance = instance
     self.name     = name
@@ -25,7 +23,7 @@ class Attribute:
 
 
 class AttributeMeta(type):
-  __slots__ = 'instance', 'name'
+  # __slots__ = 'instance', 'name'
   def __new__(metacls, cls, bases, classdict ):
     cls_instance = super().__new__(metacls, cls, bases+(Attribute,), classdict)
     cls_instance.instance = classdict['instance']

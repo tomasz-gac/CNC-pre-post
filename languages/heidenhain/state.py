@@ -52,12 +52,6 @@ class Spindle(IntEnum):
   OFF = 0
   CW  = 1
   CCW = 2
-  
-@unique
-class Plane(IntEnum):
-  XY = 0
-  ZX = 1
-  YZ = 2
 
 def angNorm( a, radians=True ):
   if not radians:
@@ -70,7 +64,7 @@ def angNorm( a, radians=True ):
 def Abs2Inc( value, source, state ):
   incrementalCoord = source.instance.attr.inc
   result = value - state[source]
-  if source.instance == Polar.ANG:
+  if source.instance == Arc.ANG:
     result = angNorm( result, radians=False )
   result = { incrementalCoord : result }
   # print( 'abs2inc value:%s source:%s result:%s' % (value, source, result))
@@ -79,7 +73,7 @@ def Abs2Inc( value, source, state ):
 def Inc2Abs( value, source, state ):
   absoluteCoord = source.instance.attr.abs
   result = value + state[absoluteCoord]
-  if source.instance == Polar.ANG:
+  if source.instance == Arc.ANG:
     result = angNorm( result, radians=False )
   result = { absoluteCoord : result }
   # print( 'inc2abs value:%s source:%s result:%s' % (value, source, result))
@@ -87,7 +81,7 @@ def Inc2Abs( value, source, state ):
 
 
 # CIRCLE CENTER X Y Z
-class Center(Morph):  
+class Origin(Morph):  
   class CX(Morph):
     abs = morphism( float, Abs2Inc )
     inc = morphism( float, Inc2Abs )
@@ -98,10 +92,30 @@ class Center(Morph):
     abs = morphism( float, Abs2Inc )
     inc = morphism( float, Inc2Abs )
     
-  plane = Plane
+  def __call__( self, member, state ):
+    coord2type = { 
+      (self.CX.attr.inc, self.CY.attr.inc ) : { Plane.attr.kind : Plane.kind.XY },
+      (self.CZ.attr.inc, self.CX.attr.inc ) : { Plane.attr.kind : Plane.kind.ZX },
+      (self.CY.attr.inc, self.CZ.attr.inc ) : { Plane.attr.kind : Plane.kind.YZ }
+    }
+    for (x1, x2), result in coord2type.items():
+      if (not math.isclose( x1.value, 0, abs_tol=0.00001 ) and 
+          not math.isclose( x2.value, 0, abs_tol=0.00001 ) ):
+        return result
+    return {}
+    
+
+class Plane(Morph):
+  origin = Origin
+  @unique
+  class kind(IntEnum):
+    XY = 0
+    ZX = 1
+    YZ = 2
+
   
   
-class Cartesian(Morph):
+class Point(Morph):
   class X(Morph):
     abs = morphism( float, Abs2Inc )
     inc = morphism( float, Inc2Abs )
@@ -112,7 +126,7 @@ class Cartesian(Morph):
     abs = morphism( float, Abs2Inc )
     inc = morphism( float, Inc2Abs )
     
-class Polar(Morph):
+class Arc(Morph):
   class RAD(Morph):
     abs = morphism( float, Abs2Inc )
     inc = morphism( float, Inc2Abs )
@@ -135,84 +149,84 @@ class Angular(Morph):
     inc = morphism( float, Inc2Abs )
 
 planeCoordDict = {  
-    Plane.XY : (Cartesian.attr.X,Cartesian.attr.Y,Cartesian.attr.Z),
-    Plane.YZ : (Cartesian.attr.Y,Cartesian.attr.Z,Cartesian.attr.X),
-    Plane.ZX : (Cartesian.attr.Z,Cartesian.attr.X,Cartesian.attr.Y)
+    Plane.kind.XY : (Point.attr.X,Point.attr.Y,Point.attr.Z),
+    Plane.kind.YZ : (Point.attr.Y,Point.attr.Z,Point.attr.X),
+    Plane.kind.ZX : (Point.attr.Z,Point.attr.X,Point.attr.Y)
   }
 # circle center mappings for polar calculation
 planeCenterDict = {  
-    Plane.XY : (Center.attr.CX,Center.attr.CY),
-    Plane.YZ : (Center.attr.CY,Center.attr.CZ),
-    Plane.ZX : (Center.attr.CZ,Center.attr.CX)
+    Plane.kind.XY : (Origin.attr.CX,Origin.attr.CY),
+    Plane.kind.YZ : (Origin.attr.CY,Origin.attr.CZ),
+    Plane.kind.ZX : (Origin.attr.CZ,Origin.attr.CX)
   }
     
 
-class Cartesian2Polar(Morph):
-  cartesian = Cartesian
-  center    = Center
+class Cartesian(Morph):
+  reference = Point
+  plane     = Plane
   
   def __call__( self, member, state ):
     # print('cartesian2polar')
-    plane  = state[Registers.POLARPLANE]
+    plane  = self.plane.kind
     coord  = planeCoordDict[plane] # get cartesian coordinates for substitution
     center = planeCenterDict[plane]  # get circle center coordinates
     
-    x0, x1, x2 = tuple( getattr( self.cartesian, x.name).abs for x in coord )
-    cx0, cx1   = tuple( getattr( self.center,    x.name).abs for x in center )
+    x0, x1, x2 = tuple( getattr( self.reference,     x.name).abs for x in coord )
+    cx0, cx1   = tuple( getattr( self.plane.origin, x.name).abs for x in center )
     
     r1, r2 = (x0-cx0), (x1-cx1)
     
     result = {}
-    result[ Polar.RAD.attr.abs ] = math.sqrt(r1**2 + r2**2)
-    result[ Polar.ANG.attr.abs ] = angNorm(math.atan2(r2, r1)) * float(180)/math.pi
-    result[ Polar.LEN.attr.abs ] = x2
-    inc_results = ( Abs2Inc(value, key, state).items() for key,value in result.items() )
+    result[ Arc.RAD.attr.abs ] = math.sqrt(r1**2 + r2**2)
+    result[ Arc.ANG.attr.abs ] = angNorm(math.atan2(r2, r1)) * float(180)/math.pi
+    result[ Arc.LEN.attr.abs ] = x2
+    inc_results = [ Abs2Inc(value, key, state).items() for key,value in result.items() ]
     result.update( pair for list in inc_results for pair in list )
-    result[Polar.ANG.attr.inc] = angNorm(result[Polar.ANG.attr.inc]*math.pi/float(180)) * float(180)/math.pi
-    result[Polar2Cartesian.attr.center] = self.center
-    obj = construct( Polar2Cartesian, result )
+    result[Arc.ANG.attr.inc] = angNorm(result[Arc.ANG.attr.inc]*math.pi/float(180)) * float(180)/math.pi
+    result[Polar.attr.plane] = self.plane
+    obj = construct( Polar, result )
     
     return { Position.attr.polar : obj }
     
-class Polar2Cartesian(Morph):
-  polar  = Polar
-  center = Center
+class Polar(Morph):
+  reference = Arc
+  plane     = Plane
     
   def __call__( self, member, state ):
     # print('polar2cartesian')
-    plane = state[Registers.POLARPLANE]
+    plane  = self.plane.kind
     coord  = planeCoordDict[plane]   # get cartesian coordinates for substitution
     center = planeCenterDict[plane]  # get circle center coordinates
     
     x0, x1, x2 = tuple( x.value.attr.abs for x in coord )
-    cx0, cx1 = tuple( getattr( self.center, x.name).abs for x in center )
+    cx0, cx1   = tuple( getattr( self.plane.origin, x.name).abs for x in center )
     
     result = {}
-    result[ x0 ] = cx0 + self.polar.RAD.abs*math.cos(self.polar.ANG.abs*math.pi/180)
-    result[ x1 ] = cx1 + self.polar.RAD.abs*math.sin(self.polar.ANG.abs*math.pi/180)
-    result[ x2 ] = self.polar.LEN.abs
-    inc_results = ( Abs2Inc(value, key, state).items() for key,value in result.items() )
+    result[ x0 ] = cx0 + self.reference.RAD.abs*math.cos(self.reference.ANG.abs*math.pi/180)
+    result[ x1 ] = cx1 + self.reference.RAD.abs*math.sin(self.reference.ANG.abs*math.pi/180)
+    result[ x2 ] = self.reference.LEN.abs
+    inc_results = [ Abs2Inc(value, key, state).items() for key,value in result.items() ]
     result.update( pair for list in inc_results for pair in list )
-    result[Cartesian2Polar.attr.center] = self.center
-    obj = construct( Cartesian2Polar, result )
+    result[Cartesian.attr.plane] = self.plane
+    obj = construct( Cartesian, result )
     
     return { Position.attr.cartesian : obj }
     
 class Position(Morph):
-  cartesian = Cartesian2Polar
-  polar     = Polar2Cartesian
+  cartesian = Cartesian
+  polar     = Polar
   
 def StateDict():
   result = { key : 0 for key in list(Registers) }
-  result.update( { kind : 0 for key in Cartesian.attr for kind in key.value.attr } )
-  result.update( { kind : 0 for key in Polar.attr     for kind in key.value.attr } )
+  result.update( { kind : 0 for key in Point.attr for kind in key.value.attr } )
+  result.update( { kind : 0 for key in Arc.attr     for kind in key.value.attr } )
   result.update( { kind : 0 for key in Angular.attr   for kind in key.value.attr } )
-  result.update( { kind : 0 for key in list(Center.attr)[:-1]  for kind in key.value.attr } )  
+  result.update( { kind : 0 for key in Origin.attr  for kind in key.value.attr } )  
   result[Registers.COMPENSATION] = Compensation.NONE
   result[Registers.DIRECTION]    = Direction.CW
   result[Registers.UNITS]        = Units.MM
   result[Registers.MOTIONMODE]   = Motion.LINEAR
   result[Registers.WCS]          = 54
-  result[Center.attr.plane]      = Plane.XY
+  result[Plane.attr.kind]        = Plane.kind.XY
   result[Registers.COOLANT]      = Coolant.OFF
   return result

@@ -11,5 +11,8 @@ from hydra.functions import morph
 from hydra.functions import construct
 
 from hydra.iteration import in_order
+from hydra.iteration import in_order_cached
 from hydra.iteration import post_order
+from hydra.iteration import post_order_cached
 from hydra.iteration import breadth_first
+from hydra.iteration import breadth_first_cached
