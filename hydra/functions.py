@@ -135,7 +135,13 @@ def morph( data, *args, stack=None ):
       pass # source does not encode transformation, so skip it
     data[source] = value
   return conflicts
-  
+
+def construct( cls, data ):
+  post_order_composites = ( attr for attr in post_order_cached(cls) if not attr.terminal)
+  for type_attr in post_order_composites:
+    if type_attr not in data and all( member in data for member in type_attr.value.attr ):
+      data[type_attr] = type_attr.value(data)
+  return cls(data)
           
 def guard( values ):
   # make sure that each value has the type declared by its associated member
@@ -161,10 +167,3 @@ def cached_dependencies( cls ):
         _dependencies_[ type_attr.value ] = { dec_attr for dec_attr in breadth_first_cached(type_attr.value) if dec_attr.terminal }
       _dependencies_[cls].update( _dependencies_[ type_attr.value ] )
   return _dependencies_
-
-def construct( cls, data ):
-  post_order_composites = ( attr for attr in post_order_cached(cls) if not attr.terminal)
-  for type_attr in post_order_composites:
-    if type_attr not in data and all( member in data for member in type_attr.value.attr ):
-      data[type_attr] = type_attr.value(data)
-  return cls(data)

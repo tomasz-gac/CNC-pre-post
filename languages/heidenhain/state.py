@@ -4,60 +4,22 @@ import math
 
 @unique
 class Registers(IntEnum):
-  COMPENSATION = 0   # COMPENSATION TYPE
-  DIRECTION    = 1   # CIRCLE DIRECTION
   LINENO       = 2   # LINE NUMBER
   UNITS        = 3   # MACHINE UNITS
-  FEED         = 4   # MACHINE FEED
-  SPINSPEED    = 5   # SPINDLE SPEED
-  SPINDIR      = 6   # SPINDLE ROTATION DIRECTION
-  MOTIONMODE   = 7   # POSITIONING MOTION MODE
-  TOOLNO       = 8   # TOOL NUMBER
-  TOOLDL       = 9   # TOOL DELTA LENGTH
-  TOOLDR       = 10  # TOOL DELTA RADIUS
-  COOLANT      = 11  # COOLANT TYPE
   WCS          = 12  # WORLD COORDINATE SYSTEM NUMBER
-  POLARPLANE   = 13  # POLAR MOTION PLANE
   
 @unique
 class Units(IntEnum):
   MM    = 0
   INCH  = 1
-  
-@unique
-class Compensation(IntEnum):
-  NONE = 0
-  LEFT = 1
-  RIGHT = 2
 
-@unique
-class Direction(IntEnum):
-  CW = 0
-  CCW = 1
-  
-@unique
-class Motion(IntEnum):
-  LINEAR = 0
-  CIRCULAR = 1
-  
-@unique
-class Coolant(IntEnum):
-  OFF   = 0
-  FLOOD = 1
-  MIST  = 2
-  AIR   = 3
-  
-@unique
-class Spindle(IntEnum):
-  OFF = 0
-  CW  = 1
-  CCW = 2
-
+# Normalize angle to be contained between 0 and 360 degress
 def angNorm( a ):
   a = a*math.pi/180  
   result = a - (2 * math.pi)*math.floor((a+math.pi)/(2*math.pi))
   return result *180/math.pi
-  
+
+# Calculate the incremental value given absolute coordinate
 def Abs2Inc( value, source, state ):
   incrementalCoord = source.instance.attr.inc
   result = value - state[source]
@@ -66,7 +28,8 @@ def Abs2Inc( value, source, state ):
   result = { incrementalCoord : result }
   # print( 'abs2inc value:%s source:%s result:%s' % (value, source, result))
   return result 
-
+  
+# Calculate the absolute value given incremental coordinate
 def Inc2Abs( value, source, state ):
   absoluteCoord = source.instance.attr.abs
   result = value + state[absoluteCoord]
@@ -75,7 +38,6 @@ def Inc2Abs( value, source, state ):
   result = { absoluteCoord : result }
   # print( 'inc2abs value:%s source:%s result:%s' % (value, source, result))
   return result
-
 
 # CIRCLE CENTER X Y Z
 class Origin(Morph):  
@@ -89,6 +51,7 @@ class Origin(Morph):
     abs = morphism( float, Abs2Inc )
     inc = morphism( float, Inc2Abs )
     
+  ''' Calculate the plane type depending on specified coordinates '''
   def __call__( self, member, state ):
     coord2type = { 
       (self.OX.attr.inc, self.OY.attr.inc ) : { Plane.attr.kind : Plane.kind.XY },
@@ -101,7 +64,7 @@ class Origin(Morph):
         return result
     return {}
     
-
+# Plane for polar and cartesian coordinate system calculations
 class Plane(Morph):
   origin = Origin
   @unique
@@ -110,7 +73,7 @@ class Plane(Morph):
     ZX = 1
     YZ = 2
 
-  
+# Cartesian coordinate system reference
 class Point(Morph):
   class X(Morph):
     abs = morphism( float, Abs2Inc )
@@ -121,7 +84,8 @@ class Point(Morph):
   class Z(Morph):
     abs = morphism( float, Abs2Inc )
     inc = morphism( float, Inc2Abs )
-    
+
+# Polar coordinate system reference
 class Arc(Morph):
   class RAD(Morph):
     abs = morphism( float, Abs2Inc )
@@ -133,6 +97,7 @@ class Arc(Morph):
     abs = morphism( float, Abs2Inc )
     inc = morphism( float, Inc2Abs )
 
+# For 5-axis machines
 class Angular(Morph):
   class A(Morph):
     abs = morphism( float, Abs2Inc )
@@ -144,18 +109,18 @@ class Angular(Morph):
     abs = morphism( float, Abs2Inc )
     inc = morphism( float, Inc2Abs )
 
+# circle center mappings for polar-cartesian translation
 planeCoordDict = {  
     Plane.kind.XY : (Point.attr.X,Point.attr.Y,Point.attr.Z),
     Plane.kind.YZ : (Point.attr.Y,Point.attr.Z,Point.attr.X),
     Plane.kind.ZX : (Point.attr.Z,Point.attr.X,Point.attr.Y)
   }
-# circle center mappings for polar calculation
 planeCenterDict = {  
     Plane.kind.XY : (Origin.attr.OX,Origin.attr.OY),
     Plane.kind.YZ : (Origin.attr.OY,Origin.attr.OZ),
     Plane.kind.ZX : (Origin.attr.OZ,Origin.attr.OX)
   }
-
+# Cartesian coordinate system
 class Cartesian(Morph):
   reference = Point
   plane     = Plane
@@ -181,11 +146,14 @@ class Cartesian(Morph):
     obj = construct( Polar, result )
     
     return { Position.attr.polar : obj }
-    
+
+# Polar coordinate system
 class Polar(Morph):
   reference = Arc
   plane     = Plane
-    
+  
+  ''' Calculates the position in the cartesian coordinate system 
+      given the Arc reference and circle plane. '''
   def __call__( self, member, state ):
     # print('polar2cartesian')
     plane  = self.plane.kind
@@ -205,22 +173,69 @@ class Polar(Morph):
     obj = construct( Cartesian, result )
     
     return { Position.attr.cartesian : obj }
-    
+
+# Tool position
 class Position(Morph):
   cartesian = Cartesian
   polar     = Polar
+
+class Spindle(Morph):
+  speed = float         # SPINDLE SPEED
+  tool  = int           # TOOL NUMBER
+  DL    = float         # TOOL DELTA LENGTH
+  DR    = float         # TOOL DELTA RADIUS
+  @unique
+  class spindir(IntEnum):
+    OFF = 0
+    CW  = 1
+    CCW = 2
+  @unique
+  class coolant(IntEnum):     # COOLANT TYPE
+    OFF   = 0
+    FLOOD = 1
+    MIST  = 2
+    AIR   = 3
+
+# Motion
+class Motion(Morph):
+  target  = Position
+  spindle = Spindle
+  feed    = float     # MACHINE FEED
   
+  @unique
+  class compensation(IntEnum):  # COMPENSATION TYPE
+    NONE = 0
+    LEFT = 1
+    RIGHT = 2
+  @unique
+  class direction(IntEnum):     # CIRCLE DIRECTION
+    CW = 0
+    CCW = 1
+  @unique
+  class mode(IntEnum):          # POSITIONING MOTION MODE
+    LINEAR = 0
+    CIRCULAR = 1
+
 def StateDict():
-  result = { key : 0 for key in list(Registers) }
-  result.update( { kind : 0 for key in Point.attr for kind in key.value.attr } )
-  result.update( { kind : 0 for key in Arc.attr     for kind in key.value.attr } )
-  result.update( { kind : 0 for key in Angular.attr   for kind in key.value.attr } )
-  result.update( { kind : 0 for key in Origin.attr  for kind in key.value.attr } )  
-  result[Registers.COMPENSATION] = Compensation.NONE
-  result[Registers.DIRECTION]    = Direction.CW
-  result[Registers.UNITS]        = Units.MM
-  result[Registers.MOTIONMODE]   = Motion.LINEAR
-  result[Registers.WCS]          = 54
-  result[Plane.attr.kind]        = Plane.kind.XY
-  result[Registers.COOLANT]      = Coolant.OFF
-  return result
+  pool = { key : 0 for key in list(Registers) }
+  pool.update( { kind : 0 for key in Point.attr for kind in key.value.attr } )
+  pool.update( { kind : 0 for key in Arc.attr     for kind in key.value.attr } )
+  pool.update( { kind : 0 for key in Angular.attr   for kind in key.value.attr } )
+  pool.update( { kind : 0 for key in Origin.attr  for kind in key.value.attr } )  
+  pool[Motion.attr.feed]         = 100
+  pool[Motion.attr.compensation] = Motion.compensation.NONE
+  pool[Motion.attr.direction]    = Motion.direction.CW
+  pool[Motion.attr.mode]         = Motion.mode.LINEAR
+  pool[Plane.attr.kind]          = Plane.kind.XY
+  pool[Spindle.attr.speed]       = 0
+  pool[Spindle.attr.tool]        = 0
+  pool[Spindle.attr.DR]          = 0
+  pool[Spindle.attr.DL]          = 0
+  pool[Spindle.attr.coolant]     = Spindle.coolant.OFF
+  pool[Spindle.attr.spindir]     = Spindle.spindir.CW
+  pool[Registers.UNITS]          = Units.MM
+  pool[Registers.WCS]            = 54
+  return pool
+
+def default():
+  return construct(Motion, StateDict())

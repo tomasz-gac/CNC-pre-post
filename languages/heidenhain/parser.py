@@ -9,11 +9,8 @@ import languages.heidenhain.commands as cmd
 import languages.heidenhain.state    as s
 
 from languages.heidenhain.state import Registers     as reg
-from languages.heidenhain.state import Motion        as mot
-from languages.heidenhain.state import Compensation  as comp
-from languages.heidenhain.state import Direction     as dir
-from languages.heidenhain.state import Coolant       as cool
-from languages.heidenhain.state import Spindle       as spin
+from languages.heidenhain.state import Motion
+from languages.heidenhain.state import Spindle
 
 import languages.expression.parser    as expr
 import babel.lang.parser as p
@@ -25,19 +22,19 @@ with open( 'languages/heidenhain/heidenhain.lang' ) as file:
 p = re.compile
 
 GOTOcartesian = Lookup({ 
-  p('L ')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(s.Point), cmd.invariant ),
-  p('C ')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(s.Point), cmd.invariant )
+  p('L ')  : ( cmd.Setval(Motion.attr.mode, Motion.mode.LINEAR),   cmd.SetGOTODefaults(s.Point), cmd.invariant ),
+  p('C ')  : ( cmd.Setval(Motion.attr.mode, Motion.mode.CIRCULAR), cmd.SetGOTODefaults(s.Point), cmd.invariant )
 }.items())
 
 GOTOpolar = Lookup({ 
-  p('LP')  : ( cmd.Setval(reg.MOTIONMODE, mot.LINEAR), cmd.SetGOTODefaults(s.Arc), cmd.invariant ),
-  p('CP')  : ( cmd.Setval(reg.MOTIONMODE, mot.CIRCULAR), cmd.SetGOTODefaults(s.Arc), cmd.invariant )
+  p('LP')  : ( cmd.Setval(Motion.attr.mode, Motion.mode.LINEAR),   cmd.SetGOTODefaults(s.Arc), cmd.invariant ),
+  p('CP')  : ( cmd.Setval(Motion.attr.mode, Motion.mode.CIRCULAR), cmd.SetGOTODefaults(s.Arc), cmd.invariant )
 }.items())
 
 toolCallOptions = Lookup({
-  p('DR\\s*[=]?')  : ( cmd.Set( reg.TOOLDR ), ),
-  p('DL\\s*[=]?')  : ( cmd.Set( reg.TOOLDL ), ),
-  p('S')           : ( cmd.Set( reg.SPINSPEED ), )
+  p('DR\\s*[=]?')  : ( cmd.Set( Spindle.attr.DR ), ),
+  p('DL\\s*[=]?')  : ( cmd.Set( Spindle.attr.DL ), ),
+  p('S')           : ( cmd.Set( Spindle.attr.speed ), )
 }.items())
 
 def handleCoord( map ):
@@ -91,14 +88,14 @@ CCcoord = Switch({
 }.items())
   
 compensation = Lookup( { 
-  p('R0') : ( cmd.Setval(reg.COMPENSATION, comp.NONE), ),
-  p('RL') : ( cmd.Setval(reg.COMPENSATION, comp.LEFT), ),
-  p('RR') : ( cmd.Setval(reg.COMPENSATION, comp.RIGHT), )
+  p('R0') : ( cmd.Setval(Motion.attr.compensation, Motion.compensation.NONE), ),
+  p('RL') : ( cmd.Setval(Motion.attr.compensation, Motion.compensation.LEFT), ),
+  p('RR') : ( cmd.Setval(Motion.attr.compensation, Motion.compensation.RIGHT), )
 }.items())
 
 direction = Lookup( { 
-  p('DR[-]') : ( cmd.Setval(reg.DIRECTION, dir.CW), ),
-  p('DR[+]') : ( cmd.Setval(reg.DIRECTION, dir.CCW), )
+  p('DR[-]') : ( cmd.Setval(Motion.attr.direction, Motion.direction.CW), ),
+  p('DR[+]') : ( cmd.Setval(Motion.attr.direction, Motion.direction.CCW), )
 }.items())
 
 def handleAux( match ):
@@ -106,12 +103,12 @@ def handleAux( match ):
   command = { 
     0  : ( cmd.stop, ), 
     1  : ( cmd.optionalStop, ), 
-    3  : ( cmd.Setval(reg.SPINDIR, spin.CW), ),
-    4  : ( cmd.Setval(reg.SPINDIR, spin.CCW), ),
-    5  : ( cmd.Setval(reg.SPINDIR, spin.OFF), ),
+    3  : ( cmd.Setval(Spindle.attr.spindir, Spindle.spindir.CW), ),
+    4  : ( cmd.Setval(Spindle.attr.spindir, Spindle.spindir.CCW), ),
+    5  : ( cmd.Setval(Spindle.attr.spindir, Spindle.spindir.OFF), ),
     6  : ( cmd.toolchange, ), 
-    8  : ( cmd.Setval(reg.COOLANT, cool.FLOOD), ),
-    9  : ( cmd.Setval(reg.COOLANT, cool.OFF), ),
+    8  : ( cmd.Setval(Spindle.attr.coolant, Spindle.coolant.FLOOD), ),
+    9  : ( cmd.Setval(Spindle.attr.coolant, Spindle.coolant.OFF), ),
     30 : ( cmd.end, ),
     91 : ( cmd.Temporary(reg.WCS), cmd.Setval(reg.WCS, 0) )
   }
@@ -125,7 +122,7 @@ terminals = {
   'PAPRL'             : polarCoord,
   'CCXYZ'             : CCcoord,
   'lineno'            : Wrapper( expr.number , lambda x : ( cmd.Setval(reg.LINENO, x[0]), ) ),
-  'F'                 : Return( cmd.Set(reg.FEED) ).If(p('F')),
+  'F'                 : Return( cmd.Set(Motion.attr.feed) ).If(p('F')),
   'MAX'               : Return( Push(-1) ).If(p('MAX')),
   'compensation'      : compensation,
   'direction'         : direction,
@@ -141,7 +138,7 @@ terminals = {
   'blockFormStart'    : Return(cmd.discard).If(p('BLK FORM 0\\.1 (X|Y|Z)')),
   'blockFormEnd'      : Return(cmd.discard).If(p('BLK FORM 0\\.2')),
   'fn_f'              : Return(cmd.invariant).If(p('FN 0\\:')),
-  'tool_call'         : Return(cmd.Set(reg.TOOLNO), cmd.invariant, cmd.toolchange ).If(p('TOOL CALL')),
+  'tool_call'         : Return(cmd.Set(Spindle.attr.tool), cmd.invariant, cmd.toolchange ).If(p('TOOL CALL')),
   'tool_axis'         : Return().If(p('(X|Y|Z)')),
   'tool_options'      : toolCallOptions,
   'primary'           : expr.primary,

@@ -3,6 +3,8 @@ import languages.heidenhain.state as state
 import hydra as h
 import babel as b
 
+print('Test 1: ABC')
+
 class C(h.Morph):
   common = int
 
@@ -20,10 +22,13 @@ class A(h.Morph):
   
 init = { attr : attr.value() for attr in h.breadth_first(A) if attr.terminal }
 a, i = h.solve( A, init )
+if a.b1.c is not a.b2.c:
+  print('test failed')
+  input()
  
 def decompose_solve( obj, data ):
-  decomposition = state.StateDict()
-  decomposition.update( { type(attr) : attr.value for attr in h.breadth_first(obj) if attr.terminal } )
+  # decomposition = state.StateDict()
+  decomposition = { type(attr) : attr.value for attr in h.breadth_first(obj) if attr.terminal }
   for attr in decomposition:
     if attr.name == 'inc':
       decomposition[attr] = 0
@@ -33,39 +38,35 @@ def decompose_solve( obj, data ):
 s = b.State('L Z+150 IX-20 FMAX')
 r = p.Parse(s)
 
-print('s0')
-s0, i = h.solve(state.Position, state.StateDict(), state.StateDict())
-s00,i = h.solve(state.Position, state.StateDict(), state.StateDict())
-# print(s0 == s00)
-print('s1 : linear 1')
-# input()
+print('Test 2: building default')
+s0 = state.default()
+
+print('Test 3: linear 1')
 s1 = decompose_solve(s0, s.symtable)
 tests = [
-  s1.cartesian.reference.X.abs == -20,
-  s1.cartesian.reference.X.inc == -20,
-  s1.cartesian.reference.Z.abs == 150
+  s1.target.cartesian.reference.X.abs == -20,
+  s1.target.cartesian.reference.X.inc == -20,
+  s1.target.cartesian.reference.Z.abs == 150
 ]
 if any( not test for test in tests):
   print('test failed')
   input()
-print('s2 : linear update')
-# input()
+print('Test 4: linear update')
 
 s = b.State('L IX-30 FMAX')
 r = p.Parse(s)
 
 s2 = decompose_solve(s1, s.symtable )
 tests = [
-  s2.cartesian.reference.X.abs == -50,
-  s2.cartesian.reference.X.inc == -30,
-  s2.cartesian.reference.Z.abs == 150
+  s2.target.cartesian.reference.X.abs == -50,
+  s2.target.cartesian.reference.X.inc == -30,
+  s2.target.cartesian.reference.Z.abs == 150
 ]
 if any( not test for test in tests):
   print('test failed')
   input()
 
-print('s3 : circle center change')
-# input()
+print('Test 5: circle center change')
 s = b.State('CC Z-20 Y+30')
 r = p.Parse(s)
 s.symtable.update({
@@ -82,8 +83,7 @@ s.symtable.update({
   state.Point.Z.attr.inc : 0
 })
 s3 = decompose_solve(s2, s.symtable)
-print('s4 : looping')
-# input()
+print('Test 6: looping')
 
 
 import time
