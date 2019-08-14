@@ -2,22 +2,7 @@ from hydra.classes import Morph, AttributeMeta
 from hydra.iteration import post_order_cached, breadth_first, breadth_first_cached
 from collections import Counter
 
-_dependencies_ = {}
-
-def cached_dependencies( cls ):
-  if cls in _dependencies_:
-    return _dependencies_
-  _dependencies_[cls] = set()
-  # for all composite types in cls
-  # mapping of type -> set of type's terminal dependencies
-  # TODO : omit nested breadth_first? 
-  for type_attr in breadth_first_cached(cls):
-    if not type_attr.terminal:
-      if type_attr.value not in _dependencies_:
-        _dependencies_[ type_attr.value ] = { dec_attr for dec_attr in breadth_first_cached(type_attr.value) if dec_attr.terminal }
-      _dependencies_[cls].update( _dependencies_[ type_attr.value ] )
-  return _dependencies_
-
+  
 def update( val, data, *args, limit=10 ):
   cls = type(val)
   dependencies = cached_dependencies(cls)
@@ -29,52 +14,29 @@ def update( val, data, *args, limit=10 ):
                         for key,value in data.items() if isinstance(key, AttributeMeta) and isinstance( value, Morph )
                           for value_attr in breadth_first(value) if value_attr.terminal }
   decomposed_data.update( (key, value) for key,value in data.items() if not isinstance(key, AttributeMeta) or not isinstance( value, Morph ) )
-  # print('----------------------------------- UPDATE START---------------------------------------')
   result = None
-  attempt = {}
-  solve_conflicts = {None}
+  solve_conflicts = {}
   
   for i in range(limit):
     # overwrite decomposed_value with decomposed_data
     attempt = dict(decomposed_value)
     attempt.update(decomposed_data)
-    a0 = dict(attempt)
     # try building result
-    result, solve_conflicts, shared = solve(cls, attempt, *args)
+    result, solve_conflicts = solve(cls, attempt, *args)
     if len(solve_conflicts) == 0:
-      return result, attempt
-    solve_conflicts = { conflict for pair in solve_conflicts for conflict in pair }
-    # decompose shared values down to terminals
-    shared_terminals = { attr for item in shared for attr in dependencies[item] }
-    # for each composite source of conflict, add their terminal decomposition, but omit the terminals that are shared
-    conflicts = { attribute for source in solve_conflicts if source.value in dependencies
-                              for attribute in ( dependencies[source.value] - shared_terminals ) }
-    # handle the case when the shared terminal itself is the source of conflict
-    conflicts.update( shared_terminal for source in solve_conflicts if source.value in shared
-                                        for shared_terminal in dependencies[source.value] )
+      return result
+    # for each source,target pair of conflict, add the terminal decomposition of target, 
+    # but omit the terminals that are shared between them.
+    conflicts = { attribute for source,target in solve_conflicts if target.value in dependencies
+                              for attribute in ( dependencies[target.value] - dependencies.get(source.value,[]) ) }
     # append the terminals
-    conflicts.update( solve_conflicts )
+    conflicts.update( target for source,target in solve_conflicts )
     # remove conflicts from decomposed_value
     decomposed_value = { key : value for key,value in decomposed_value.items() if key not in conflicts }
-    print('----- a0', a0 )
-    print('----- attempt diff', { key : value for key,value in attempt.items() if key not in a0 or a0[key] != value})
-    print('----- created', { key for key in attempt if key not in a0 and not key.terminal})
-    
-    print('----- conflicts ',conflicts)
-    print('----- solve_conflicts ',solve_conflicts)
-    print('----- decomposed_value ',decomposed_value)
-    print('----------------------------------')
-    input()
+
     
   raise RuntimeError('Update iteration limit reached') 
 
-
-def construct( cls, data ):
-  post_order_composites = ( attr for attr in post_order_cached(cls) if not attr.terminal)
-  for type_attr in post_order_composites:
-    if type_attr not in data and all( member in data for member in type_attr.value.attr ):
-      data[type_attr] = type_attr.value(data)
-  return cls(data)
   
 ''' Builds cls instance from data dict using *args
     returns None in case of failure, uses morph to extend the amount of data
@@ -98,36 +60,28 @@ def solve( cls, data, *args ):
         created.append( (type_attr, type_attr.value(data)) )
   
   ''' At this stage, data is constructed, but it may contain multiple copies of an object
-      that satisfies the class' == operator. Since all objects need to be decomposible
+      that is composed of the same terminals. Since all objects need to be decomposible
       to unique set of attribute : value pairs (data is a dict), these copies are actually one object.
       We need to make sure that the hierarchy contains only one object of each type. '''
   
-  data_composites = [ (type_attr, value) for type_attr,value in data.items() 
-                                          if isinstance(type_attr,AttributeMeta) and not type_attr.terminal ]
-  type_count = Counter( type_attr.value for type_attr,value in data_composites )
-  # type -> object mapping for shared objects
-  shared_composites = { type_attr.value : value
-                          for type_attr,value in data_composites
-                            if type_count[type_attr.value] > 1 }
-  # update the value of the attribute to its shared state
-  for type_attr, value in data_composites:
-    for shared_attr in value.attr:
-      value_type = type(shared_attr).value
-      if value_type in shared_composites:
-        shared_attr.value = shared_composites[value_type]
+  if len(conflicts) == 0:
+    data_composites = [ (type_attr, value) for type_attr,value in data.items() 
+                                            if isinstance(type_attr,AttributeMeta) and not type_attr.terminal ]
+    type_count = Counter( type_attr.value for type_attr,value in data_composites )
+    # type -> object mapping for shared objects
+    shared_composites = { type_attr.value : value
+                            for type_attr,value in data_composites
+                              if type_count[type_attr.value] > 1 }
+    # update the value of the attribute to its shared state
+    for type_attr, value in data_composites:
+      for shared_attr in value.attr:
+        value_type = type(shared_attr).value
+        if value_type in shared_composites:
+          shared_attr.value = shared_composites[value_type]
   
   result = cls(data) if all( attr in data for attr in cls.attr ) else None
-  return result, conflicts, shared_composites
-          
-def guard( values ):
-  # make sure that each value has the type declared by its associated member
-  values.update( (attribute, attribute.value(value)) for attribute,value in values.items() 
-                    if isinstance(attribute,AttributeMeta) and type(value) != attribute.value )
-  # decompose the values that are of type Morph
-  values.update( (type(attribute), attribute.value) 
-                    for key,value in values.items() if isinstance(value,Morph)
-                      for attribute in breadth_first(value) )
-
+  return result, conflicts
+  
 ''' Runs the morphisms of the data until no new results are available
     Recursively breaks each result to its constituent members and morphs them as well
     Checks inner consistency of results with data by class' operator !=, returns the list of conflicts
@@ -138,10 +92,9 @@ def morph( data, *args, stack=None ):
   if stack is None:
     stack = list(data.items())
   conflicts = []
-  # d = dict(data)
-  # morph the values contents
+  # morph the stack contents
   while len(stack) > 0:
-    # Get source and value from values
+    # Get source and value from stack
     source, value = stack.pop(-1)
     
     if callable( value ):
@@ -167,9 +120,15 @@ def morph( data, *args, stack=None ):
           if data.get(target,result) != result:
             conflicts.append( (source, target) )
         else:
-          # composites are in conflict if their terminals are in conflict, do not decompose
-          results_to_process.extend( (type(attr), attr.value) for attr in breadth_first(result) if attr.terminal )
-     
+          # composites are in conflict if their terminals are in conflict
+          # no need to check the intermediate composites
+          for val_attr in breadth_first(result):
+            type_  = type(val_attr)
+            value_ = val_attr.value
+            if val_attr.terminal and data.get(type_,value_) != value_:
+              conflicts.append( (source, target) )
+              break
+              
       stack.extend( (target,result) for target,result in results.items() if target not in data )
       data.update( results )
     else:
@@ -177,3 +136,35 @@ def morph( data, *args, stack=None ):
     data[source] = value
   return conflicts
   
+          
+def guard( values ):
+  # make sure that each value has the type declared by its associated member
+  values.update( (attribute, attribute.value(value)) for attribute,value in values.items() 
+                    if isinstance(attribute,AttributeMeta) and type(value) != attribute.value )
+  # decompose the values that are of type Morph
+  values.update( (type(attribute), attribute.value) 
+                    for key,value in values.items() if isinstance(value,Morph)
+                      for attribute in breadth_first(value) )
+
+_dependencies_ = {}
+
+def cached_dependencies( cls ):
+  if cls in _dependencies_:
+    return _dependencies_
+  _dependencies_[cls] = set()
+  # for all composite types in cls
+  # mapping of type -> set of type's terminal dependencies
+  # TODO : optimize the nested breadth_first? 
+  for type_attr in breadth_first_cached(cls):
+    if not type_attr.terminal:
+      if type_attr.value not in _dependencies_:
+        _dependencies_[ type_attr.value ] = { dec_attr for dec_attr in breadth_first_cached(type_attr.value) if dec_attr.terminal }
+      _dependencies_[cls].update( _dependencies_[ type_attr.value ] )
+  return _dependencies_
+
+def construct( cls, data ):
+  post_order_composites = ( attr for attr in post_order_cached(cls) if not attr.terminal)
+  for type_attr in post_order_composites:
+    if type_attr not in data and all( member in data for member in type_attr.value.attr ):
+      data[type_attr] = type_attr.value(data)
+  return cls(data)

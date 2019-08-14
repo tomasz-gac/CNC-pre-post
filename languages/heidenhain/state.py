@@ -166,7 +166,7 @@ class Cartesian(Morph):
     coord  = planeCoordDict[plane] # get cartesian coordinates for substitution
     center = planeCenterDict[plane]  # get circle center coordinates
     
-    x0, x1, x2 = tuple( getattr( self.reference,     x.name).abs for x in coord )
+    x0, x1, x2 = tuple( getattr( self.reference,    x.name).abs for x in coord )
     ox0, ox1   = tuple( getattr( self.plane.origin, x.name).abs for x in center )
     
     r1, r2 = (x0-ox0), (x1-ox1)
