@@ -27,7 +27,6 @@ if a.b1.c is not a.b2.c:
   input()
  
 def decompose_solve( obj, data ):
-  # decomposition = state.StateDict()
   decomposition = { type(attr) : attr.value for attr in h.breadth_first(obj) if attr.terminal }
   for attr in decomposition:
     if attr.name == 'inc':
@@ -69,33 +68,33 @@ if any( not test for test in tests):
 print('Test 5: circle center change')
 s = b.State('CC Z-20 Y+30')
 r = p.Parse(s)
-s.symtable.update({
+'''s.symtable.update({
   state.Point.X.attr.inc : 0,
   state.Point.Y.attr.inc : 0,
   state.Point.Z.attr.inc : 0
-})
+})'''
 s3 = decompose_solve(s2, s.symtable)
 s = b.State('CC IX-20 IY+30')
 r = p.Parse(s)
-s.symtable.update({
+'''s.symtable.update({
   state.Point.X.attr.inc : 0,
   state.Point.Y.attr.inc : 0,
   state.Point.Z.attr.inc : 0
-})
+})'''
 s3 = decompose_solve(s2, s.symtable)
-print('Test 6: looping')
-
-
 import time
-start = time.time()
-s4 = s3
-att4 = None
+def do_loop( n ):
+  print('Test 6: looping')
+  start = time.time()
+  s4 = s3
+  att4 = None
 
-for i in range(200000):
-  s = b.State('LP IPA+20 PR30 FMAX')
-  r = p.Parse(s)
-  s4 = decompose_solve(s4, s.symtable)
-  if s2 is None:
-    print('failed ',i)
-    break
-print( time.time() - start )
+  for i in range(n):
+    s = b.State('LP IPA+20 PR30 FMAX')
+    r = p.Parse(s)
+    s4 = decompose_solve(s4, s.symtable)
+    if s2 is None:
+      print('failed ',i)
+      break
+  print( time.time() - start )
+do_loop(200000)

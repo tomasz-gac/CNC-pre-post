@@ -117,6 +117,14 @@ def handleAux( match ):
   except KeyError:
     raise RuntimeError('Unknown auxillary function M'+str(aux) )
 
+''' CC relates polar and cartesian coordinates and we need to choose
+    which coordinates are not changed in the transformation '''
+CC_defaults = ( 
+  cmd.Setval(s.Point.X.attr.inc, 0), 
+  cmd.Setval(s.Point.Y.attr.inc, 0), 
+  cmd.Setval(s.Point.Z.attr.inc, 0) 
+  )
+
 terminals = {
   'XYZABC'            : cartesianCoord,
   'PAPRL'             : polarCoord,
@@ -130,7 +138,7 @@ terminals = {
   'LPCP'              : GOTOpolar,
   'MOVE'              : Return( cmd.invariant ),
   'UPDATE'            : Return( cmd.invariant ),
-  'CC'                : Return( cmd.invariant ).If(p('CC')),
+  'CC'                : Return( *CC_defaults ).If(p('CC')),
   'auxilary'          : If(p('M(\\d+)'), handleAux),
   'begin_pgm'         : Return().If(p('BEGIN PGM (.+) (MM|INCH)')),
   'end_pgm'           : Return().If(p('END PGM (.+)')),
