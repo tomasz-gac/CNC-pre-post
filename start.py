@@ -68,19 +68,9 @@ if any( not test for test in tests):
 print('Test 5: circle center change')
 s = b.State('CC Z-20 Y+30')
 r = p.Parse(s)
-'''s.symtable.update({
-  state.Point.X.attr.inc : 0,
-  state.Point.Y.attr.inc : 0,
-  state.Point.Z.attr.inc : 0
-})'''
 s3 = decompose_solve(s2, s.symtable)
 s = b.State('CC IX-20 IY+30')
 r = p.Parse(s)
-'''s.symtable.update({
-  state.Point.X.attr.inc : 0,
-  state.Point.Y.attr.inc : 0,
-  state.Point.Z.attr.inc : 0
-})'''
 s3 = decompose_solve(s2, s.symtable)
 import time
 def do_loop( n ):
