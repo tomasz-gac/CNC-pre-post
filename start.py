@@ -2,6 +2,7 @@ import languages.heidenhain.parser as p
 import languages.heidenhain.state as state
 import hydra as h
 import babel as b
+import sys
 
 print('Test 1: ABC')
 
@@ -27,7 +28,6 @@ if a.b1.c is not a.b2.c:
   input()
  
 def decompose_solve( obj, data ):
-  # decomposition = state.StateDict()
   decomposition = { type(attr) : attr.value for attr in h.breadth_first(obj) if attr.terminal }
   for attr in decomposition:
     if attr.name == 'inc':
@@ -83,19 +83,24 @@ s.symtable.update({
   state.Point.Z.attr.inc : 0
 })
 s3 = decompose_solve(s2, s.symtable)
-print('Test 6: looping')
-
 
 import time
-start = time.time()
-s4 = s3
-att4 = None
 
-for i in range(200000):
-  s = b.State('LP IPA+20 PR30 FMAX')
-  r = p.Parse(s)
-  s4 = decompose_solve(s4, s.symtable)
-  if s2 is None:
-    print('failed ',i)
-    break
-print( time.time() - start )
+def loop(n=200000):
+  print('Test 6: looping')
+  start = time.time()
+  s4    = s3
+  att4  = None
+  for i in range(n):
+    s = b.State('LP IPA+20 PR30 FMAX')
+    r = p.Parse(s)
+    s4 = decompose_solve(s4, s.symtable)
+    if s2 is None:
+      print('failed ',i)
+      break
+  print( time.time() - start )
+
+n = int(sys.argv[1])
+if n is None:
+  n = 200000
+loop(n)

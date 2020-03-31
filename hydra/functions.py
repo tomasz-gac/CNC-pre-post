@@ -26,13 +26,16 @@ def update( val, data, *args, limit=10 ):
     if len(solve_conflicts) == 0:
       return result
     # for each source,target pair of conflict, add the terminal decomposition of target, 
-    # but omit the terminals that are shared between them.
+    # but skip the terminals that are shared between them.
     conflicts = { attribute for source,target in solve_conflicts if target.value in dependencies
                               for attribute in ( dependencies[target.value] - dependencies.get(source.value,[]) ) }
     # append the terminals
     conflicts.update( target for source,target in solve_conflicts )
     # remove conflicts from decomposed_value
     decomposed_value = { key : value for key,value in decomposed_value.items() if key not in conflicts }
+    '''print('----- solve_conflicts', solve_conflicts )
+    print('----- conflicts', conflicts )
+    input()'''
 
     
   raise RuntimeError('Update iteration limit reached') 

@@ -124,7 +124,11 @@ class Morph(metaclass=MorphMeta):
     self.attr = None # to properly initialize Attribute.terminal
     self.attr = type(self).attr(self)
     for attr in self.attr:
-      attr.value = data[type(attr)]
+      value_ = data[type(attr)]
+      if type(value_) is type(attr).value:
+        attr.value = value_
+      else:
+        attr.value = type(attr).value(value_)
     
   def __eq__( self, other ):
     raise RuntimeError('Morph.__eq__')
