@@ -20,8 +20,8 @@ def parse( program, lineOffset ):
       state = State( line.rstrip('\n') )
       state.symtable.update( symtable )
       rest = parser( state )
-      if len(rest) > 0:
-        raise RuntimeError( 'Parser failed at line ' + line + ' rest: "' + rest + '"' )
+      if len(state.input) > 0:
+        raise RuntimeError( 'Parser failed at line ' + str(line) + ' rest: "' + state.input + '"' )
       else:
         results.append( state.symtable )
         symtable.update( state.symtable )

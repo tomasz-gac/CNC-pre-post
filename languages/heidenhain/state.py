@@ -125,6 +125,8 @@ class Cartesian(Morph):
   reference = Point
   plane     = Plane
   
+  ''' Calculates the position in the polar coordinate system 
+      given the Point reference and circle plane. '''
   def __call__( self, member, state ):
     # print('cartesian2polar')
     plane  = self.plane.kind
@@ -218,10 +220,10 @@ class Motion(Morph):
 
 def StateDict():
   pool = { key : 0 for key in list(Registers) }
-  pool.update( { kind : 0 for key in Point.attr for kind in key.value.attr } )
-  pool.update( { kind : 0 for key in Arc.attr     for kind in key.value.attr } )
+  pool.update( { kind : 0 for key in Point.attr     for kind in key.value.attr } )
+  pool.update( { kind : 0 for key in Arc.attr       for kind in key.value.attr } )
   pool.update( { kind : 0 for key in Angular.attr   for kind in key.value.attr } )
-  pool.update( { kind : 0 for key in Origin.attr  for kind in key.value.attr } )  
+  pool.update( { kind : 0 for key in Origin.attr    for kind in key.value.attr } )  
   pool[Motion.attr.feed]         = 100
   pool[Motion.attr.compensation] = Motion.compensation.NONE
   pool[Motion.attr.direction]    = Motion.direction.CW

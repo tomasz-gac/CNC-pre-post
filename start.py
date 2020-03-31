@@ -69,28 +69,17 @@ if any( not test for test in tests):
 print('Test 5: circle center change')
 s = b.State('CC Z-20 Y+30')
 r = p.Parse(s)
-s.symtable.update({
-  state.Point.X.attr.inc : 0,
-  state.Point.Y.attr.inc : 0,
-  state.Point.Z.attr.inc : 0
-})
 s3 = decompose_solve(s2, s.symtable)
 s = b.State('CC IX-20 IY+30')
 r = p.Parse(s)
-s.symtable.update({
-  state.Point.X.attr.inc : 0,
-  state.Point.Y.attr.inc : 0,
-  state.Point.Z.attr.inc : 0
-})
 s3 = decompose_solve(s2, s.symtable)
-
 import time
-
-def loop(n=200000):
+def do_loop( n ):
   print('Test 6: looping')
   start = time.time()
-  s4    = s3
-  att4  = None
+  s4 = s3
+  att4 = None
+
   for i in range(n):
     s = b.State('LP IPA+20 PR30 FMAX')
     r = p.Parse(s)
@@ -100,7 +89,4 @@ def loop(n=200000):
       break
   print( time.time() - start )
 
-n = int(sys.argv[1])
-if n is None:
-  n = 200000
-loop(n)
+do_loop(200000)
